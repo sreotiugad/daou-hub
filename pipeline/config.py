@@ -17,8 +17,8 @@ import json
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT_PATH = os.path.join(REPO_ROOT, "data.json")
 
-# 프론트가 기대하는 최근 일수(일별 배열 길이). 프론트는 7/14/30으로 잘라 씀.
-PERIOD_DAYS = 30
+# 프론트가 기대하는 최근 일수(일별 배열 길이). 프론트는 14/30/90/365로 잘라 씀.
+PERIOD_DAYS = 365
 
 # ── 브랜드 계층 (서비스명 → 대분류/세부브랜드) ──────────
 # RAW 시트의 '서비스' 컬럼 값이 여기 키와 일치해야 한다.

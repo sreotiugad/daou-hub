@@ -234,7 +234,7 @@
 <main id="v-report" class="view" hidden>
   <div class="rep-head">
     <div><h2 id="repTitle">광고 리포트</h2><div class="s" id="repSub"></div></div>
-    <div class="seg" id="periodChips"><button data-n="7">7D</button><button data-n="14" class="on">14D</button><button data-n="30">30D</button></div>
+    <div class="seg" id="periodChips"><button data-n="14">14D</button><button data-n="30" class="on">30D</button><button data-n="90">90D</button><button data-n="365">1년</button></div>
   </div>
   <div class="tabbar" id="tabbar"></div>
   <div class="pills" id="pills"></div>
@@ -323,7 +323,7 @@ const DUReport=(function(){
     "다우오피스HR":{group:"다우오피스",cost:372000,cpa:13300,cpc:720,ctr:.031,mo:-.5,media:{네이버:.64,구글:.36},ct:{브랜드검색:.12,파워링크:.28,쇼핑검색:.02,구글검색:.30,실적최대화:.20,동영상:.08}},
   };
   const GROUP_SUBS={"사방넷":["사방넷","사방넷미니","풀필먼트"],"애드콘":["애드콘","엔팩스"],"다우오피스":["다우오피스","다우오피스HR"]};
-  let state={group:"사방넷",sub:"전체",N:14},fullDates=[],labels=[];
+  let state={group:"사방넷",sub:"전체",N:30},fullDates=[],labels=[];
   function genSub(name,N){const s=SUBS[name],r=MUL(H(name)+N*7);const cost=[],signup=[],imp=[],click=[];for(let i=0;i<N;i++){const t=N>1?i/(N-1):0;const trend=1+s.mo*(t-.5)*.44;const noise=.85+r()*.30;const dow=(i+2)%7;const wk=(dow===5||dow===6)?.9:1;const c=Math.max(0,s.cost*trend*noise*wk);cost.push(c);click.push(c/s.cpc);imp.push(c/s.cpc/s.ctr);signup.push(c/s.cpa)}return{cost,signup,imp,click}}
   function realSub(){return (window.DAOU_DATA&&window.DAOU_DATA.report&&window.DAOU_DATA.report.subs)||null}
   function subDaily(name,N){const R=realSub();if(R&&R[name]&&R[name].cost&&R[name].cost.length){const a=R[name],L=a.cost.length,st=Math.max(0,L-N);return{cost:a.cost.slice(st),signup:a.signup.slice(st),imp:a.imp.slice(st),click:a.click.slice(st)}}return genSub(name,N)}
@@ -353,7 +353,7 @@ const DUReport=(function(){
   function spark(data,color){const W=110,Hh=26,max=Math.max(...data),min=Math.min(...data),rng=(max-min)||1;const pts=data.map((v,i)=>[i/(data.length-1)*W,Hh-2-((v-min)/rng)*(Hh-5)]);return `<svg viewBox="0 0 ${W} ${Hh}" width="70" height="26"><path d="${smooth(pts)}" fill="none" stroke="${color}" stroke-width="1.6" stroke-linecap="round"/></svg>`}
   function buildComment(group,agg){const topCt=CT_ORDER.map(k=>[k,agg.ct[k]]).sort((a,b)=>b[1]-a[1])[0];const nv=(agg.media.네이버/(agg.media.네이버+agg.media.구글)*100).toFixed(0);const cpaGood=agg.d.cpa<0;const cpaTxt=cpaGood?`CPA <b class="hl">${Math.abs(agg.d.cpa).toFixed(1)}% 개선</b>`:`CPA ${agg.d.cpa.toFixed(1)}% 상승`;const sTxt=agg.d.signup>0?`가입 <b class="hl">${agg.d.signup.toFixed(1)}% 증가</b>`:`가입 ${Math.abs(agg.d.signup).toFixed(1)}% 감소`;const items=[[cpaGood?'check':'alert',cpaGood?COL.success:COL.warning,`직전 대비 ${cpaTxt}. 현재 CPA <b class="hl">${cpaF(agg.cpa)}</b>.`],['trend',COL.primary,`광고비 <b class="hl">${won(agg.tCost)}</b>, ${sTxt} · 총 <b class="hl">${comma(agg.tSign)}건</b>.`],['target',COL.accent,`<b class="hl">${topCt[0]}</b> 비중 1위(${(topCt[1]/agg.tCost*100).toFixed(0)}%) · 네이버 ${nv}%·구글 ${100-nv}%.`]];document.getElementById('comment').innerHTML=`<div class="ci"><span class="ico">${ic('trend',COL.primary,15)}</span><div><b>AI 데일리 코멘트</b> <em>${group} · Gemini</em></div></div><ul>${items.map(it=>`<li><span class="k">${ic(it[0],it[1],15)}</span><span>${it[2]}</span></li>`).join('')}</ul>`}
 
-  function buildDates(N){fullDates=[];labels=[];const P=window.DAOU_DATA&&window.DAOU_DATA.period;if(P&&P.dates&&P.dates.length){const st=Math.max(0,P.dates.length-N);P.dates.slice(st).forEach(iso=>{const p=String(iso).split('-');const mm=+p[1],dd=+p[2];fullDates.push(`${mm}/${dd}`);labels.push(`${dd}`)});return}const end=new Date(2026,7,22);for(let i=N-1;i>=0;i--){const d=new Date(end);d.setDate(end.getDate()-i);fullDates.push(`${d.getMonth()+1}/${d.getDate()}`);labels.push(`${d.getDate()}`)}}
+  function buildDates(N){fullDates=[];labels=[];const lng=N>45;const P=window.DAOU_DATA&&window.DAOU_DATA.period;if(P&&P.dates&&P.dates.length){const st=Math.max(0,P.dates.length-N);P.dates.slice(st).forEach(iso=>{const p=String(iso).split('-');const mm=+p[1],dd=+p[2];fullDates.push(`${mm}/${dd}`);labels.push(lng?`${mm}/${dd}`:`${dd}`)});return}const end=new Date(2026,7,22);for(let i=N-1;i>=0;i--){const d=new Date(end);d.setDate(end.getDate()-i);const mm=d.getMonth()+1,dd=d.getDate();fullDates.push(`${mm}/${dd}`);labels.push(lng?`${mm}/${dd}`:`${dd}`)}}
   function periodText(){return `${fullDates[0]}–${fullDates[fullDates.length-1]}`}
   function currentSubs(){return state.sub==="전체"?GROUP_SUBS[state.group]:[state.sub]}
   function renderTabs(){document.getElementById('tabbar').innerHTML=GROUPS.map(g=>{const agg=aggregate(GROUP_SUBS[g.key],state.N);return `<button class="tab ${state.group===g.key?'on':''}" data-g="${g.key}" style="--tabc:${GCOLOR[g.key]}"><span class="d"></span><b>${g.key}</b><span class="amt">${won(agg.tCost)}</span></button>`}).join('');document.querySelectorAll('#tabbar .tab').forEach(t=>t.addEventListener('click',()=>{state.group=t.dataset.g;state.sub="전체";render()}))}
