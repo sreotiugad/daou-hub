@@ -1,0 +1,4 @@
+# Daou Hub data 파이프라인 (시트 → data.json)
+gspread>=6.0
+google-auth>=2.0
+requests>=2.28

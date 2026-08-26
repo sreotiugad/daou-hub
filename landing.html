@@ -1,0 +1,325 @@
+<title>Daou Universe</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Noto+Sans+KR:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap">
+
+<style>
+  :root{
+    --bg:#FFFFFF;--alt:#F6F8FC;--panel:#FFFFFF;
+    --line:#E9ECF3;--line-2:#F0F2F9;
+    --ink:#111726;--ink-soft:#57607A;--ink-mute:#98A1B7;
+    --brand:#4F46E5;--brand-2:#7C5CF6;
+    --sabang:#2F6BFF;--adcon:#7C5CF6;--daou:#0EA5B7;
+    --green:#16A34A;
+    --shadow:0 1px 2px rgba(16,24,40,.04),0 12px 32px rgba(16,24,40,.07);
+    --shadow-lg:0 24px 60px rgba(16,24,40,.14);
+    --r:16px;
+  }
+  :root[data-theme="dark"]{
+    --bg:#0A0D16;--alt:#0E1220;--panel:#141926;
+    --line:#232a3c;--line-2:#1b2231;
+    --ink:#EAEDF7;--ink-soft:#9AA4BD;--ink-mute:#606A82;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 14px 34px rgba(0,0,0,.4);
+    --shadow-lg:0 30px 70px rgba(0,0,0,.55);
+  }
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+    --bg:#0A0D16;--alt:#0E1220;--panel:#141926;
+    --line:#232a3c;--line-2:#1b2231;
+    --ink:#EAEDF7;--ink-soft:#9AA4BD;--ink-mute:#606A82;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 14px 34px rgba(0,0,0,.4);
+    --shadow-lg:0 30px 70px rgba(0,0,0,.55);
+  }}
+
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Sans KR",system-ui,sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}html{scroll-behavior:auto}}
+  a{color:inherit;text-decoration:none}
+  h1,h2,h3,h4{margin:0;font-family:"Sora","Noto Sans KR",sans-serif;letter-spacing:-.02em;text-wrap:balance}
+  p{margin:0}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 24px}
+  .eb{font-family:"Space Mono";font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--brand)}
+  .btn{font-family:"Sora";font-weight:600;font-size:14.5px;padding:12px 22px;border-radius:10px;cursor:pointer;border:1px solid transparent;display:inline-flex;align-items:center;gap:8px;transition:transform .18s,box-shadow .18s,background .18s,border-color .18s}
+  .btn-primary{background:linear-gradient(90deg,var(--brand),var(--brand-2));color:#fff;box-shadow:0 8px 22px rgba(79,70,229,.28)}
+  .btn-primary:hover{transform:translateY(-2px);box-shadow:0 14px 30px rgba(79,70,229,.4)}
+  .btn-ghost{background:var(--panel);border-color:var(--line);color:var(--ink)}
+  .btn-ghost:hover{transform:translateY(-2px);border-color:var(--brand)}
+
+  /* nav */
+  nav{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--bg) 78%,transparent);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+  .nav-in{display:flex;align-items:center;justify-content:space-between;height:66px}
+  .logo{display:flex;align-items:center;gap:10px;font-family:"Sora";font-weight:800;font-size:17px;letter-spacing:-.02em}
+  .logo .o{width:26px;height:26px;border-radius:8px;background:conic-gradient(from 210deg,#2F6BFF,#7C5CF6,#0EA5B7,#2F6BFF);box-shadow:0 4px 14px rgba(79,70,229,.35)}
+  .nlinks{display:flex;gap:28px;font-size:14px;color:var(--ink-soft)}
+  .nlinks a:hover{color:var(--ink)}
+  .nav-r{display:flex;align-items:center;gap:12px}
+  .iconbtn{width:38px;height:38px;border-radius:9px;border:1px solid var(--line);background:var(--panel);display:grid;place-content:center;cursor:pointer;color:var(--ink-soft)}
+  .iconbtn:hover{color:var(--ink)}
+  @media(max-width:820px){.nlinks{display:none}}
+
+  /* hero */
+  header{padding:64px 0 48px;position:relative;overflow:hidden}
+  .hero{display:grid;grid-template-columns:1.05fr .95fr;gap:44px;align-items:center}
+  .badge{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-soft);border:1px solid var(--line);background:var(--panel);padding:6px 13px;border-radius:999px;margin-bottom:20px}
+  .badge .dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green)}
+  h1{font-family:"Sora";font-weight:800;font-size:clamp(34px,4.8vw,52px);line-height:1.1}
+  h1 .g{background:linear-gradient(90deg,var(--sabang),var(--brand-2));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .hero p.lead{color:var(--ink-soft);font-size:17px;margin-top:20px;max-width:520px}
+  .hero-cta{display:flex;gap:12px;margin-top:28px;flex-wrap:wrap}
+  .hero-meta{display:flex;gap:26px;margin-top:30px}
+  .hero-meta div b{font-family:"Sora";font-weight:800;font-size:22px;display:block}
+  .hero-meta div span{font-size:12.5px;color:var(--ink-mute)}
+
+  /* dashboard preview card */
+  .preview{background:var(--panel);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow-lg);padding:18px;position:relative}
+  .pv-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+  .pv-top .t{display:flex;align-items:center;gap:8px;font-family:"Sora";font-weight:700;font-size:13.5px}
+  .pv-top .t .cdot{width:8px;height:8px;border-radius:50%;background:var(--sabang)}
+  .pv-top .live{font-size:11px;color:var(--green);font-family:"Space Mono";display:flex;align-items:center;gap:5px}
+  .pv-top .live i{width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink 1.5s infinite}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+  .pv-k{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+  .pk{background:var(--alt);border:1px solid var(--line-2);border-radius:11px;padding:11px 13px}
+  .pk small{font-size:11px;color:var(--ink-mute)}
+  .pk b{display:block;font-family:"Sora";font-weight:800;font-size:19px;margin-top:3px;font-variant-numeric:tabular-nums}
+  .pk .up{font-size:11px;color:var(--green);font-family:"Space Mono"}
+  .pv-chart{background:var(--alt);border:1px solid var(--line-2);border-radius:11px;padding:12px 12px 6px}
+  .pv-chart .lbl{font-size:11px;color:var(--ink-mute);font-family:"Space Mono";margin-bottom:4px}
+
+  /* media strip */
+  .media{border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--alt)}
+  .media-in{display:flex;align-items:center;gap:30px;padding:22px 0;flex-wrap:wrap;justify-content:center}
+  .media-in .cap{font-size:12.5px;color:var(--ink-mute);font-family:"Space Mono"}
+  .media-in .m{display:flex;align-items:center;gap:8px;font-family:"Sora";font-weight:700;font-size:15px;color:var(--ink-soft)}
+  .media-in .m .b{width:9px;height:9px;border-radius:3px}
+
+  section{padding:80px 0}
+  .sec-h{text-align:center;max-width:620px;margin:0 auto 48px}
+  .sec-h h2{font-family:"Sora";font-weight:800;font-size:clamp(26px,3.6vw,38px);margin-top:14px;line-height:1.15}
+  .sec-h p{color:var(--ink-soft);margin-top:14px;font-size:16px}
+
+  /* products */
+  .prods{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+  @media(max-width:900px){.prods{grid-template-columns:1fr}.hero{grid-template-columns:1fr}}
+  .prod{display:block;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:26px;transition:transform .25s,box-shadow .25s,border-color .25s;position:relative;overflow:hidden}
+  .prod::before{content:"";position:absolute;inset:0 0 auto 0;height:4px;background:var(--pc)}
+  .prod:hover{transform:translateY(-6px);box-shadow:var(--shadow-lg);border-color:var(--line)}
+  .prod .pi{width:48px;height:48px;border-radius:13px;display:grid;place-content:center;color:#fff;font-family:"Sora";font-weight:800;font-size:20px;margin-bottom:18px;box-shadow:0 8px 20px rgba(0,0,0,.15)}
+  .prod h3{font-size:21px;font-weight:800}
+  .prod .subs{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
+  .prod .subs span{font-size:11.5px;color:var(--ink-soft);background:var(--alt);border:1px solid var(--line-2);padding:3px 10px;border-radius:999px;font-family:"Space Mono"}
+  .prod .desc{color:var(--ink-soft);font-size:14px;margin-top:14px;line-height:1.6}
+  .prod .foot{display:flex;align-items:center;justify-content:space-between;margin-top:20px;padding-top:16px;border-top:1px solid var(--line-2)}
+  .prod .foot .med{font-size:11.5px;color:var(--ink-mute);font-family:"Space Mono"}
+  .prod .foot .go{font-family:"Sora";font-weight:700;font-size:13px;color:var(--pc);display:flex;align-items:center;gap:5px;transition:gap .2s}
+  .prod:hover .foot .go{gap:9px}
+
+  /* features */
+  .feats{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+  @media(max-width:900px){.feats{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:560px){.feats{grid-template-columns:1fr}}
+  .feat{background:var(--panel);border:1px solid var(--line);border-radius:15px;padding:22px}
+  .feat .fi{width:42px;height:42px;border-radius:11px;background:color-mix(in srgb,var(--brand) 12%,transparent);color:var(--brand);display:grid;place-content:center;margin-bottom:16px}
+  .feat h4{font-family:"Sora";font-size:16px;font-weight:700}
+  .feat p{color:var(--ink-soft);font-size:13.5px;margin-top:8px;line-height:1.6}
+
+  /* steps */
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;counter-reset:s}
+  @media(max-width:820px){.steps{grid-template-columns:1fr}}
+  .step{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:26px;position:relative}
+  .step .n{font-family:"Space Mono";font-size:12px;color:var(--brand);font-weight:700}
+  .step h4{font-family:"Sora";font-size:18px;font-weight:700;margin-top:10px}
+  .step p{color:var(--ink-soft);font-size:14px;margin-top:8px;line-height:1.6}
+
+  /* cta */
+  .cta{background:linear-gradient(120deg,#3b3ad6,#6d4cf0 55%,#0EA5B7);border-radius:24px;padding:56px 40px;text-align:center;color:#fff;position:relative;overflow:hidden}
+  .cta h2{font-family:"Sora";font-weight:800;font-size:clamp(26px,3.6vw,38px);color:#fff}
+  .cta p{color:rgba(255,255,255,.85);margin:14px auto 26px;max-width:480px;font-size:16px}
+  .cta .btn-white{background:#fff;color:#2b2a8f}
+  .cta .btn-white:hover{transform:translateY(-2px);box-shadow:0 14px 30px rgba(0,0,0,.25)}
+
+  footer{border-top:1px solid var(--line);padding:40px 0;margin-top:20px;color:var(--ink-mute);font-size:13px}
+  .foot-in{display:flex;justify-content:space-between;flex-wrap:wrap;gap:18px;align-items:center}
+  .foot-links{display:flex;gap:20px}
+  .foot-links a:hover{color:var(--ink)}
+
+  .reveal{opacity:0;transform:translateY(22px);transition:opacity .7s cubic-bezier(.2,.7,.2,1),transform .7s cubic-bezier(.2,.7,.2,1)}
+  .reveal.in{opacity:1;transform:none}
+</style>
+
+<nav>
+  <div class="wrap nav-in">
+    <div class="logo"><span class="o"></span>Daou Universe</div>
+    <div class="nlinks">
+      <a href="#products">제품</a>
+      <a href="#features">기능</a>
+      <a href="#how">도입 방법</a>
+    </div>
+    <div class="nav-r">
+      <button class="iconbtn" id="themeBtn" title="테마" aria-label="테마 전환"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
+      <a href="index.html" class="btn btn-primary" style="padding:9px 18px;font-size:13.5px">대시보드 열기</a>
+    </div>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap hero">
+    <div>
+      <div class="badge"><span class="dot"></span>네이버 · 구글 · META · 사람인 · GA4 통합</div>
+      <h1>흩어진 광고 데이터를<br><span class="g">하나의 콘솔</span>로</h1>
+      <p class="lead">사방넷 · 애드콘 · 다우오피스의 광고 성과를 브랜드별로 한눈에. 매체별 광고비부터 가입 전환·CPA까지, 매일 아침 AI가 요약해 드립니다.</p>
+      <div class="hero-cta">
+        <a href="index.html" class="btn btn-primary">대시보드 열기 →</a>
+        <a href="#products" class="btn btn-ghost">제품 살펴보기</a>
+      </div>
+      <div class="hero-meta">
+        <div><b>3</b><span>통합 제품군</span></div>
+        <div><b>7</b><span>세부 브랜드</span></div>
+        <div><b>5</b><span>연동 매체</span></div>
+      </div>
+    </div>
+
+    <div class="preview reveal in" aria-hidden="true">
+      <div class="pv-top"><div class="t"><span class="cdot"></span>사방넷 · 최근 14일</div><div class="live"><i></i>실시간</div></div>
+      <div class="pv-k">
+        <div class="pk"><small>광고비</small><b>₩3,120만</b><span class="up">▲ 8.2%</span></div>
+        <div class="pk"><small>가입</small><b>5,930건</b><span class="up">▲ 11.4%</span></div>
+        <div class="pk"><small>CPA</small><b>₩9,100</b><span class="up">▼ 3.1%</span></div>
+        <div class="pk"><small>CTR</small><b>3.42%</b><span class="up">▲ 0.4%</span></div>
+      </div>
+      <div class="pv-chart">
+        <div class="lbl">일별 광고비 · 가입 추이</div>
+        <svg viewBox="0 0 320 84" width="100%" height="76">
+          <defs><linearGradient id="pg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4F46E5" stop-opacity=".2"/><stop offset="1" stop-color="#4F46E5" stop-opacity="0"/></linearGradient></defs>
+          <path d="M0,62 C34,56 52,36 80,40 C110,44 128,22 160,28 C192,34 210,50 240,42 C270,35 292,16 320,22" fill="none" stroke="#4F46E5" stroke-width="2.6" stroke-linecap="round"/>
+          <path d="M0,62 C34,56 52,36 80,40 C110,44 128,22 160,28 C192,34 210,50 240,42 C270,35 292,16 320,22 L320,84 L0,84 Z" fill="url(#pg)"/>
+          <path d="M0,72 C34,70 52,60 80,63 C110,66 128,54 160,57 C192,60 210,66 240,61 C270,56 292,48 320,52" fill="none" stroke="#16A34A" stroke-width="2" stroke-linecap="round" opacity=".9"/>
+          <circle cx="320" cy="22" r="3.4" fill="#fff" stroke="#4F46E5" stroke-width="2.4"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="media">
+  <div class="wrap media-in">
+    <span class="cap">연동 매체 &amp; 소스</span>
+    <span class="m"><span class="b" style="background:#03C75A"></span>네이버</span>
+    <span class="m"><span class="b" style="background:#4285F4"></span>구글 Ads</span>
+    <span class="m"><span class="b" style="background:#1877F2"></span>META</span>
+    <span class="m"><span class="b" style="background:#1F8CE6"></span>사람인</span>
+    <span class="m"><span class="b" style="background:#E8710A"></span>GA4</span>
+  </div>
+</div>
+
+<section id="products">
+  <div class="wrap">
+    <div class="sec-h reveal">
+      <span class="eb">Products</span>
+      <h2>세 제품, 각각의 대시보드로</h2>
+      <p>제품마다 세부 브랜드로 나눠 따로 확인할 수 있습니다. 카드를 눌러 바로 대시보드로 이동하세요.</p>
+    </div>
+    <div class="prods">
+      <a href="index.html?brand=사방넷" class="prod reveal" style="--pc:var(--sabang)">
+        <div class="pi" style="background:linear-gradient(135deg,#2F6BFF,#5f8dff)">S</div>
+        <h3>사방넷</h3>
+        <div class="subs"><span>사방넷</span><span>사방넷미니</span><span>풀필먼트</span></div>
+        <p class="desc">이커머스 통합관리 서비스의 광고 성과. 네이버·구글 매체의 가입 전환과 CPA를 브랜드별로 추적합니다.</p>
+        <div class="foot"><span class="med">네이버 · 구글</span><span class="go">대시보드 →</span></div>
+      </a>
+      <a href="index.html?brand=애드콘" class="prod reveal" style="--pc:var(--adcon)">
+        <div class="pi" style="background:linear-gradient(135deg,#7C5CF6,#a06bff)">A</div>
+        <h3>애드콘</h3>
+        <div class="subs"><span>애드콘</span><span>엔팩스</span></div>
+        <p class="desc">DAOU 쿠폰 플랫폼과 엔팩스의 퍼포먼스 광고. 파워링크·브랜드검색·PMax까지 캠페인 유형별로 분석합니다.</p>
+        <div class="foot"><span class="med">네이버 · 구글</span><span class="go">대시보드 →</span></div>
+      </a>
+      <a href="index.html?brand=다우오피스" class="prod reveal" style="--pc:var(--daou)">
+        <div class="pi" style="background:linear-gradient(135deg,#0EA5B7,#3bd0df)">O</div>
+        <h3>다우오피스</h3>
+        <div class="subs"><span>다우오피스</span><span>다우오피스HR</span></div>
+        <p class="desc">그룹웨어·HR 서비스의 광고 성과. META·사람인까지 5개 매체와 GA4 전환을 6중 키로 결합해 집계합니다.</p>
+        <div class="foot"><span class="med">네이버·구글·META·사람인·GA4</span><span class="go">대시보드 →</span></div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<section id="features" style="background:var(--alt);border-top:1px solid var(--line);border-bottom:1px solid var(--line)">
+  <div class="wrap">
+    <div class="sec-h reveal">
+      <span class="eb">Features</span>
+      <h2>리포트에 쓰는 시간을 절반으로</h2>
+      <p>매일 반복하던 광고 데이터 취합·정리·분석을 자동화합니다.</p>
+    </div>
+    <div class="feats">
+      <div class="feat reveal">
+        <div class="fi"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 6l-9.5 9.5-5-5L1 18"/><path d="M17 6h6v6"/></svg></div>
+        <h4>실시간 매체 연동</h4>
+        <p>네이버·구글·META·사람인·GA4를 API와 업로드로 자동 취합. 이중입력이 사라집니다.</p>
+      </div>
+      <div class="feat reveal">
+        <div class="fi"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg></div>
+        <h4>브랜드별 분석</h4>
+        <p>제품 → 세부 브랜드 2단계로. 광고비·가입·CPA·CTR을 브랜드마다 따로 봅니다.</p>
+      </div>
+      <div class="feat reveal">
+        <div class="fi"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+        <h4>AI 데일리 코멘트</h4>
+        <p>Gemini가 전일·전주 대비 변화를 짚어 우선순위 있는 액션을 매일 아침 제안합니다.</p>
+      </div>
+      <div class="feat reveal">
+        <div class="fi"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 15l2 2 4-4"/></svg></div>
+        <h4>엑셀 내보내기</h4>
+        <p>통합 RAW·키워드 성과를 한 번에 엑셀로. 기존 리포트 양식 그대로 다운로드.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="how">
+  <div class="wrap">
+    <div class="sec-h reveal">
+      <span class="eb">How it works</span>
+      <h2>연동하고, 보고, 공유하면 끝</h2>
+    </div>
+    <div class="steps">
+      <div class="step reveal"><div class="n">STEP 01</div><h4>계정 연동</h4><p>매체 API 키를 등록하거나 네이버·사람인 리포트를 업로드하면 자동으로 취합됩니다.</p></div>
+      <div class="step reveal"><div class="n">STEP 02</div><h4>브랜드별 확인</h4><p>제품 탭에서 세부 브랜드를 골라 광고비·가입·CPA·CTR과 추이를 실시간으로 확인합니다.</p></div>
+      <div class="step reveal"><div class="n">STEP 03</div><h4>리포트 · 공유</h4><p>AI 코멘트로 요약하고, 엑셀로 내보내 팀·경영진에 바로 공유합니다.</p></div>
+    </div>
+  </div>
+</section>
+
+<section style="padding-top:20px">
+  <div class="wrap">
+    <div class="cta reveal">
+      <span class="eb" style="color:rgba(255,255,255,.8)">Get Started</span>
+      <h2>지금 대시보드를 열어보세요</h2>
+      <p>사방넷·애드콘·다우오피스의 오늘 광고 성과가 이미 준비되어 있습니다.</p>
+      <a href="index.html" class="btn btn-white">대시보드 열기 →</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap foot-in">
+    <div class="logo"><span class="o"></span>Daou Universe</div>
+    <div class="foot-links">
+      <a href="#products">제품</a>
+      <a href="#features">기능</a>
+      <a href="#how">도입 방법</a>
+      <a href="index.html">대시보드</a>
+    </div>
+    <div>© 2026 Daou Universe · 광고 성과 통합 콘솔</div>
+  </div>
+</footer>
+
+<script>
+  const root=document.documentElement;
+  try{const s=localStorage.getItem('du-home-theme');if(s)root.setAttribute('data-theme',s)}catch(e){}
+  document.getElementById('themeBtn').addEventListener('click',()=>{const cur=root.getAttribute('data-theme');const dark=cur?cur==='dark':matchMedia('(prefers-color-scheme:dark)').matches;const nx=dark?'light':'dark';root.setAttribute('data-theme',nx);try{localStorage.setItem('du-home-theme',nx)}catch(e){}});
+  const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{threshold:.12});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+</script>

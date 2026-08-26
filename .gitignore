@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+node_modules/
+.agents/
+.claude/skills/
+skills-lock.json
+scratchpad/
+pipeline/.env

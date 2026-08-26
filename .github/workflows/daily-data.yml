@@ -1,0 +1,61 @@
+name: Daily Daou Hub data
+
+# 매일 오전 9시(KST) = 00:00 UTC 에 시트 RAW → data.json 갱신 후 커밋.
+# 수동 실행도 가능(Actions 탭 → Run workflow).
+on:
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daou-hub-data
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      # ── 필수: 구글시트 RAW ──
+      DAOU_SHEET_ID: ${{ secrets.DAOU_SHEET_ID }}
+      DAOU_SHEET_WORKSHEET: ${{ secrets.DAOU_SHEET_WORKSHEET }}
+      GA4_SERVICE_ACCOUNT_JSON: ${{ secrets.GA4_SERVICE_ACCOUNT_JSON }}
+      # ── 선택: 네이버 키워드 실검색량 ──
+      NAVER1_CUSTOMER_ID: ${{ secrets.NAVER1_CUSTOMER_ID }}
+      NAVER1_API_KEY: ${{ secrets.NAVER1_API_KEY }}
+      NAVER1_SECRET_KEY: ${{ secrets.NAVER1_SECRET_KEY }}
+      # DataLab + 검색 API (성별·연령·추이·콘텐츠수)
+      NAVER_DEV_CLIENT_ID: ${{ secrets.NAVER_DEV_CLIENT_ID }}
+      NAVER_DEV_CLIENT_SECRET: ${{ secrets.NAVER_DEV_CLIENT_SECRET }}
+      # YouTube Data API v3 (영상 순위·썸네일)
+      YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+      DAOU_KEYWORDS: ${{ secrets.DAOU_KEYWORDS }}
+      DAOU_OUR_BRAND: ${{ secrets.DAOU_OUR_BRAND }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install deps
+        run: pip install -r pipeline/requirements.txt
+
+      - name: Build data.json (sheet → data.json; falls back to sample if no keys)
+        run: |
+          cd pipeline
+          python build_data.py
+
+      - name: Commit data.json if changed
+        run: |
+          git config user.name  "daou-hub-bot"
+          git config user.email "actions@users.noreply.github.com"
+          if ! git diff --quiet -- data.json; then
+            git add data.json
+            git commit -m "chore(data): refresh Daou Hub data.json [skip ci]"
+            git push
+          else
+            echo "data.json unchanged"
+          fi

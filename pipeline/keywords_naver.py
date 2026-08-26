@@ -1,0 +1,140 @@
+"""네이버 검색광고 키워드툴(/keywordstool)로 실검색량·경쟁정도·연관키워드를 가져온다.
+
+인증: adcon_report.py 와 동일한 HMAC 서명 방식.
+필요 환경변수: NAVER1_CUSTOMER_ID / NAVER1_API_KEY / NAVER1_SECRET_KEY
+
+키워드툴이 주는 것(실데이터): 월 PC/모바일 검색수, 경쟁정도(compIdx),
+평균 광고노출개수(plAvgDepth), 연관키워드.
+키워드툴이 주지 않는 것(모델 추정으로 보완): 성별·연령·요일·시간대 분포,
+12개월 추이, 콘텐츠 발행량, 광고 경쟁 브랜드 → sample.model_extras 사용.
+CPC 는 키워드툴 미제공 → 경쟁정도 기반 추정.
+"""
+import time
+import hmac
+import hashlib
+import base64
+import requests
+import config as C
+import sample as S
+import providers_youtube as YT
+import providers_naver_extra as NX
+
+BASE = "https://api.searchad.naver.com"
+
+
+def _headers(acc, uri, method="GET"):
+    ts = str(int(time.time() * 1000))
+    msg = f"{ts}.{method}.{uri}"
+    sig = base64.b64encode(
+        hmac.new(str(acc["secret_key"]).encode(), msg.encode(), hashlib.sha256).digest()
+    ).decode()
+    return {"X-Timestamp": ts, "X-API-KEY": str(acc["api_key"]),
+            "X-Customer": str(acc["customer_id"]), "X-Signature": sig,
+            "Content-Type": "application/json"}
+
+
+def _int(v):
+    s = str(v).strip()
+    if "<" in s:      # "< 10"
+        return 9
+    try:
+        return int(float(s.replace(",", "")))
+    except Exception:
+        return 0
+
+
+def _est_cpc(level):
+    return {"낮음": 550, "중간": 1100, "높음": 1650}.get(level, 900)
+
+
+def fetch_keyword(kw, acc, logs=None):
+    """한 키워드 분석. 실패하면 None."""
+    logs = logs if logs is not None else []
+    uri = "/keywordstool"
+    params = {"hintKeywords": kw.replace(" ", ""), "showDetail": "1"}
+    try:
+        r = requests.get(BASE + uri, params=params, headers=_headers(acc, uri), timeout=15)
+        if r.status_code != 200:
+            logs.append(f"[kw] {kw} status={r.status_code}")
+            return None
+        rows = r.json().get("keywordList", []) or []
+    except Exception as e:
+        logs.append(f"[kw] {kw} 오류: {e}")
+        return None
+    if not rows:
+        return None
+
+    norm = kw.replace(" ", "")
+    head = next((x for x in rows if str(x.get("relKeyword", "")).replace(" ", "") == norm), rows[0])
+    pc = _int(head.get("monthlyPcQcCnt"))
+    mob = _int(head.get("monthlyMobileQcCnt"))
+    total = pc + mob
+    if total <= 0:
+        total = 10
+    m_share = (mob / total) if total else .7
+    level = str(head.get("compIdx", "중간")).strip() or "중간"
+    if level not in ("낮음", "중간", "높음"):
+        level = "중간"
+    advertisers = _int(head.get("plAvgDepth")) or (2 if level == "낮음" else 6 if level == "중간" else 11)
+    cpc = _est_cpc(level)
+
+    related = []
+    for x in rows:
+        rk = str(x.get("relKeyword", "")).replace(" ", "")
+        if rk == norm:
+            continue
+        rp = _int(x.get("monthlyPcQcCnt")) + _int(x.get("monthlyMobileQcCnt"))
+        lv = str(x.get("compIdx", "중간")).strip()
+        if lv not in ("낮음", "중간", "높음"):
+            lv = "중간"
+        related.append({"kw": str(x.get("relKeyword", "")).strip(), "v": rp,
+                        "comp": lv, "cpc": _est_cpc(lv)})
+        if len(related) >= 12:
+            break
+    related.sort(key=lambda z: -z["v"])
+    related = related[:8]
+
+    ex = S.model_extras(kw, total, m_share)
+
+    # ── 실데이터 보강 (있으면 모델값을 덮어씀) ──
+    ecpc = NX.estimate_cpc(kw, acc, logs)         # 검색광고 예상 입찰가
+    if ecpc:
+        cpc = ecpc
+    cc = NX.content_count(kw, logs)               # 네이버 검색 API 콘텐츠수
+    dl = NX.datalab(kw, total, m_share, logs) or {}  # DataLab 추이·성별·연령
+    yt = YT.fetch_videos(kw, logs=logs)           # YouTube 영상 순위
+
+    blog = cc if cc is not None else ex["blog"]
+    sat = round(blog / total, 1) if total else 0
+    trend = dl.get("trend", ex["trend"])
+    male = dl.get("male", ex["male"])
+    female = dl.get("female", ex["female"])
+    age = dl.get("age", ex["age"])
+    youtube = yt if yt is not None else S.model_youtube(kw)
+
+    for b in ex["brands"]:
+        b["bid"] = cpc if b["us"] else round(cpc * 0.9)
+
+    return {"total": total, "pc": pc, "mob": mob, "mShare": round(m_share, 4),
+            "advertisers": advertisers, "comp": level, "cpc": cpc,
+            "blog": blog, "sat": sat, "trend": trend,
+            "male": male, "female": female, "age": age,
+            "dow": ex["dow"], "hourP": ex["hourP"], "related": related,
+            "brands": ex["brands"], "youtube": youtube}
+
+
+def fetch_keywords(keywords, logs=None):
+    """설정된 키워드 목록을 실검색량으로. 계정 없으면 빈 딕셔너리."""
+    logs = logs if logs is not None else []
+    acc = C.naver_account()
+    if not acc:
+        logs.append("[kw] NAVER 계정 없음 → 키워드 실검색량 스킵")
+        return {}
+    out = {}
+    for kw in keywords:
+        d = fetch_keyword(kw, acc, logs)
+        if d:
+            out[kw] = d
+        time.sleep(0.3)  # 레이트리밋 여유
+    logs.append(f"[kw] 실검색량 {len(out)}/{len(keywords)}개")
+    return out

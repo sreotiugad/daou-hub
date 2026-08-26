@@ -1,0 +1,28 @@
+# StyleSeed — Design Lock
+<!-- Selections persist here. This file cannot waive StyleSeed core invariants. -->
+- App domain: saas
+- Surface: desktop-web
+- Surface adapter: product-ui
+- Page type: dashboard
+- Output grammar: operations-console
+- Grammar path: built-in:engine/RULESETS.md
+- Grammar fallback: operations-console
+- Reference confidence: n/a
+- Brand recipe: enterprise-workbench
+- Palette recipe: cobalt-instrument
+- Key color: #1D4ED8
+- Palette character: balanced
+- Palette mode: light
+- Palette harmony: auto
+- Surface temperature: cool
+- Aesthetic profile: none
+- Skin: custom
+- Primary action: #1D4ED8
+- Font: Pretendard (fallback: Noto Sans KR, system-ui)
+- Radius: soft
+- Elevation: light=tonal grouping + hairline borders · dark=tonal ramp + hairline
+- Density: compact
+- Motion: Spring restrained
+- Imagery/data role: data-first; charts only to support a decision
+- Signature move: one focal element per view (home=single search, report=brand KPI band, keyword=search-volume headline)
+- Locked: 2026-08-24
