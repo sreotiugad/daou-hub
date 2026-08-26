@@ -23,6 +23,14 @@ import keywords_naver
 import sample as S
 
 
+def _load_existing():
+    try:
+        with open(C.OUT_PATH, encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+
 def main():
     logs = []
 
@@ -32,6 +40,12 @@ def main():
         rep = aggregate.build_report(rows)
         live_report = True
     else:
+        # 시트 미연동 상태. 이미 커밋된 실데이터가 있으면 덮어쓰지 않고 보존한다.
+        existing = _load_existing()
+        if existing and existing.get("source") == "live":
+            print("=== Daou Hub data.json ===")
+            print("  [report] 시트 미연동 → 기존 LIVE data.json 보존 (덮어쓰지 않음)")
+            return
         rep = S.build_sample_report()
         live_report = False
     logs.append(f"[report] {'LIVE(시트)' if live_report else 'SAMPLE'} · 세부브랜드 {len(rep['report']['subs'])}종")
