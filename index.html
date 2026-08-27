@@ -180,6 +180,30 @@
   .sec.on{border-color:color-mix(in srgb,var(--primary) 40%,var(--border-soft));background:var(--primary-weak);color:var(--fg)}
   .sec.on .sd{background:var(--primary)}
   .sec.off{color:var(--muted);opacity:.62}.sec.off .sd{background:var(--muted)}
+  .cx-btn{border:1px solid var(--border);background:var(--surface);color:var(--fg);font-weight:600;font-size:13px;padding:9px 16px;border-radius:var(--r-sm);cursor:pointer}
+  .cx-btn:hover{border-color:var(--primary);color:var(--primary)}
+  .cx-panel{padding:16px 18px}
+  .cx-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:8px 0;border-bottom:1px solid var(--border-soft)}
+  .cx-row:last-child{border-bottom:0}
+  .cx-lab{font-size:12px;font-weight:600;color:var(--muted);width:76px;flex:none}
+  .cxseg{display:flex;gap:4px;flex-wrap:wrap;background:var(--bg);padding:3px;border-radius:var(--r-sm);border:1px solid var(--border-soft)}
+  .cxseg.wrap{flex-wrap:wrap}
+  .cxseg button{border:0;background:transparent;color:var(--muted);font-size:12.5px;font-weight:500;padding:6px 12px;border-radius:5px;cursor:pointer;transition:all .1s}
+  .cxseg button:hover{color:var(--fg)}
+  .cxseg button.on{background:var(--primary);color:var(--primary-fg);font-weight:600}
+  .cxseg.sm button{padding:5px 9px;font-size:11.5px}
+  .cx-gran{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--muted)}
+  .cx-sel{border:1px solid var(--border);background:var(--surface);color:var(--fg);font-size:12.5px;padding:7px 10px;border-radius:var(--r-sm);cursor:pointer}
+  #cxTable table{width:100%;border-collapse:collapse;font-size:13px}
+  #cxTable th{text-align:left;font-weight:600;color:var(--muted);font-size:11.5px;padding:9px 12px;border-bottom:1.5px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none}
+  #cxTable th.r{text-align:right}
+  #cxTable th.sorted{color:var(--primary)}
+  #cxTable td{padding:9px 12px;border-bottom:1px solid var(--border-soft);white-space:nowrap}
+  #cxTable td.r{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+  #cxTable tr:hover td{background:var(--primary-weak)}
+  #cxTable tr.tot td{font-weight:700;border-top:1.5px solid var(--border);border-bottom:0;background:var(--bg)}
+  #cxTable tr.tot td:first-child{color:var(--muted)}
+  #cxTable .dimc{font-weight:500;color:var(--fg)}
   .k2{grid-template-columns:1fr 1fr}
   .k21{grid-template-columns:1.5fr 1fr}
   @media(max-width:900px){.k2,.k21{grid-template-columns:1fr}}
@@ -213,6 +237,7 @@
     <nav class="an-tabs">
       <button data-go="home" class="on">홈</button>
       <button data-go="report">리포트</button>
+      <button data-go="custom">커스텀 리포트</button>
       <button data-go="keyword">경쟁 분석</button>
     </nav>
     <div class="an-r">
@@ -313,6 +338,29 @@
     <div class="card"><div class="card-h"><h3>광고 경쟁 현황</h3><span class="hint">추정·상위노출</span></div><div class="card-b" style="overflow-x:auto"><div id="advTable"></div></div></div>
   </div>
   <div class="card" style="margin-top:14px"><div class="card-h"><h3>YouTube 콘텐츠 순위</h3><span class="hint">이 키워드 상위 영상</span></div><div class="card-b"><div id="ytList"></div></div></div>
+</main>
+
+<!-- CUSTOM REPORT -->
+<main id="v-custom" class="view" hidden>
+  <div class="rep-head">
+    <div><h1 style="font-size:21px;font-weight:700">커스텀 리포트</h1><div class="repsub" style="color:var(--muted);font-size:13px;margin-top:4px">차원과 지표를 직접 골라 표를 조립하세요 · 네이버·메타 열 설정처럼</div></div>
+    <button id="cxExport" class="cx-btn">CSV 내보내기</button>
+  </div>
+  <div class="card cx-panel">
+    <div class="cx-row"><span class="cx-lab">행 (차원)</span>
+      <div class="seg cxseg" id="cxDims"><button data-dim="기간" class="on">기간</button><button data-dim="서비스" class="on">서비스</button><button data-dim="매체">매체</button><button data-dim="캠페인유형">캠페인유형</button></div>
+      <span class="cx-gran" id="cxGranWrap">단위<div class="seg sm cxseg" id="cxGran"><button data-g="일">일</button><button data-g="주">주</button><button data-g="월" class="on">월</button></div></span>
+    </div>
+    <div class="cx-row"><span class="cx-lab">열 (지표)</span>
+      <div class="seg cxseg wrap" id="cxMets"><button data-m="cost" class="on">광고비</button><button data-m="imp">노출</button><button data-m="click">클릭</button><button data-m="signup" class="on">가입</button><button data-m="cpa" class="on">CPA</button><button data-m="ctr">CTR</button><button data-m="cpc">CPC</button><button data-m="cvr">전환율</button></div>
+    </div>
+    <div class="cx-row"><span class="cx-lab">필터</span>
+      <select id="cxGroup" class="cx-sel"><option value="">전체 브랜드</option></select>
+      <select id="cxMedia" class="cx-sel"><option value="">전체 매체</option><option value="네이버">네이버</option><option value="구글">구글</option></select>
+      <span class="cx-gran">기간<div class="seg sm cxseg" id="cxPeriod"><button data-n="30">30D</button><button data-n="90">90D</button><button data-n="365" class="on">1년</button></div></span>
+    </div>
+  </div>
+  <div class="card" style="margin-top:14px"><div class="card-h"><h3 id="cxTitle">커스텀 표</h3><span class="hint mono" id="cxCount"></span></div><div class="card-b" style="overflow-x:auto"><div id="cxTable"></div></div></div>
 </main>
 
 <div class="tip" id="tip"></div>
@@ -433,13 +481,72 @@ const DUKeyword=(function(){
   return {render,setKw(kw){current=kw;document.getElementById('kwInput').value=kw}};
 })();
 
+/* ===================== CUSTOM REPORT (피벗) ===================== */
+const DUCustom=(function(){
+  const DIMS={"기간":"d","서비스":"svc","매체":"media","캠페인유형":"ct"};
+  const MET={
+    cost:{label:"광고비",fmt:"won"}, imp:{label:"노출",fmt:"num"}, click:{label:"클릭",fmt:"num"},
+    signup:{label:"가입",fmt:"num1"},
+    cpa:{label:"CPA",fmt:"won",calc:s=>s.signup>0?s.cost/s.signup:0},
+    ctr:{label:"CTR",fmt:"pct",calc:s=>s.imp>0?s.click/s.imp*100:0},
+    cpc:{label:"CPC",fmt:"won",calc:s=>s.click>0?s.cost/s.click:0},
+    cvr:{label:"전환율",fmt:"pct",calc:s=>s.click>0?s.signup/s.click*100:0}
+  };
+  let st={dims:["기간","서비스"],gran:"월",mets:["cost","signup","cpa"],group:"",media:"",N:365,sort:null,dir:-1};
+  let _synth=null;
+  const cma=n=>Math.round(n).toLocaleString();
+  const wonf=n=>"₩"+Math.round(n).toLocaleString();
+  const fmtV=(m,v)=>{const f=MET[m].fmt;return f==="won"?wonf(v):f==="pct"?v.toFixed(2)+"%":f==="num1"?(Math.round(v*10)/10).toLocaleString():cma(v)};
+  function facts(){const F=window.DAOU_DATA&&window.DAOU_DATA.report&&window.DAOU_DATA.report.facts;if(F&&F.length)return F;if(!_synth)_synth=synth();return _synth}
+  function synth(){const SB=[["사방넷","사방넷"],["사방넷미니","사방넷"],["풀필먼트","사방넷"],["엔팩스","애드콘"],["애드콘","애드콘"],["다우오피스","다우오피스"],["다우오피스HR","다우오피스"]];const CT=["브랜드검색","파워링크","쇼핑검색","구글검색","실적최대화","동영상"];const out=[];const end=new Date(2026,7,24);for(let i=0;i<365;i++){const dt=new Date(end);dt.setDate(end.getDate()-i);const ds=dt.toISOString().slice(0,10);for(const[svc,grp]of SB){const r=MUL(H(svc+ds));for(const media of["네이버","구글"]){for(const ct of CT){if(r()<0.45)continue;const cost=Math.round((5000+r()*300000));const click=Math.max(1,Math.round(cost/(400+r()*500)));const imp=Math.round(click/(0.02+r()*0.05));const signup=Math.round(click/(8+r()*30)*10)/10;out.push({d:ds,svc,grp,media,ct,imp,click,cost,signup})}}}}return out}
+  function maxD(F){let m="";for(const r of F)if(r.d>m)m=r.d;return m}
+  function cutoff(F){const m=maxD(F);if(!m)return"";const d=new Date(m);d.setDate(d.getDate()-(st.N-1));return d.toISOString().slice(0,10)}
+  function bkt(d){if(st.gran==="일")return d;if(st.gran==="월")return d.slice(0,7);const dt=new Date(d),wd=(dt.getDay()+6)%7;dt.setDate(dt.getDate()-wd);return dt.toISOString().slice(0,10)}
+  function dimVal(r,dm){return dm==="기간"?bkt(r.d):r[DIMS[dm]]}
+  function metVal(m,s){const d=MET[m];return d.calc?d.calc(s):s[m]}
+  function build(){const F=facts(),co=cutoff(F);const rows=F.filter(r=>r.d>=co&&(!st.group||r.grp===st.group)&&(!st.media||r.media===st.media));const gr={};for(const r of rows){const k=st.dims.map(dm=>dimVal(r,dm)).join("");let g=gr[k];if(!g){g={_k:st.dims.map(dm=>dimVal(r,dm)),cost:0,imp:0,click:0,signup:0};gr[k]=g}g.cost+=r.cost;g.imp+=r.imp;g.click+=r.click;g.signup+=r.signup}
+    let list=Object.values(gr);const sc=st.sort;
+    if(sc&&DIMS[sc]!==undefined){const idx=st.dims.indexOf(sc);list.sort((a,b)=>{const x=a._k[idx],y=b._k[idx];return st.dir*(x<y?-1:x>y?1:0)})}
+    else{const m0=sc&&MET[sc]?sc:st.mets[0];list.sort((a,b)=>st.dir*(metVal(m0,a)-metVal(m0,b)))}
+    const tot=list.reduce((t,g)=>{t.cost+=g.cost;t.imp+=g.imp;t.click+=g.click;t.signup+=g.signup;return t},{cost:0,imp:0,click:0,signup:0});
+    return{list,tot}}
+  function populate(){const F=facts();const gs=[];for(const r of F)if(gs.indexOf(r.grp)<0)gs.push(r.grp);const sel=document.getElementById('cxGroup');if(sel.options.length<=1)gs.forEach(g=>{const o=document.createElement('option');o.value=g;o.textContent=g;sel.appendChild(o)})}
+  function syncSeg(id,active){document.querySelectorAll('#'+id+' button').forEach(b=>{const on=active(b);b.classList.toggle('on',on)})}
+  function render(){
+    populate();
+    syncSeg('cxDims',b=>st.dims.includes(b.dataset.dim));
+    syncSeg('cxMets',b=>st.mets.includes(b.dataset.m));
+    syncSeg('cxGran',b=>b.dataset.g===st.gran);
+    syncSeg('cxPeriod',b=>+b.dataset.n===st.N);
+    document.getElementById('cxGranWrap').style.display=st.dims.includes('기간')?'':'none';
+    const{list,tot}=build();
+    const th=st.dims.map(dm=>`<th data-sort="${dm}" class="${st.sort===dm?'sorted':''}">${dm}</th>`).join('')
+            +st.mets.map(m=>`<th class="r ${st.sort===m?'sorted':''}" data-sort="${m}">${MET[m].label}</th>`).join('');
+    const body=list.map(g=>st.dims.map((dm,i)=>`<td class="dimc">${g._k[i]}</td>`).join('')+st.mets.map(m=>`<td class="r">${fmtV(m,metVal(m,g))}</td>`).join('')).map(r=>`<tr>${r}</tr>`).join('');
+    const totr=st.dims.map((dm,i)=>`<td>${i===0?'합계 ('+list.length+')':''}</td>`).join('')+st.mets.map(m=>`<td class="r">${fmtV(m,metVal(m,tot))}</td>`).join('');
+    document.getElementById('cxTable').innerHTML=`<table><thead><tr>${th}</tr></thead><tbody>${body}<tr class="tot">${totr}</tr></tbody></table>`;
+    document.getElementById('cxCount').textContent=list.length+'행 · 최근 '+st.N+'일';
+    document.getElementById('cxTitle').textContent=st.dims.join(' × ')+' — '+st.mets.map(m=>MET[m].label).join('·');
+    document.querySelectorAll('#cxTable th[data-sort]').forEach(h=>h.addEventListener('click',()=>{const c=h.dataset.sort;if(st.sort===c)st.dir*=-1;else{st.sort=c;st.dir=DIMS[c]!==undefined?1:-1}render()}));
+  }
+  function csv(){const{list,tot}=build();const head=[...st.dims,...st.mets.map(m=>MET[m].label)];const lines=[head.join(',')];list.forEach(g=>{const row=[...g._k,...st.mets.map(m=>Math.round(metVal(m,g)*10)/10)];lines.push(row.join(','))});const blob=new Blob(["﻿"+lines.join('\n')],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='daouhub_custom_report.csv';a.click()}
+  document.getElementById('cxDims').addEventListener('click',e=>{if(e.target.tagName!=='BUTTON')return;const d=e.target.dataset.dim,i=st.dims.indexOf(d);if(i<0)st.dims.push(d);else if(st.dims.length>1)st.dims.splice(i,1);render()});
+  document.getElementById('cxMets').addEventListener('click',e=>{if(e.target.tagName!=='BUTTON')return;const m=e.target.dataset.m,i=st.mets.indexOf(m);if(i<0)st.mets.push(m);else if(st.mets.length>1)st.mets.splice(i,1);render()});
+  document.getElementById('cxGran').addEventListener('click',e=>{if(e.target.tagName!=='BUTTON')return;st.gran=e.target.dataset.g;render()});
+  document.getElementById('cxPeriod').addEventListener('click',e=>{if(e.target.tagName!=='BUTTON')return;st.N=+e.target.dataset.n;render()});
+  document.getElementById('cxGroup').addEventListener('change',e=>{st.group=e.target.value;render()});
+  document.getElementById('cxMedia').addEventListener('change',e=>{st.media=e.target.value;render()});
+  document.getElementById('cxExport').addEventListener('click',csv);
+  return {render};
+})();
+
 /* ===================== SHELL ===================== */
 (function(){
-  const views={home:document.getElementById('v-home'),report:document.getElementById('v-report'),keyword:document.getElementById('v-keyword')};
+  const views={home:document.getElementById('v-home'),report:document.getElementById('v-report'),custom:document.getElementById('v-custom'),keyword:document.getElementById('v-keyword')};
   let cur='home';
-  function show(v){cur=v;for(const k in views)views[k].hidden=(k!==v);document.querySelectorAll('.an-tabs button').forEach(b=>b.classList.toggle('on',b.dataset.go===v));if(v==='report')DUReport.render();if(v==='keyword')DUKeyword.render();window.scrollTo(0,0)}
+  function show(v){cur=v;for(const k in views)views[k].hidden=(k!==v);document.querySelectorAll('.an-tabs button').forEach(b=>b.classList.toggle('on',b.dataset.go===v));if(v==='report')DUReport.render();if(v==='custom')DUCustom.render();if(v==='keyword')DUKeyword.render();window.scrollTo(0,0)}
   // Load real data snapshot (built daily from the Google Sheet RAW → data.json). Falls back to demo data when absent.
-  fetch('data.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{if(!d)return;window.DAOU_DATA=d;const e=document.getElementById('envPill');if(e)e.innerHTML='<b></b>'+(d.source==='live'?'실데이터 연동':'데모 데이터');if(cur==='report')DUReport.render();if(cur==='keyword')DUKeyword.render()}).catch(()=>{});
+  fetch('data.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{if(!d)return;window.DAOU_DATA=d;const e=document.getElementById('envPill');if(e)e.innerHTML='<b></b>'+(d.source==='live'?'실데이터 연동':'데모 데이터');if(cur==='report')DUReport.render();if(cur==='custom')DUCustom.render();if(cur==='keyword')DUKeyword.render()}).catch(()=>{});
   document.querySelectorAll('[data-go]').forEach(el=>el.addEventListener('click',()=>show(el.dataset.go)));
   document.querySelectorAll('[data-brand]').forEach(el=>el.addEventListener('click',()=>{DUReport.setBrand(el.dataset.brand);show('report')}));
   function hs(){const v=document.getElementById('homeSearch').value.trim();if(v){DUKeyword.setKw(v);show('keyword')}}

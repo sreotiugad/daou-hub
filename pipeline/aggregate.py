@@ -85,8 +85,25 @@ def build_report(rows, days=None):
         if gsubs:
             brands[g] = {"subs": gsubs}
 
+    # facts: 커스텀 리포트(피벗)용 상세 팩트 — 날짜×서비스×매체×캠페인유형
+    axisset = set(axis)
+    fmap = {}
+    for r in rows:
+        sub = r["service"]
+        if sub not in C.BRAND_MAP or r["date"] not in axisset:
+            continue
+        key = (r["date"], sub, r["media"], r["camptype"])
+        f = fmap.setdefault(key, {"imp": 0.0, "click": 0.0, "cost": 0.0, "signup": 0.0})
+        f["imp"] += r["imp"]; f["click"] += r["click"]
+        f["cost"] += r["cost"]; f["signup"] += r["signup"]
+    facts = [{
+        "d": k[0], "svc": k[1], "grp": C.BRAND_MAP[k[1]][0], "media": k[2], "ct": k[3],
+        "imp": round(v["imp"]), "click": round(v["click"]),
+        "cost": round(v["cost"]), "signup": round(v["signup"], 1),
+    } for k, v in fmap.items()]
+
     return {
         "period": {"start": axis[0], "end": axis[-1], "days": days, "dates": axis},
-        "report": {"brands": brands, "subs": out_subs},
+        "report": {"brands": brands, "subs": out_subs, "facts": facts},
         "_present": sorted(present),
     }
