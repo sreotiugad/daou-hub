@@ -1,0 +1,38 @@
+{
+  "_설명": "이 파일을 accounts.json 으로 복사(또는 내용을 GitHub Secret DAOU_AD_ACCOUNTS 에 JSON으로) 붙여넣어라. accounts.json 은 .gitignore 로 커밋되지 않는다.",
+  "defaults": { "markup": 0.15, "vat": 0.10 },
+
+  "naver": [
+    {
+      "label": "사방넷-네이버",
+      "customer_id": "1234567",
+      "api_key": "010000000000....",
+      "secret_key": "AQAAAAA....",
+      "service": "사방넷",
+      "markup": 0.15,
+      "vat": 0.10,
+      "service_rules": [
+        { "contains": "미니", "service": "사방넷미니" },
+        { "contains": "풀필", "service": "풀필먼트" }
+      ]
+    },
+    {
+      "label": "뿌리오-네이버",
+      "customer_id": "7654321",
+      "api_key": "010000000000....",
+      "secret_key": "AQAAAAA....",
+      "service": "뿌리오"
+    }
+  ],
+
+  "google": [
+    {
+      "label": "사방넷-구글",
+      "customer_id": "123-456-7890",
+      "service": "사방넷",
+      "service_rules": [
+        { "contains": "미니", "service": "사방넷미니" }
+      ]
+    }
+  ]
+}

@@ -17,6 +17,8 @@ from datetime import datetime, timezone
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import config as C
+import bq_store
+import raw_store
 import sheet_source
 import aggregate
 import keywords_naver
@@ -34,8 +36,8 @@ def _load_existing():
 def main():
     logs = []
 
-    # 1) 광고 리포트: 시트 RAW → 집계 (없으면 샘플)
-    rows = sheet_source.read_rows(logs)
+    # 1) 광고 리포트: BigQuery → raw/ 폴더 → 구글시트 → 샘플 순
+    rows = bq_store.read_rows(logs) or raw_store.read_rows(logs) or sheet_source.read_rows(logs)
     if rows:
         rep = aggregate.build_report(rows)
         live_report = True

@@ -1,4 +1,8 @@
-# Daou Hub data 파이프라인 (시트 → data.json)
+# Daou Hub data 파이프라인 (광고 API → raw/ → data.json)
 gspread>=6.0
 google-auth>=2.0
 requests>=2.28
+# 구글애즈 수집(선택). 구글 계정 안 쓰면 없어도 됨(수집기가 자동 스킵).
+google-ads>=24.0
+# BigQuery RAW 창고(선택). BQ_DATASET 없으면 raw/ 폴더로 폴백.
+google-cloud-bigquery>=3.0

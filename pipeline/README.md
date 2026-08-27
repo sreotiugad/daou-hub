@@ -1,73 +1,97 @@
-# Daou Hub — 데이터 연결 가이드
+# Daou Hub — 데이터 파이프라인 가이드
 
-정적 프론트(`daou-universe/index.html`)는 광고 API를 직접 부르지 않는다.
-무거운 수집은 하루 1번만 돌고 결과(RAW)는 **구글시트**에 누적되며,
-파이프라인이 그 시트를 읽어 **`daou-universe/data.json`** 을 만든다.
-프론트는 `data.json` 만 읽으므로 1년치도 즉시 렌더된다.
+정적 프론트(`index.html`)는 광고 API를 직접 부르지 않는다. 무거운 수집은
+**매일 아침 9시(KST)에 GitHub Actions**가 대신 돌린다. 네가 "리포트 다운로드"를
+누르면 API들이 조합해 raw를 만들어 주던 그 과정을, 코드가 자동으로 한다.
 
 ```
-매체 API (기존 리포트 도구)  ──append──▶  📊 구글시트 RAW  ──build_data──▶  data.json  ──fetch──▶  🖥️ Daou Hub
-   (adcon_report 등, 키 필요)                (누적 원장)         (매일 9시)        (CDN)          (index.html)
+매일 09:00 KST  (GitHub Actions 크론)
+  ① ingest.py    네이버·구글 광고 API 호출 → 표준 raw 행
+                 (계정·마크업·서비스분류는 accounts.json / DAOU_AD_ACCOUNTS)
+  ② 창고 적재     BigQuery 테이블 ads_raw 에 누적  (BQ 미설정이면 raw/ 폴더)
+  ③ build_data   창고 → 집계 → data.json 스냅샷
+  ④ commit/push  data.json 커밋 → Vercel 자동 재배포 (서버 연산 0)
 ```
 
-`data.json` 이 없거나 키가 없으면 프론트/파이프라인 모두 **자동 샘플(데모)** 로 동작한다.
-→ 키가 없어도 사이트는 뜨고, 키를 넣으면 실데이터로 바뀐다. (우상단 뱃지: 데모/실데이터)
+키/계정이 없으면 파이프라인은 **기존 data.json을 보존**하고, 아무것도 없으면
+샘플(데모)로 동작한다. 우상단 뱃지: 데모 / 실데이터.
 
-## 내일 아침 — 이것만 채우면 됨
+## 창고 선택 — BigQuery 권장
 
-`pipeline/.env.example` 참고. 로컬은 `.env`, 배포는 GitHub Actions Secrets 에 등록.
+브랜드가 늘고(사방넷·애드콘·다우오피스·뿌리오…) 광고 raw + 키워드 raw를 함께
+누적하므로 **BigQuery**가 맞다. 무료 티어(저장 10GB + 쿼리 1TB/월)로 충분.
+BQ를 설정하지 않으면 저장소의 `raw/` 폴더(CSV 누적)로 자동 폴백한다.
 
-| 환경변수 | 용도 | 필수 |
-|---|---|---|
-| `DAOU_SHEET_ID` | RAW 누적 스프레드시트 ID | ✅ |
-| `GA4_SERVICE_ACCOUNT_JSON` | 서비스계정 JSON (시트에 편집자로 공유) | ✅ |
-| `DAOU_SHEET_WORKSHEET` | RAW 탭 이름 (기본 `RAW`) | – |
-| `NAVER1_CUSTOMER_ID/API_KEY/SECRET_KEY` | 검색광고: 검색량·경쟁·연관·예상CPC | 선택 |
-| `NAVER_DEV_CLIENT_ID/SECRET` | DataLab(성별·연령·추이) + 검색 API(콘텐츠수) | 선택 |
-| `YOUTUBE_API_KEY` | YouTube 영상 순위·썸네일 | 선택 |
-| `DAOU_KEYWORDS` | 분석할 키워드(쉼표) | 선택 |
+읽기 우선순위: **BigQuery → raw/ 폴더 → 구글시트 → 샘플**
 
-> 키워드 분석 실데이터 소스 정리: **검색량·경쟁·연관·예상CPC** = 검색광고 키 /
-> **성별·연령·추이·콘텐츠수** = 네이버 개발자앱(DataLab·검색) / **영상 순위** = YouTube.
-> **시간대별·경쟁 광고순위**는 공개 API가 없어 모델 추정으로 표시된다.
+## 설정 — 내일 아침 이것만
 
-> RAW 를 시트에 **적재**하는 매체 API 키(GADS_*, NAVER2_*, META_* 등)는
-> 그 수집을 담당하는 기존 도구(`adcon_report.py` 등)에 넣는다. 이 파이프라인은 시트를 **읽기**만 한다.
+로컬은 `.env` + `pipeline/accounts.json`, 배포는 GitHub Actions Secrets.
+
+### 1) 광고 계정·사업규칙 (`accounts.json` 또는 Secret `DAOU_AD_ACCOUNTS`)
+`pipeline/accounts.example.json`을 복사해 채운다. 계정별로:
+- `service` — 이 계정이 태우는 세부브랜드(사방넷/애드콘/…)
+- `markup`, `vat` — 광고비(마크업·VAT 포함) 환산율 (기본 0.15 / 0.10)
+- `service_rules` — 한 계정이 여러 세부브랜드면 캠페인명으로 분류
+- 네이버: `customer_id`, `api_key`, `secret_key`
+- 구글: `customer_id` (OAuth 공통키는 아래 env)
+
+### 2) 구글애즈 공통 OAuth (Secrets)
+`GOOGLE_ADS_DEVELOPER_TOKEN`, `GOOGLE_ADS_CLIENT_ID`, `GOOGLE_ADS_CLIENT_SECRET`,
+`GOOGLE_ADS_REFRESH_TOKEN`, (MCC면) `GOOGLE_ADS_LOGIN_CUSTOMER_ID`
+
+### 3) BigQuery 창고 (Secrets)
+`BQ_DATASET`(예: `daou_hub`), (선택) `BQ_ADS_TABLE`(기본 `ads_raw`), `BQ_PROJECT`,
+그리고 `GA4_SERVICE_ACCOUNT_JSON`(서비스계정 JSON). 서비스계정에
+**BigQuery Data Editor + BigQuery Job User** 역할을 준다.
+
+### 4) 키워드 실데이터 (선택, Secrets)
+`NAVER1_*`(검색량·경쟁·연관·CPC), `NAVER_DEV_*`(성별·연령·추이·콘텐츠수),
+`YOUTUBE_API_KEY`(영상 순위·썸네일), `DAOU_KEYWORDS`.
+
+## BigQuery 처음 세팅 (5단계)
+
+1. Google Cloud 콘솔 → 프로젝트 선택/생성 → **결제 사용 설정**(무료 티어라도 카드 필요, 과금 거의 0).
+2. **BigQuery API** 사용 설정.
+3. BigQuery → 데이터셋 만들기 → 이름 `daou_hub`, 위치 `asia-northeast3(서울)`.
+4. IAM → 서비스계정(`daou-hub-reader@…`)에 **BigQuery 데이터 편집자** + **BigQuery 작업 사용자** 역할 부여.
+5. GitHub Secret `BQ_DATASET=daou_hub`, `GA4_SERVICE_ACCOUNT_JSON`=서비스계정 JSON 등록.
+   → 테이블 `ads_raw`는 파이프라인이 자동 생성한다.
 
 ## 로컬 실행
 
 ```bash
 pip install -r pipeline/requirements.txt
-cd pipeline && python build_data.py     # → ../daou-universe/data.json
+cd pipeline
+python ingest.py --sample --backfill 3   # 키 없이 배선 검증(더미 raw 생성)
+python ingest.py --backfill 1            # 어제치 실제 수집(계정 설정 시)
+python ingest.py --backfill 400          # 최초 1년치 백필
+python build_data.py                     # 창고 → ../data.json
 ```
 
-## 자동화 (이미 세팅됨)
+## 새 브랜드 추가
 
-`.github/workflows/daily-data.yml` 이 **매일 09:00 KST** 에 `build_data.py` 를 돌려
-`data.json` 을 갱신·커밋한다. GitHub Secrets 에 위 값만 넣으면 끝.
-수동 실행: Actions 탭 → *Daily Daou Hub data* → Run workflow.
-
-## RAW 를 시트에 적재하는 쪽 연결
-
-기존 리포트 도구가 매체에서 뽑은 표준 행을 `sheet_writer.append_raw(rows)` 로 넘기면 된다.
-표준 행: `{service, media, camptype, date(YYYY-MM-DD), imp, click, cost, signup}`
-(시트 헤더가 이미 `서비스/매체/캠페인유형/날짜/노출수/클릭수/광고비(마크업포함,VAT별도)/가입` 형식이면 그대로 읽힌다.
-다르면 `.env` 의 `COL_*` 로 매핑.)
+`config.py`의 `BRAND_MAP` / `GROUP_SUBS` / `GROUPS`에 한 줄 추가하고
+(예: 뿌리오), `accounts.json`에 그 브랜드 광고계정을 넣으면 끝.
+프론트 탭도 그 그룹을 자동 인식한다(데이터 있는 세부브랜드만 노출).
 
 ## 파일
 
 | 파일 | 역할 |
 |---|---|
-| `config.py` | 브랜드 계층·컬럼 매핑·env 로딩 |
-| `sheet_source.py` | 시트 RAW → 표준 행 |
-| `aggregate.py` | 표준 행 → report(일별 배열·매체·캠페인 비율) |
-| `keywords_naver.py` | 네이버 키워드툴 실검색량·경쟁·연관 |
-| `sample.py` | 샘플 data.json + 키워드 보조지표 모델러 |
-| `build_data.py` | 오케스트레이터 → `data.json` |
-| `sheet_writer.py` | 표준 행 → 시트 RAW append (수집 도구용) |
+| `ingest.py` | 오케스트레이터: 광고 API → 표준행 → 창고(BQ/raw) |
+| `ingest_naver_ads.py` | 네이버 검색광고 수집(캠페인·일자 실적) |
+| `ingest_google_ads.py` | 구글애즈 수집(GAQL) |
+| `ad_config.py` | 계정·마크업·서비스 규칙 로더 |
+| `bq_store.py` | BigQuery 창고(적재·조회) |
+| `raw_store.py` | raw/ 폴더 창고(BQ 폴백) |
+| `sheet_source.py` | 구글시트 읽기(추가 폴백) + 표준행 변환 |
+| `aggregate.py` | 표준행 → report(일별 집계) |
+| `build_data.py` | 창고 → 집계 → data.json (실데이터 보존 가드) |
+| `keywords_naver.py` | 네이버 키워드툴 → 경쟁 분석 |
+| `sample.py` | 키 없을 때 샘플 데이터 |
 
 ## 배포 (Vercel)
 
-`daou-universe/` 를 정적 배포하면 됨. Vercel Root Directory = `daou-universe`.
-`index.html`(Hub)이 진입점, `data.json` 을 같은 경로에서 읽는다.
-`landing.html` 은 소개용 마케팅 페이지(선택).
+저장소 루트를 그대로 정적 배포. `index.html`(Hub)이 진입점, 같은 경로의
+`data.json`을 읽는다. Root Directory 설정 불필요.

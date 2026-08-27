@@ -18,7 +18,20 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      # ── 필수: 구글시트 RAW ──
+      # ── 광고 RAW 자동 수집(네이버/구글 광고 API) ──
+      #   accounts.json 대신 이 시크릿(JSON)로 계정·마크업·서비스 매핑을 준다.
+      DAOU_AD_ACCOUNTS: ${{ secrets.DAOU_AD_ACCOUNTS }}
+      #   구글애즈 공통 OAuth(계정별 customer_id 는 DAOU_AD_ACCOUNTS 안에)
+      GOOGLE_ADS_DEVELOPER_TOKEN: ${{ secrets.GOOGLE_ADS_DEVELOPER_TOKEN }}
+      GOOGLE_ADS_CLIENT_ID: ${{ secrets.GOOGLE_ADS_CLIENT_ID }}
+      GOOGLE_ADS_CLIENT_SECRET: ${{ secrets.GOOGLE_ADS_CLIENT_SECRET }}
+      GOOGLE_ADS_REFRESH_TOKEN: ${{ secrets.GOOGLE_ADS_REFRESH_TOKEN }}
+      GOOGLE_ADS_LOGIN_CUSTOMER_ID: ${{ secrets.GOOGLE_ADS_LOGIN_CUSTOMER_ID }}
+      # ── BigQuery RAW 창고 (BQ_DATASET 있으면 사용, 없으면 raw/ 폴더) ──
+      BQ_DATASET: ${{ secrets.BQ_DATASET }}
+      BQ_ADS_TABLE: ${{ secrets.BQ_ADS_TABLE }}
+      BQ_PROJECT: ${{ secrets.BQ_PROJECT }}
+      # ── (선택) 구글시트 RAW: BQ·raw/ 둘 다 비었을 때만 사용 ──
       DAOU_SHEET_ID: ${{ secrets.DAOU_SHEET_ID }}
       DAOU_SHEET_WORKSHEET: ${{ secrets.DAOU_SHEET_WORKSHEET }}
       GA4_SERVICE_ACCOUNT_JSON: ${{ secrets.GA4_SERVICE_ACCOUNT_JSON }}
@@ -43,19 +56,24 @@ jobs:
       - name: Install deps
         run: pip install -r pipeline/requirements.txt
 
-      - name: Build data.json (sheet → data.json; falls back to sample if no keys)
+      - name: Ingest ads → RAW (어제치 광고 API 수집 → BigQuery/raw)
+        run: |
+          cd pipeline
+          python ingest.py --backfill 1
+
+      - name: Build data.json (RAW 창고 → data.json; 없으면 기존 유지/샘플)
         run: |
           cd pipeline
           python build_data.py
 
-      - name: Commit data.json if changed
+      - name: Commit data.json + raw if changed
         run: |
           git config user.name  "daou-hub-bot"
           git config user.email "actions@users.noreply.github.com"
-          if ! git diff --quiet -- data.json; then
-            git add data.json
+          git add data.json raw 2>/dev/null || git add data.json
+          if ! git diff --cached --quiet; then
             git commit -m "chore(data): refresh Daou Hub data.json [skip ci]"
             git push
           else
-            echo "data.json unchanged"
+            echo "no changes"
           fi

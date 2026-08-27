@@ -6,3 +6,4 @@ node_modules/
 skills-lock.json
 scratchpad/
 pipeline/.env
+pipeline/accounts.json
