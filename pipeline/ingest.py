@@ -68,7 +68,7 @@ def _sample_rows(date_iso):
                 "캠페인": f"{svc} {ct} 캠페인", "기간": date_iso,
                 "노출 수": imp, "클릭 수": clk, "총 비용": net,
                 "가입": round(clk / rnd.randint(8, 30), 1),
-                "광고비(마크업포함,VAT포함)": ad_config.marked_cost(net, 0.15, 0.10),
+                "광고비(마크업포함,VAT포함)": ad_config.marked_cost(net, media, 0.0, 0.10),
             })
     return rows
 

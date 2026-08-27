@@ -8,8 +8,14 @@
 인증: keywords_naver 와 동일한 HMAC 서명.
 계정 없거나 호출 실패 시 [] 반환(파이프라인은 계속 진행).
 
-주의(라이브 보정 필요): salesAmt=VAT별도 순매체비로 가정, ccnt=주 전환(가입)으로 가정.
-실제 계정 전환설정에 맞춰 첫 연동 때 한 번 검증한다.
+가입(중요·브랜드별 상이):
+  실제 브랜드 리포트는 /stats 의 ccnt(전체 전환)를 그대로 쓰지 않는다.
+  - 애드콘: AD_CONVERSION 리포트에서 convType='sign_up' 만 필터 → adgroup 병합
+  - 사방넷: AD_CONVERSION 을 전환일≠노출일 보정해 키워드 단위 합산
+  - 다우오피스: 광고 전환이 아니라 GA4 키이벤트(속성별)로 가입 집계
+  여기 ccnt 는 '전체 전환' 근사치다. 정확 매칭은 accounts 의 signup 규칙 +
+  AD_CONVERSION 연동으로 첫 실행 때 보정한다. (RAW_RECIPES.md 참고)
+광고비: salesAmt(VAT포함) ÷1.1 = ad_config.marked_cost(net,'네이버',...).
 """
 import time
 import hmac
@@ -113,7 +119,7 @@ def fetch_day(acc, date_iso, defaults, logs=None):
             "클릭 수": int(clk),
             "총 비용": int(net),
             "가입": conv,
-            "광고비(마크업포함,VAT포함)": ad_config.marked_cost(net, mk, vat),
+            "광고비(마크업포함,VAT포함)": ad_config.marked_cost(net, "네이버", mk, vat),
         })
     logs.append(f"[naver-ads] {acc.get('label','')} {date_iso} · {len(rows)}행")
     return rows

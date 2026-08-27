@@ -1,6 +1,7 @@
 {
   "_설명": "이 파일을 accounts.json 으로 복사(또는 내용을 GitHub Secret DAOU_AD_ACCOUNTS 에 JSON으로) 붙여넣어라. accounts.json 은 .gitignore 로 커밋되지 않는다.",
-  "defaults": { "markup": 0.15, "vat": 0.10 },
+  "_광고비": "구글=총비용×1.1, 네이버=salesAmt÷1.1 (VAT 10%). 별도 마크업 없으면 markup 0.",
+  "defaults": { "markup": 0.0, "vat": 0.10 },
 
   "naver": [
     {

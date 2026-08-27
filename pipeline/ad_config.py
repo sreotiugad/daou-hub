@@ -22,7 +22,10 @@ import os
 import json
 import config as C
 
-_DEF_MARKUP = 0.15
+# 실제 브랜드 리포트(사방넷/애드콘/다우오피스) 공통 규칙:
+#   광고비 = 구글 총비용(VAT제외) × 1.1  /  네이버 salesAmt(VAT포함) ÷ 1.1
+#   → '마크업'은 별도로 없고(0), VAT 10%를 매체 방향에 맞춰 적용한다.
+_DEF_MARKUP = 0.0
 _DEF_VAT = 0.10
 
 
@@ -69,6 +72,12 @@ def resolve_service(acc, campaign_name):
     return acc.get("service")
 
 
-def marked_cost(net_cost, markup, vat):
-    """순 매체비(VAT별도) → 광고비(마크업포함, VAT포함)."""
-    return round(float(net_cost) * (1.0 + markup) * (1.0 + vat))
+def marked_cost(net_cost, media, markup, vat):
+    """매체 원비용 → 광고비. 브랜드 리포트 공통 규칙.
+       구글: 총비용(VAT제외) × (1+markup) × (1+vat)   [기본 ×1.1]
+       네이버: salesAmt(VAT포함) × (1+markup) ÷ (1+vat) [기본 ÷1.1]
+    """
+    c = float(net_cost) * (1.0 + markup)
+    if str(media) == "구글":
+        return round(c * (1.0 + vat))
+    return round(c / (1.0 + vat))

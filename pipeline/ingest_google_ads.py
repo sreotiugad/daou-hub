@@ -65,38 +65,52 @@ def fetch_day(acc, date_iso, defaults, logs=None, _client_cache={}):
         logs.append(f"[google-ads] {acc.get('label','?')} customer_id 없음 → 스킵")
         return []
     mk, vat = ad_config.markup_vat(acc, defaults)
-    q = (
+    # 성과(노출·클릭·비용)와 가입(전환)을 분리 조회한다.
+    #   가입 = conversion_action_category = SIGNUP 인 전환만 (실제 브랜드 리포트 동일).
+    #   conversion 카테고리로 세그먼트하면 성과 지표가 중복되므로 쿼리를 나눈다.
+    q_perf = (
         "SELECT campaign.name, campaign.advertising_channel_type, "
-        "metrics.impressions, metrics.clicks, metrics.cost_micros, metrics.conversions "
+        "metrics.impressions, metrics.clicks, metrics.cost_micros "
         "FROM campaign WHERE segments.date = '%s'" % date_iso
     )
-    rows = []
+    q_conv = (
+        "SELECT campaign.name, segments.conversion_action_category, metrics.conversions "
+        "FROM campaign WHERE segments.date = '%s'" % date_iso
+    )
+    perf, signup = {}, {}
     try:
         svc = client.get_service("GoogleAdsService")
-        for batch in svc.search_stream(customer_id=cid, query=q):
+        for batch in svc.search_stream(customer_id=cid, query=q_perf):
             for r in batch.results:
-                imp = int(r.metrics.impressions)
-                clk = int(r.metrics.clicks)
-                net = r.metrics.cost_micros / 1_000_000.0
-                conv = float(r.metrics.conversions)
-                if imp == 0 and clk == 0 and net == 0:
-                    continue
                 name = r.campaign.name
-                chtp = _CHTP.get(r.campaign.advertising_channel_type.name, "구글검색")
-                rows.append({
-                    "서비스": ad_config.resolve_service(acc, name),
-                    "매체": "구글",
-                    "캠페인 유형": C.norm_ct(chtp, "구글"),
-                    "캠페인": name,
-                    "기간": date_iso,
-                    "노출 수": imp,
-                    "클릭 수": clk,
-                    "총 비용": int(round(net)),
-                    "가입": conv,
-                    "광고비(마크업포함,VAT포함)": ad_config.marked_cost(net, mk, vat),
-                })
+                d = perf.setdefault(name, {"imp": 0, "clk": 0, "net": 0.0,
+                                          "chtp": r.campaign.advertising_channel_type.name})
+                d["imp"] += int(r.metrics.impressions)
+                d["clk"] += int(r.metrics.clicks)
+                d["net"] += r.metrics.cost_micros / 1_000_000.0
+        for batch in svc.search_stream(customer_id=cid, query=q_conv):
+            for r in batch.results:
+                if r.segments.conversion_action_category.name != "SIGNUP":
+                    continue
+                signup[r.campaign.name] = signup.get(r.campaign.name, 0.0) + float(r.metrics.conversions)
     except Exception as e:
         logs.append(f"[google-ads] {acc.get('label','')} 쿼리 오류: {e}")
         return []
+    rows = []
+    for name, d in perf.items():
+        if d["imp"] == 0 and d["clk"] == 0 and d["net"] == 0:
+            continue
+        rows.append({
+            "서비스": ad_config.resolve_service(acc, name),
+            "매체": "구글",
+            "캠페인 유형": C.norm_ct(_CHTP.get(d["chtp"], "구글검색"), "구글"),
+            "캠페인": name,
+            "기간": date_iso,
+            "노출 수": d["imp"],
+            "클릭 수": d["clk"],
+            "총 비용": int(round(d["net"])),
+            "가입": round(signup.get(name, 0.0), 1),
+            "광고비(마크업포함,VAT포함)": ad_config.marked_cost(d["net"], "구글", mk, vat),
+        })
     logs.append(f"[google-ads] {acc.get('label','')} {date_iso} · {len(rows)}행")
     return rows
