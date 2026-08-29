@@ -98,10 +98,12 @@ def fetch_day(acc, date_iso, defaults, logs=None, _client_cache={}):
     except Exception as e:
         logs.append(f"[google-ads] {acc.get('label','')} 쿼리 오류: {e}")
         return []
+    ga4 = acc.get("signup_from_ga4")
     rows = []
     for name, d in perf.items():
         if d["imp"] == 0 and d["clk"] == 0 and d["net"] == 0:
             continue
+        sval = 0.0 if ga4 else signup.get(name, 0.0)
         rows.append({
             "서비스": ad_config.resolve_service(acc, name),
             "매체": "구글",
@@ -111,7 +113,7 @@ def fetch_day(acc, date_iso, defaults, logs=None, _client_cache={}):
             "노출 수": d["imp"],
             "클릭 수": d["clk"],
             "총 비용": int(round(d["net"])),
-            "가입": round(signup.get(name, 0.0), 1),
+            "가입": round(sval, 1),
             "광고비(마크업포함,VAT포함)": ad_config.marked_cost(d["net"], "구글", mk, vat),
         })
     logs.append(f"[google-ads] {acc.get('label','')} {date_iso} · {len(rows)}행")

@@ -137,10 +137,11 @@ def read_rows(logs=None):
         svc = str(r["service"] or "").strip()
         if svc not in C.BRAND_MAP:
             continue
+        media = C.norm_media(r["media"])
         out.append({
             "service": svc,
-            "media": r["media"] if r["media"] in ("네이버", "구글") else "네이버",
-            "camptype": C.norm_ct(r["camptype"], r["media"]),
+            "media": media,
+            "camptype": C.norm_ct(r["camptype"], media),
             "date": r["date"].isoformat() if hasattr(r["date"], "isoformat") else str(r["date"])[:10],
             "imp": float(r["imp"] or 0),
             "click": float(r["click"] or 0),

@@ -15,7 +15,7 @@
     --success:#006425;--warning:#6E4B00;--danger:#902824;
     --sabang:#2957CD;--adcon:#763AA7;--daou:#0E7C7B;
     --c1:#2957CD;--c2:#0E7C7B;--c3:#A8641B;
-    --naver:#03934A;--google:#2E6BD6;
+    --naver:#03934A;--google:#2E6BD6;--meta:#C4377E;
     --r:8px;--r-sm:6px;
     --shadow:0 1px 2px rgba(9,12,14,.05);
     --mono:"IBM Plex Mono",ui-monospace,monospace;
@@ -297,7 +297,7 @@
     <div class="card">
       <div class="card-h"><h3>매체별 광고비</h3><span class="hint">네이버·구글</span></div>
       <div class="card-b"><div class="donut-wrap" id="donut"></div>
-        <div class="legend c"><span><i style="background:var(--naver)"></i>네이버</span><span><i style="background:var(--google)"></i>구글</span></div></div>
+        <div class="legend c"><span><i style="background:var(--naver)"></i>네이버</span><span><i style="background:var(--google)"></i>구글</span><span><i style="background:var(--meta)"></i>메타</span></div></div>
     </div>
   </div>
   <div class="r-mid">
@@ -360,7 +360,7 @@
     </div>
     <div class="cx-row"><span class="cx-lab">필터</span>
       <select id="cxGroup" class="cx-sel"><option value="">전체 브랜드</option></select>
-      <select id="cxMedia" class="cx-sel"><option value="">전체 매체</option><option value="네이버">네이버</option><option value="구글">구글</option></select>
+      <select id="cxMedia" class="cx-sel"><option value="">전체 매체</option><option value="네이버">네이버</option><option value="구글">구글</option><option value="메타">메타</option></select>
     </div>
     <div class="cx-row"><span class="cx-lab">기간</span>
       <div class="seg sm cxseg" id="cxPeriod"><button data-n="30">30D</button><button data-n="90">90D</button><button data-n="365" class="on">1년</button></div>
@@ -376,7 +376,7 @@
 const CSS=getComputedStyle(document.documentElement);
 const cv=(n,f)=>{const v=CSS.getPropertyValue(n).trim();return v||f};
 const TIP=document.getElementById('tip');
-const COL={c1:cv('--c1','#2957CD'),c2:cv('--c2','#0E7C7B'),c3:cv('--c3','#A8641B'),primary:cv('--primary','#2957CD'),accent:cv('--accent','#763AA7'),naver:cv('--naver','#03934A'),google:cv('--google','#2E6BD6'),line:cv('--border-soft','#D8E3EC'),muted:cv('--muted','#4B5055'),surface:cv('--surface','#FAFDFF'),fg:cv('--fg','#090C0E'),success:cv('--success','#006425'),warning:cv('--warning','#6E4B00'),danger:cv('--danger','#902824')};
+const COL={c1:cv('--c1','#2957CD'),c2:cv('--c2','#0E7C7B'),c3:cv('--c3','#A8641B'),primary:cv('--primary','#2957CD'),accent:cv('--accent','#763AA7'),naver:cv('--naver','#03934A'),google:cv('--google','#2E6BD6'),meta:cv('--meta','#C4377E'),line:cv('--border-soft','#D8E3EC'),muted:cv('--muted','#4B5055'),surface:cv('--surface','#FAFDFF'),fg:cv('--fg','#090C0E'),success:cv('--success','#006425'),warning:cv('--warning','#6E4B00'),danger:cv('--danger','#902824')};
 function H(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
 function MUL(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 function niceMax(m){if(m<=0)return 10;const p=Math.pow(10,Math.floor(Math.log10(m)));const n=m/p;return (n<=1?1:n<=2?2:n<=5?5:10)*p}
@@ -389,7 +389,7 @@ function ic(name,color,sz){return `<svg width="${sz||15}" height="${sz||15}" vie
 const DUReport=(function(){
   const GROUPS=[{key:"사방넷"},{key:"애드콘"},{key:"다우오피스"}];
   const GCOLOR={"사방넷":cv('--sabang','#2957CD'),"애드콘":cv('--adcon','#763AA7'),"다우오피스":cv('--daou','#0E7C7B')};
-  const CT_ORDER=["브랜드검색","파워링크","쇼핑검색","구글검색","실적최대화","동영상"];
+  const CT_ORDER=["브랜드검색","파워링크","쇼핑검색","구글검색","실적최대화","동영상","디스플레이"];
   const SUBS={
     "사방넷":{group:"사방넷",cost:1740000,cpa:9100,cpc:610,ctr:.034,mo:.7,media:{네이버:.62,구글:.38},ct:{브랜드검색:.14,파워링크:.33,쇼핑검색:.21,구글검색:.16,실적최대화:.12,동영상:.04}},
     "사방넷미니":{group:"사방넷",cost:452000,cpa:8100,cpc:560,ctr:.036,mo:.5,media:{네이버:.70,구글:.30},ct:{브랜드검색:.10,파워링크:.40,쇼핑검색:.24,구글검색:.14,실적최대화:.09,동영상:.03}},
@@ -425,7 +425,7 @@ const DUReport=(function(){
     document.getElementById('lineChart').innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%">${g}${xl}${area}${path}${guide}${dot}${hot}</svg>`;
     const gEl=document.getElementById('rlg_g');
     document.querySelectorAll('#lineChart .hc').forEach(c=>{c.addEventListener('mousemove',e=>{const i=+c.dataset.i;gEl.setAttribute('x1',x(i));gEl.setAttribute('x2',x(i));gEl.setAttribute('opacity','1');TIP.innerHTML=`<div class="t">${fullDates[i]}</div><div class="row"><i style="background:${COL.c1}"></i>광고비<b>${won(agg.cost[i])}</b></div><div class="row"><i style="background:${COL.c2}"></i>가입<b>${comma(agg.signup[i])}</b></div><div class="row"><i style="background:${COL.c3}"></i>클릭<b>${comma(agg.click[i])}</b></div>`;TIP.style.left=e.clientX+'px';TIP.style.top=e.clientY+'px';TIP.style.opacity='1'});c.addEventListener('mouseleave',()=>{TIP.style.opacity='0';gEl.setAttribute('opacity','0')})});}
-  function drawDonut(agg){const segs=[{l:"네이버",v:agg.media.네이버,c:COL.naver},{l:"구글",v:agg.media.구글,c:COL.google}];const total=segs.reduce((a,s)=>a+s.v,0)||1,R=72,r=48,cx=88,cy=88,gap=.025;let ang=-Math.PI/2,arcs="";segs.forEach(s=>{const a0=ang+gap,a1=ang+(s.v/total)*6.283-gap,lg=(a1-a0)>Math.PI?1:0;const P=(a,rd)=>[cx+rd*Math.cos(a),cy+rd*Math.sin(a)];const[x0,y0]=P(a0,R),[x1,y1]=P(a1,R),[x2,y2]=P(a1,r),[x3,y3]=P(a0,r);arcs+=`<path d="M${x0.toFixed(1)},${y0.toFixed(1)} A${R},${R} 0 ${lg} 1 ${x1.toFixed(1)},${y1.toFixed(1)} L${x2.toFixed(1)},${y2.toFixed(1)} A${r},${r} 0 ${lg} 0 ${x3.toFixed(1)},${y3.toFixed(1)} Z" fill="${s.c}"><title>${s.l}: ${won(s.v)}</title></path>`;ang+=(s.v/total)*6.283});const nv=(agg.media.네이버/total*100).toFixed(0);document.getElementById('donut').innerHTML=`<svg viewBox="0 0 176 176" width="180" height="180">${arcs}<text x="88" y="83" text-anchor="middle" font-size="11" fill="${COL.muted}" font-family="IBM Plex Mono">네이버</text><text x="88" y="103" text-anchor="middle" font-size="22" font-weight="600" fill="${COL.fg}" font-family="IBM Plex Sans KR">${nv}%</text></svg>`;}
+  function drawDonut(agg){const order=[["네이버",COL.naver],["구글",COL.google],["메타",COL.meta]];let segs=order.filter(o=>(agg.media[o[0]]||0)>0).map(o=>({l:o[0],v:agg.media[o[0]]||0,c:o[1]}));if(!segs.length)segs=[{l:"네이버",v:1,c:COL.naver}];const total=segs.reduce((a,s)=>a+s.v,0)||1,R=72,r=48,cx=88,cy=88,gap=.025;let ang=-Math.PI/2,arcs="";segs.forEach(s=>{const a0=ang+gap,a1=ang+(s.v/total)*6.283-gap,lg=(a1-a0)>Math.PI?1:0;const P=(a,rd)=>[cx+rd*Math.cos(a),cy+rd*Math.sin(a)];const[x0,y0]=P(a0,R),[x1,y1]=P(a1,R),[x2,y2]=P(a1,r),[x3,y3]=P(a0,r);arcs+=`<path d="M${x0.toFixed(1)},${y0.toFixed(1)} A${R},${R} 0 ${lg} 1 ${x1.toFixed(1)},${y1.toFixed(1)} L${x2.toFixed(1)},${y2.toFixed(1)} A${r},${r} 0 ${lg} 0 ${x3.toFixed(1)},${y3.toFixed(1)} Z" fill="${s.c}"><title>${s.l}: ${won(s.v)}</title></path>`;ang+=(s.v/total)*6.283});const top=segs.slice().sort((a,b)=>b.v-a.v)[0];const pctTop=(top.v/total*100).toFixed(0);document.getElementById('donut').innerHTML=`<svg viewBox="0 0 176 176" width="180" height="180">${arcs}<text x="88" y="83" text-anchor="middle" font-size="11" fill="${COL.muted}" font-family="IBM Plex Mono">${top.l}</text><text x="88" y="103" text-anchor="middle" font-size="22" font-weight="600" fill="${COL.fg}" font-family="IBM Plex Sans KR">${pctTop}%</text></svg>`;}
   function drawBar(agg){const rows=CT_ORDER.map(k=>({l:k,v:agg.ct[k]})).sort((a,b)=>b.v-a.v);const W=560,H=224,pl=38,pr=10,pt=10,pb=40,iw=W-pl-pr,ih=H-pt-pb;const max=niceMax(Math.max(...rows.map(r=>r.v))*1.14),step=iw/rows.length,bw=Math.min(38,step*.52),y=v=>pt+ih*(1-v/max);let grid="";for(let k=0;k<=4;k++){const t=max*k/4;grid+=`<line x1="${pl}" y1="${y(t)}" x2="${W-pr}" y2="${y(t)}" stroke="${COL.line}"/><text x="${pl-6}" y="${y(t)+3.5}" text-anchor="end" font-size="10" fill="${COL.muted}" font-family="IBM Plex Mono">${t>=1e6?(t/1e6).toFixed(0)+'M':Math.round(t/1e4)+'만'}</text>`}let bars="";rows.forEach((r,i)=>{const bx=pl+step*i+step/2,by=y(r.v),bh=pt+ih-by;bars+=`<rect class="bx" data-l="${r.l}" data-v="${r.v}" x="${(bx-bw/2).toFixed(1)}" y="${by.toFixed(1)}" width="${bw}" height="${bh.toFixed(1)}" rx="3" fill="${COL.c1}" opacity="${1-i*0.1}"/><text x="${bx.toFixed(1)}" y="${H-24}" text-anchor="middle" font-size="10" fill="${COL.muted}" font-family="IBM Plex Sans KR">${r.l}</text>`});document.getElementById('barCt').innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%">${grid}${bars}</svg>`;document.querySelectorAll('#barCt .bx').forEach(b=>{b.addEventListener('mousemove',e=>{TIP.innerHTML=`<div class="t">${b.dataset.l}</div><div class="row"><i style="background:${COL.c1}"></i><b>${won(+b.dataset.v)}</b></div>`;TIP.style.left=e.clientX+'px';TIP.style.top=e.clientY+'px';TIP.style.opacity='1';b.style.opacity='.75'});b.addEventListener('mouseleave',()=>{TIP.style.opacity='0';b.style.opacity=''})})}
   function spark(data,color){const W=110,Hh=26,max=Math.max(...data),min=Math.min(...data),rng=(max-min)||1;const pts=data.map((v,i)=>[i/(data.length-1)*W,Hh-2-((v-min)/rng)*(Hh-5)]);return `<svg viewBox="0 0 ${W} ${Hh}" width="70" height="26"><path d="${smooth(pts)}" fill="none" stroke="${color}" stroke-width="1.6" stroke-linecap="round"/></svg>`}
   function buildComment(group,agg){const topCt=CT_ORDER.map(k=>[k,agg.ct[k]]).sort((a,b)=>b[1]-a[1])[0];const nv=(agg.media.네이버/(agg.media.네이버+agg.media.구글)*100).toFixed(0);const cpaGood=agg.d.cpa<0;const cpaTxt=cpaGood?`CPA <b class="hl">${Math.abs(agg.d.cpa).toFixed(1)}% 개선</b>`:`CPA ${agg.d.cpa.toFixed(1)}% 상승`;const sTxt=agg.d.signup>0?`가입 <b class="hl">${agg.d.signup.toFixed(1)}% 증가</b>`:`가입 ${Math.abs(agg.d.signup).toFixed(1)}% 감소`;const items=[[cpaGood?'check':'alert',cpaGood?COL.success:COL.warning,`직전 대비 ${cpaTxt}. 현재 CPA <b class="hl">${cpaF(agg.cpa)}</b>.`],['trend',COL.primary,`광고비 <b class="hl">${won(agg.tCost)}</b>, ${sTxt} · 총 <b class="hl">${comma(agg.tSign)}건</b>.`],['target',COL.accent,`<b class="hl">${topCt[0]}</b> 비중 1위(${(topCt[1]/agg.tCost*100).toFixed(0)}%) · 네이버 ${nv}%·구글 ${100-nv}%.`]];document.getElementById('comment').innerHTML=`<div class="ci"><span class="ico">${ic('trend',COL.primary,15)}</span><div><b>AI 데일리 코멘트</b> <em>${group} · Gemini</em></div></div><ul>${items.map(it=>`<li><span class="k">${ic(it[0],it[1],15)}</span><span>${it[2]}</span></li>`).join('')}</ul>`}
@@ -505,7 +505,7 @@ const DUCustom=(function(){
   const wonf=n=>"₩"+Math.round(n).toLocaleString();
   const fmtV=(m,v)=>{const f=MET[m].fmt;return f==="won"?wonf(v):f==="pct"?v.toFixed(2)+"%":f==="num1"?(Math.round(v*10)/10).toLocaleString():cma(v)};
   function facts(){const F=window.DAOU_DATA&&window.DAOU_DATA.report&&window.DAOU_DATA.report.facts;if(F&&F.length)return F;if(!_synth)_synth=synth();return _synth}
-  function synth(){const SB=[["사방넷","사방넷"],["사방넷미니","사방넷"],["풀필먼트","사방넷"],["엔팩스","애드콘"],["애드콘","애드콘"],["다우오피스","다우오피스"],["다우오피스HR","다우오피스"]];const CT=["브랜드검색","파워링크","쇼핑검색","구글검색","실적최대화","동영상"];const out=[];const end=new Date(2026,7,24);for(let i=0;i<365;i++){const dt=new Date(end);dt.setDate(end.getDate()-i);const ds=dt.toISOString().slice(0,10);for(const[svc,grp]of SB){const r=MUL(H(svc+ds));for(const media of["네이버","구글"]){for(const ct of CT){if(r()<0.45)continue;const cost=Math.round((5000+r()*300000));const click=Math.max(1,Math.round(cost/(400+r()*500)));const imp=Math.round(click/(0.02+r()*0.05));const signup=Math.round(click/(8+r()*30)*10)/10;out.push({d:ds,svc,grp,media,ct,imp,click,cost,signup})}}}}return out}
+  function synth(){const SB=[["사방넷","사방넷"],["사방넷미니","사방넷"],["풀필먼트","사방넷"],["엔팩스","애드콘"],["애드콘","애드콘"],["다우오피스","다우오피스"],["다우오피스HR","다우오피스"]];const CT=["브랜드검색","파워링크","쇼핑검색","구글검색","실적최대화","동영상","디스플레이"];const out=[];const end=new Date(2026,7,24);for(let i=0;i<365;i++){const dt=new Date(end);dt.setDate(end.getDate()-i);const ds=dt.toISOString().slice(0,10);for(const[svc,grp]of SB){const r=MUL(H(svc+ds));for(const media of["네이버","구글","메타"]){for(const ct of CT){if(r()<0.45)continue;const cost=Math.round((5000+r()*300000));const click=Math.max(1,Math.round(cost/(400+r()*500)));const imp=Math.round(click/(0.02+r()*0.05));const signup=Math.round(click/(8+r()*30)*10)/10;out.push({d:ds,svc,grp,media,ct,imp,click,cost,signup})}}}}return out}
   function maxD(F){let m="";for(const r of F)if(r.d>m)m=r.d;return m}
   function minD(F){let m="9999";for(const r of F)if(r.d<m)m=r.d;return m}
   function cutoff(F){const m=maxD(F);if(!m)return"";const d=new Date(m);d.setDate(d.getDate()-(st.N-1));return d.toISOString().slice(0,10)}

@@ -86,9 +86,16 @@ daou-hub 에서 **처음부터 재구현하면 숫자가 어긋난다.** 가장 
 - 즉 각 앱에 "raw 생성 → BigQuery 적재" 데일리 잡을 1개씩 붙이는 게 최선(로직 재사용).
 - daou-hub 의 `ingest_*.py` 는 그게 어려운 브랜드용 **범용 폴백**(공통 규칙만 정확).
 
+## 매체 수집기 (구현됨)
+- 네이버 검색광고: `ingest_naver_ads.py`
+- 구글애즈: `ingest_google_ads.py` (가입=SIGNUP 카테고리만)
+- **메타**: `ingest_meta.py` (Graph insights, 동영상/디스플레이, complete_registration=가입, spend 그대로)
+- **GA4(다우오피스 가입)**: `ingest_ga4.py` (전환 이벤트 → 가입, 광고비 0행). 광고계정엔 `signup_from_ga4:true` 로 중복 방지.
+
 ## 첫 연동 때 보정 체크리스트(TODO)
-- [ ] 네이버 가입: AD_CONVERSION `sign_up` 필터 붙이기(현재 ccnt 전체전환 근사)
-- [ ] 다우오피스 가입: GA4 키이벤트 수집 추가(광고 API 아님)
+- [x] 다우오피스 가입: GA4 키이벤트 수집 추가 → `ingest_ga4.py` (conversion_event 이름만 확인)
+- [x] 메타 수집 추가 → `ingest_meta.py`
+- [ ] 네이버 가입: AD_CONVERSION `sign_up` 필터(현재 ccnt 전체전환 근사)
 - [ ] 사방넷 브랜드검색: 계약 고정단가표로 비용 대체
-- [ ] 사방넷미니 DA 배너: 시트/CSV 소스로 별도 적재
+- [ ] 사방넷미니 그 외 DA 배너(블라인드·리멤버·데이블 등): 시트/CSV 소스로 별도 적재
 - [ ] 수기 엑셀 1일치와 대조해 광고비·가입 숫자 일치 확인

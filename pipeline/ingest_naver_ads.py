@@ -104,7 +104,7 @@ def fetch_day(acc, date_iso, defaults, logs=None):
         imp = float(s.get("impCnt", 0) or 0)
         clk = float(s.get("clkCnt", 0) or 0)
         net = float(s.get("salesAmt", 0) or 0)
-        conv = float(s.get("ccnt", 0) or 0)
+        conv = 0.0 if acc.get("signup_from_ga4") else float(s.get("ccnt", 0) or 0)
         if imp == 0 and clk == 0 and net == 0:
             continue
         name = c.get("name", "")

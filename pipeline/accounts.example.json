@@ -37,7 +37,7 @@
       "secret_key": "<애드콘앱 NAVER2_SECRET_KEY>"
     },
     {
-      "label": "다우오피스-네이버", "service": "다우오피스",
+      "label": "다우오피스-네이버", "service": "다우오피스", "signup_from_ga4": true,
       "customer_id": "<다우앱 NAVER_CUSTOMER_ID>",
       "api_key": "<다우앱 NAVER_API_KEY>",
       "secret_key": "<다우앱 NAVER_SECRET_KEY>",
@@ -59,9 +59,23 @@
     { "label": "애드콘-구글", "service": "애드콘", "customer_id": "<애드콘앱 GADS_CUSTOMER_ID>" },
     { "label": "엔팩스-구글", "service": "엔팩스", "customer_id": "<애드콘앱 GADS_CUSTOMER_ID_2>" },
     {
-      "label": "다우오피스-구글", "service": "다우오피스",
+      "label": "다우오피스-구글", "service": "다우오피스", "signup_from_ga4": true,
       "customer_id": "<다우앱 GADS_CUSTOMER_IDS (또는 GADS_CUSTOMER_ID)>",
       "service_rules": [ { "contains": "HR", "service": "다우오피스HR" }, { "contains": "hr", "service": "다우오피스HR" } ]
     }
+  ],
+
+  "meta": [
+    {
+      "label": "사방넷-메타", "service": "사방넷",
+      "access_token": "<사방넷앱 META_ACCESS_TOKEN>",
+      "ad_account_id": "<사방넷앱 META_AD_ACCOUNT_ID (act_ 접두 있어도/없어도 됨)>",
+      "service_rules": [ { "contains": "풀필", "service": "풀필먼트" }, { "contains": "미니", "service": "사방넷미니" } ]
+    }
+  ],
+
+  "ga4": [
+    { "label": "다우오피스-GA4", "service": "다우오피스", "property_id": "<다우앱 GA4_PROPERTY_DO>", "conversion_event": "<가입 이벤트명 예: sign_up>" },
+    { "label": "다우오피스HR-GA4", "service": "다우오피스HR", "property_id": "<다우앱 GA4_PROPERTY_HR>", "conversion_event": "<가입 이벤트명>" }
   ]
 }

@@ -6,3 +6,5 @@ requests>=2.28
 google-ads>=24.0
 # BigQuery RAW 창고(선택). BQ_DATASET 없으면 raw/ 폴더로 폴백.
 google-cloud-bigquery>=3.0
+# GA4 전환 수집(선택, 다우오피스 가입). ga4 계정 없으면 없어도 됨.
+google-analytics-data>=0.18

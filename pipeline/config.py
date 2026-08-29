@@ -39,10 +39,22 @@ GROUP_SUBS = {
 }
 GROUPS = ["사방넷", "애드콘", "다우오피스"]
 
-# 캠페인유형 표준 6종 (프론트 CT_ORDER 와 동일)
-CT_ORDER = ["브랜드검색", "파워링크", "쇼핑검색", "구글검색", "실적최대화", "동영상"]
+# 캠페인유형 표준 7종 (프론트 CT_ORDER 와 동일)
+CT_ORDER = ["브랜드검색", "파워링크", "쇼핑검색", "구글검색", "실적최대화", "동영상", "디스플레이"]
 
-# RAW 시트 원본 캠페인유형 → 표준 6종 매핑 (adcon_report 의 type_ko 반영)
+# 매체 표준: 네이버 / 구글 / 메타
+def norm_media(m) -> str:
+    s = str(m or "").strip()
+    if s in ("네이버", "구글", "메타"):
+        return s
+    u = s.lower()
+    if "구글" in s or "google" in u:
+        return "구글"
+    if "메타" in s or "meta" in u or "facebook" in u or "insta" in u:
+        return "메타"
+    return "네이버"
+
+# RAW 원본 캠페인유형 → 표준 매핑 (adcon_report 의 type_ko 반영)
 def norm_ct(raw: str, media: str = "") -> str:
     s = str(raw or "").strip()
     if "브랜드" in s:
@@ -55,11 +67,18 @@ def norm_ct(raw: str, media: str = "") -> str:
         return "실적최대화"
     if "동영상" in s or "VIDEO" in s.upper():
         return "동영상"
+    if "디스플레이" in s or "DISPLAY" in s.upper() or "배너" in s:
+        return "디스플레이"
     if "검색" in s or "SEARCH" in s.upper():
         # 네이버 일반 검색은 파워링크, 구글 검색은 구글검색
         return "구글검색" if str(media).strip() == "구글" else "파워링크"
-    # 디스플레이 등 나머지 → 매체 기준 기본 버킷
-    return "구글검색" if str(media).strip() == "구글" else "파워링크"
+    # 나머지 → 매체 기준 기본 버킷 (메타는 디스플레이)
+    mm = str(media).strip()
+    if mm == "구글":
+        return "구글검색"
+    if mm == "메타":
+        return "디스플레이"
+    return "파워링크"
 
 # ── RAW 시트 컬럼 매핑 (실제 헤더가 다르면 env 로 덮어쓰기) ──
 #   COL_* 환경변수로 각 컬럼 헤더명을 바꿀 수 있다.

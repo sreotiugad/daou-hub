@@ -98,10 +98,11 @@ def records_to_rows(records, logs=None):
         cost = _num(r.get(col["cost"]))
         if not cost:
             cost = _num(r.get(col["cost_alt"]))
+        nmedia = C.norm_media(media)
         out.append({
             "service": service,
-            "media": media if media in ("네이버", "구글") else ("구글" if ("구글" in media or "google" in media.lower()) else "네이버"),
-            "camptype": C.norm_ct(r.get(col["camptype"]), media),
+            "media": nmedia,
+            "camptype": C.norm_ct(r.get(col["camptype"]), nmedia),
             "date": d,
             "imp": _num(r.get(col["imp"])),
             "click": _num(r.get(col["click"])),

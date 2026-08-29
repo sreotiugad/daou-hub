@@ -53,6 +53,8 @@ def load(logs=None):
         return {"naver": [], "google": [], "defaults": {}}
     cfg.setdefault("naver", [])
     cfg.setdefault("google", [])
+    cfg.setdefault("meta", [])
+    cfg.setdefault("ga4", [])
     cfg.setdefault("defaults", {})
     return cfg
 
@@ -76,8 +78,12 @@ def marked_cost(net_cost, media, markup, vat):
     """매체 원비용 → 광고비. 브랜드 리포트 공통 규칙.
        구글: 총비용(VAT제외) × (1+markup) × (1+vat)   [기본 ×1.1]
        네이버: salesAmt(VAT포함) × (1+markup) ÷ (1+vat) [기본 ÷1.1]
+       메타: spend 그대로 × (1+markup)                 [VAT 조정 없음]
     """
     c = float(net_cost) * (1.0 + markup)
-    if str(media) == "구글":
+    m = str(media)
+    if m == "구글":
         return round(c * (1.0 + vat))
-    return round(c / (1.0 + vat))
+    if m == "네이버":
+        return round(c / (1.0 + vat))
+    return round(c)  # 메타 등

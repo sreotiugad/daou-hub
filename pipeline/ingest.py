@@ -24,6 +24,8 @@ import raw_store
 import bq_store
 import ingest_naver_ads as NAVER
 import ingest_google_ads as GOOGLE
+import ingest_meta as META
+import ingest_ga4 as GA4
 
 
 def _sink(source, date_iso, rows, logs):
@@ -92,7 +94,8 @@ def main():
     cfg = ad_config.load(logs)
     defaults = cfg.get("defaults", {})
     n_acc, g_acc = cfg.get("naver", []), cfg.get("google", [])
-    if not n_acc and not g_acc:
+    m_acc, ga_acc = cfg.get("meta", []), cfg.get("ga4", [])
+    if not (n_acc or g_acc or m_acc or ga_acc):
         _print(logs)
         print("  계정 설정이 없어 수집을 건너뜁니다. (--sample 로 배선 검증 가능)")
         return
@@ -106,6 +109,14 @@ def main():
         for acc in g_acc:
             grows += GOOGLE.fetch_day(acc, d, defaults, logs)
         _sink("google", d, grows, logs)
+        mrows = []
+        for acc in m_acc:
+            mrows += META.fetch_day(acc, d, defaults, logs)
+        _sink("meta", d, mrows, logs)
+        garows = []
+        for acc in ga_acc:
+            garows += GA4.fetch_day(acc, d, defaults, logs)
+        _sink("ga4", d, garows, logs)
     _print(logs)
 
 
