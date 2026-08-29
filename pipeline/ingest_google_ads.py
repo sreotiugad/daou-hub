@@ -30,19 +30,21 @@ def _client(logs):
     except Exception as e:
         logs.append(f"[google-ads] 라이브러리 미설치: {e}")
         return None
-    need = ["GOOGLE_ADS_DEVELOPER_TOKEN", "GOOGLE_ADS_CLIENT_ID",
-            "GOOGLE_ADS_CLIENT_SECRET", "GOOGLE_ADS_REFRESH_TOKEN"]
-    if not all(os.environ.get(k) for k in need):
-        logs.append("[google-ads] 공통 OAuth 환경변수 없음 → 스킵")
+    # 기존 스트림릿 앱과 동일한 GADS_* 이름도 그대로 받아먹는다.
+    def ev(name):
+        return os.environ.get("GOOGLE_ADS_" + name) or os.environ.get("GADS_" + name)
+    need = ["DEVELOPER_TOKEN", "CLIENT_ID", "CLIENT_SECRET", "REFRESH_TOKEN"]
+    if not all(ev(k) for k in need):
+        logs.append("[google-ads] 공통 OAuth 환경변수 없음(GOOGLE_ADS_*/GADS_*) → 스킵")
         return None
     cfg = {
-        "developer_token": os.environ["GOOGLE_ADS_DEVELOPER_TOKEN"],
-        "client_id": os.environ["GOOGLE_ADS_CLIENT_ID"],
-        "client_secret": os.environ["GOOGLE_ADS_CLIENT_SECRET"],
-        "refresh_token": os.environ["GOOGLE_ADS_REFRESH_TOKEN"],
+        "developer_token": ev("DEVELOPER_TOKEN"),
+        "client_id": ev("CLIENT_ID"),
+        "client_secret": ev("CLIENT_SECRET"),
+        "refresh_token": ev("REFRESH_TOKEN"),
         "use_proto_plus": True,
     }
-    lc = os.environ.get("GOOGLE_ADS_LOGIN_CUSTOMER_ID")
+    lc = ev("LOGIN_CUSTOMER_ID")
     if lc:
         cfg["login_customer_id"] = lc.replace("-", "")
     try:

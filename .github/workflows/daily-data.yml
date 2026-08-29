@@ -31,6 +31,12 @@ jobs:
       #   accounts.json 대신 이 시크릿(JSON)로 계정·마크업·서비스 매핑을 준다.
       DAOU_AD_ACCOUNTS: ${{ secrets.DAOU_AD_ACCOUNTS }}
       #   구글애즈 공통 OAuth(계정별 customer_id 는 DAOU_AD_ACCOUNTS 안에)
+      #   기존 스트림릿과 동일한 GADS_* 이름을 그대로 써도 됨(코드가 둘 다 인식).
+      GADS_DEVELOPER_TOKEN: ${{ secrets.GADS_DEVELOPER_TOKEN }}
+      GADS_CLIENT_ID: ${{ secrets.GADS_CLIENT_ID }}
+      GADS_CLIENT_SECRET: ${{ secrets.GADS_CLIENT_SECRET }}
+      GADS_REFRESH_TOKEN: ${{ secrets.GADS_REFRESH_TOKEN }}
+      GADS_LOGIN_CUSTOMER_ID: ${{ secrets.GADS_LOGIN_CUSTOMER_ID }}
       GOOGLE_ADS_DEVELOPER_TOKEN: ${{ secrets.GOOGLE_ADS_DEVELOPER_TOKEN }}
       GOOGLE_ADS_CLIENT_ID: ${{ secrets.GOOGLE_ADS_CLIENT_ID }}
       GOOGLE_ADS_CLIENT_SECRET: ${{ secrets.GOOGLE_ADS_CLIENT_SECRET }}

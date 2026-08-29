@@ -1,39 +1,67 @@
 {
-  "_설명": "이 파일을 accounts.json 으로 복사(또는 내용을 GitHub Secret DAOU_AD_ACCOUNTS 에 JSON으로) 붙여넣어라. accounts.json 은 .gitignore 로 커밋되지 않는다.",
-  "_광고비": "구글=총비용×1.1, 네이버=salesAmt÷1.1 (VAT 10%). 별도 마크업 없으면 markup 0.",
+  "_안내": "이 구조를 채워서 GitHub Secret 'DAOU_AD_ACCOUNTS' 에 JSON 통째로 넣어라. 각 브랜드 스트림릿 앱의 secrets 값을 해당 슬롯에 복사한다. (customer_id/api_key/secret_key). 빈 슬롯은 지워도 됨.",
+  "_광고비": "구글=총비용×1.1, 네이버=salesAmt÷1.1 (VAT 10%). 마크업 없으면 markup 0.",
   "defaults": { "markup": 0.0, "vat": 0.10 },
 
   "naver": [
     {
-      "label": "사방넷-네이버",
-      "customer_id": "1234567",
-      "api_key": "010000000000....",
-      "secret_key": "AQAAAAA....",
-      "service": "사방넷",
-      "markup": 0.15,
-      "vat": 0.10,
+      "label": "사방넷-네이버1", "service": "사방넷",
+      "customer_id": "<사방넷앱 NAVER1_CUSTOMER_ID>",
+      "api_key": "<사방넷앱 NAVER1_API_KEY>",
+      "secret_key": "<사방넷앱 NAVER1_SECRET_KEY>",
       "service_rules": [
-        { "contains": "미니", "service": "사방넷미니" },
-        { "contains": "풀필", "service": "풀필먼트" }
+        { "contains": "풀필", "service": "풀필먼트" },
+        { "contains": "미니", "service": "사방넷미니" }
       ]
     },
     {
-      "label": "뿌리오-네이버",
-      "customer_id": "7654321",
-      "api_key": "010000000000....",
-      "secret_key": "AQAAAAA....",
-      "service": "뿌리오"
+      "label": "사방넷-네이버2", "service": "사방넷",
+      "customer_id": "<사방넷앱 NAVER2_CUSTOMER_ID>",
+      "api_key": "<사방넷앱 NAVER2_API_KEY>",
+      "secret_key": "<사방넷앱 NAVER2_SECRET_KEY>",
+      "service_rules": [
+        { "contains": "풀필", "service": "풀필먼트" },
+        { "contains": "미니", "service": "사방넷미니" }
+      ]
+    },
+    {
+      "label": "애드콘-네이버", "service": "애드콘",
+      "customer_id": "<애드콘앱 NAVER1_CUSTOMER_ID>",
+      "api_key": "<애드콘앱 NAVER1_API_KEY>",
+      "secret_key": "<애드콘앱 NAVER1_SECRET_KEY>"
+    },
+    {
+      "label": "엔팩스-네이버", "service": "엔팩스",
+      "customer_id": "<애드콘앱 NAVER2_CUSTOMER_ID>",
+      "api_key": "<애드콘앱 NAVER2_API_KEY>",
+      "secret_key": "<애드콘앱 NAVER2_SECRET_KEY>"
+    },
+    {
+      "label": "다우오피스-네이버", "service": "다우오피스",
+      "customer_id": "<다우앱 NAVER_CUSTOMER_ID>",
+      "api_key": "<다우앱 NAVER_API_KEY>",
+      "secret_key": "<다우앱 NAVER_SECRET_KEY>",
+      "service_rules": [ { "contains": "HR", "service": "다우오피스HR" }, { "contains": "hr", "service": "다우오피스HR" } ]
     }
   ],
 
   "google": [
     {
-      "label": "사방넷-구글",
-      "customer_id": "123-456-7890",
-      "service": "사방넷",
-      "service_rules": [
-        { "contains": "미니", "service": "사방넷미니" }
-      ]
+      "label": "사방넷-구글1", "service": "사방넷",
+      "customer_id": "<사방넷앱 GADS_CUSTOMER_ID>",
+      "service_rules": [ { "contains": "풀필", "service": "풀필먼트" }, { "contains": "미니", "service": "사방넷미니" } ]
+    },
+    {
+      "label": "사방넷-구글2", "service": "사방넷",
+      "customer_id": "<사방넷앱 GADS_CUSTOMER_ID_2>",
+      "service_rules": [ { "contains": "풀필", "service": "풀필먼트" }, { "contains": "미니", "service": "사방넷미니" } ]
+    },
+    { "label": "애드콘-구글", "service": "애드콘", "customer_id": "<애드콘앱 GADS_CUSTOMER_ID>" },
+    { "label": "엔팩스-구글", "service": "엔팩스", "customer_id": "<애드콘앱 GADS_CUSTOMER_ID_2>" },
+    {
+      "label": "다우오피스-구글", "service": "다우오피스",
+      "customer_id": "<다우앱 GADS_CUSTOMER_IDS (또는 GADS_CUSTOMER_ID)>",
+      "service_rules": [ { "contains": "HR", "service": "다우오피스HR" }, { "contains": "hr", "service": "다우오피스HR" } ]
     }
   ]
 }
