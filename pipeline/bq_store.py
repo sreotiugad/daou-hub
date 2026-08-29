@@ -60,7 +60,9 @@ def _client(logs):
 
 
 def _table_id(bq_client):
-    return f"{bq_client.project}.{_dataset()}.{os.environ.get('BQ_ADS_TABLE','ads_raw')}"
+    # 미설정 시크릿은 빈 문자열로 들어올 수 있으므로 or 로 기본값 보장
+    tbl = (os.environ.get("BQ_ADS_TABLE") or "ads_raw").strip()
+    return f"{bq_client.project}.{_dataset()}.{tbl}"
 
 
 def _ensure(bq_client, bigquery, logs):
