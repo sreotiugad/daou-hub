@@ -46,8 +46,9 @@ def fetch_day(acc, date_iso, defaults, logs=None):
             for it in j.get("data", []):
                 obj = str(it.get("objective", "")).upper()
                 ct = "동영상" if obj in VIDEO_OBJ else "디스플레이"
-                conv = sum(float(a.get("value", 0) or 0) for a in (it.get("actions") or [])
-                           if a.get("action_type") in CONV_ACTIONS)
+                conv = 0.0 if acc.get("signup_from_ga4") else sum(
+                    float(a.get("value", 0) or 0) for a in (it.get("actions") or [])
+                    if a.get("action_type") in CONV_ACTIONS)
                 imp = int(float(it.get("impressions", 0) or 0))
                 clk = int(float(it.get("clicks", 0) or 0))
                 spend = float(it.get("spend", 0) or 0)

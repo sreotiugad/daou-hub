@@ -71,6 +71,12 @@
       "access_token": "<사방넷앱 META_ACCESS_TOKEN>",
       "ad_account_id": "<사방넷앱 META_AD_ACCOUNT_ID (act_ 접두 있어도/없어도 됨)>",
       "service_rules": [ { "contains": "풀필", "service": "풀필먼트" }, { "contains": "미니", "service": "사방넷미니" } ]
+    },
+    {
+      "label": "다우오피스-메타", "service": "다우오피스", "signup_from_ga4": true,
+      "access_token": "<다우앱 META_ACCESS_TOKEN>",
+      "ad_account_id": "<다우앱 META_AD_ACCOUNT_ID>",
+      "service_rules": [ { "contains": "HR", "service": "다우오피스HR" }, { "contains": "hr", "service": "다우오피스HR" } ]
     }
   ],
 
