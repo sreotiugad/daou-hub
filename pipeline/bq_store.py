@@ -127,7 +127,7 @@ def read_rows(logs=None):
     try:
         it = bq_client.query(
             f"SELECT date, service, media, camptype, imp, click, cost_marked, signup "
-            f"FROM `{tid}`"
+            f"FROM `{tid}` WHERE source != 'sample'"
         ).result()
     except Exception as e:
         logs.append(f"[bq] read 오류(테이블 없음?): {e}")
