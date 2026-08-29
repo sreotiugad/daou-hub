@@ -6,6 +6,15 @@ on:
   schedule:
     - cron: "0 0 * * *"
   workflow_dispatch:
+    inputs:
+      mode:
+        description: "수집 모드: real=광고API 수집 / sample=빅쿼리 연결 테스트용 더미"
+        type: choice
+        default: real
+        options: [real, sample]
+      backfill:
+        description: "며칠치 수집(백필). 최초 1년치는 400."
+        default: "1"
 
 permissions:
   contents: write
@@ -56,17 +65,27 @@ jobs:
       - name: Install deps
         run: pip install -r pipeline/requirements.txt
 
-      - name: Ingest ads → RAW (어제치 광고 API 수집 → BigQuery/raw)
+      - name: Ingest ads → RAW (광고 API 수집 → BigQuery/raw)
+        env:
+          MODE: ${{ github.event.inputs.mode || 'real' }}
+          BF: ${{ github.event.inputs.backfill || '1' }}
         run: |
           cd pipeline
-          python ingest.py --backfill 1
+          if [ "$MODE" = "sample" ]; then
+            python ingest.py --sample --backfill "$BF"
+          else
+            python ingest.py --backfill "$BF"
+          fi
 
-      - name: Build data.json (RAW 창고 → data.json; 없으면 기존 유지/샘플)
+      # 샘플(빅쿼리 연결 테스트) 모드에서는 실데이터 data.json 을 건드리지 않는다.
+      - name: Build data.json (RAW 창고 → data.json)
+        if: ${{ github.event.inputs.mode != 'sample' }}
         run: |
           cd pipeline
           python build_data.py
 
       - name: Commit data.json + raw if changed
+        if: ${{ github.event.inputs.mode != 'sample' }}
         run: |
           git config user.name  "daou-hub-bot"
           git config user.email "actions@users.noreply.github.com"
