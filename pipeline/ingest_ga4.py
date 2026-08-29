@@ -50,11 +50,13 @@ def fetch_day(acc, date_iso, defaults, logs=None, _cache={}):
             dim_filter = FilterExpression(filter=Filter(
                 field_name="eventName",
                 string_filter=Filter.StringFilter(value=str(ev))))
+        # 다우 리포트 앱과 동일: keyEvents 지표 + eventName 필터.
+        metric_name = acc.get("conversion_metric") or "keyEvents"
         req = RunReportRequest(
             property=f"properties/{pid}",
             date_ranges=[DateRange(start_date=date_iso, end_date=date_iso)],
             dimensions=[Dimension(name="date")],
-            metrics=[Metric(name="conversions")],
+            metrics=[Metric(name=metric_name)],
             dimension_filter=dim_filter,
         )
         resp = client.run_report(req)

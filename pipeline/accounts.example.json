@@ -74,8 +74,9 @@
     }
   ],
 
+  "_ga4_note": "conversion_event 는 다우 앱 config 값(DO=lead_submit(ga4), HR=lead_submit). DO의 (ga4) 접미사가 실제 이벤트명인지 GA4에서 한번 확인. conversion_metric 기본 keyEvents.",
   "ga4": [
-    { "label": "다우오피스-GA4", "service": "다우오피스", "property_id": "<다우앱 GA4_PROPERTY_DO>", "conversion_event": "<가입 이벤트명 예: sign_up>" },
-    { "label": "다우오피스HR-GA4", "service": "다우오피스HR", "property_id": "<다우앱 GA4_PROPERTY_HR>", "conversion_event": "<가입 이벤트명>" }
+    { "label": "다우오피스-GA4", "service": "다우오피스", "property_id": "<다우앱 GA4_PROPERTY_DO>", "conversion_event": "lead_submit(ga4)" },
+    { "label": "다우오피스HR-GA4", "service": "다우오피스HR", "property_id": "<다우앱 GA4_PROPERTY_HR>", "conversion_event": "lead_submit" }
   ]
 }
