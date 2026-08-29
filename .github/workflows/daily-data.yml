@@ -8,10 +8,10 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "수집 모드: real=광고API 수집 / sample=빅쿼리 연결 테스트용 더미"
+        description: "real=수집+사이트갱신 / ingest=수집만(사이트 안건드림·테스트용) / sample=더미"
         type: choice
         default: real
-        options: [real, sample]
+        options: [real, ingest, sample]
       backfill:
         description: "며칠치 수집(백필). 최초 1년치는 400."
         default: "1"
@@ -85,13 +85,13 @@ jobs:
 
       # 샘플(빅쿼리 연결 테스트) 모드에서는 실데이터 data.json 을 건드리지 않는다.
       - name: Build data.json (RAW 창고 → data.json)
-        if: ${{ github.event.inputs.mode != 'sample' }}
+        if: ${{ github.event.inputs.mode != 'sample' && github.event.inputs.mode != 'ingest' }}
         run: |
           cd pipeline
           python build_data.py
 
       - name: Commit data.json + raw if changed
-        if: ${{ github.event.inputs.mode != 'sample' }}
+        if: ${{ github.event.inputs.mode != 'sample' && github.event.inputs.mode != 'ingest' }}
         run: |
           git config user.name  "daou-hub-bot"
           git config user.email "actions@users.noreply.github.com"
