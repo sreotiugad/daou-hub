@@ -28,6 +28,7 @@ _SCHEMA = [
     ("camptype", "STRING"), ("campaign", "STRING"), ("imp", "INT64"),
     ("click", "INT64"), ("cost_net", "INT64"), ("signup", "FLOAT64"),
     ("cost_marked", "INT64"), ("avg_rank", "FLOAT64"),
+    ("adgroup", "STRING"), ("ad", "STRING"),
     ("source", "STRING"), ("ingested_at", "TIMESTAMP"),
 ]
 
@@ -36,7 +37,7 @@ _H2C = {
     "서비스": "service", "매체": "media", "캠페인 유형": "camptype",
     "캠페인": "campaign", "기간": "date", "노출 수": "imp", "클릭 수": "click",
     "총 비용": "cost_net", "가입": "signup", "광고비(마크업포함,VAT포함)": "cost_marked",
-    "평균노출순위": "avg_rank",
+    "평균노출순위": "avg_rank", "광고그룹": "adgroup", "광고": "ad",
 }
 
 
@@ -141,7 +142,8 @@ def read_rows(logs=None):
     tid = _table_id(bq_client)
     try:
         it = bq_client.query(
-            f"SELECT date, service, media, camptype, imp, click, cost_marked, signup, avg_rank "
+            f"SELECT date, service, media, camptype, campaign, imp, click, cost_marked, signup, "
+            f"avg_rank, adgroup, ad "
             f"FROM `{tid}` WHERE source != 'sample'"
         ).result()
     except Exception as e:
@@ -163,6 +165,9 @@ def read_rows(logs=None):
             "cost": float(r["cost_marked"] or 0),
             "signup": float(r["signup"] or 0),
             "rank": float(r["avg_rank"] or 0),
+            "campaign": str(r["campaign"] or "").strip(),
+            "adgroup": str(r["adgroup"] or "").strip(),
+            "ad": str(r["ad"] or "").strip(),
         })
     logs.append(f"[bq] {len(out)}행 읽음")
     return out

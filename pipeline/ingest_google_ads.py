@@ -67,54 +67,83 @@ def fetch_day(acc, date_iso, defaults, logs=None, _client_cache={}):
         logs.append(f"[google-ads] {acc.get('label','?')} customer_id 없음 → 스킵")
         return []
     mk, vat = ad_config.markup_vat(acc, defaults)
-    # 성과(노출·클릭·비용)와 가입(전환)을 분리 조회한다.
-    #   가입 = conversion_action_category = SIGNUP 인 전환만 (실제 브랜드 리포트 동일).
-    #   conversion 카테고리로 세그먼트하면 성과 지표가 중복되므로 쿼리를 나눈다.
-    q_perf = (
-        "SELECT campaign.name, campaign.advertising_channel_type, "
-        "metrics.impressions, metrics.clicks, metrics.cost_micros "
-        "FROM campaign WHERE segments.date = '%s'" % date_iso
-    )
-    q_conv = (
-        "SELECT campaign.name, segments.conversion_action_category, metrics.conversions "
-        "FROM campaign WHERE segments.date = '%s'" % date_iso
-    )
-    perf, signup = {}, {}
-    try:
+    # 성과·가입을 (1)캠페인 (2)광고(ad_group_ad) 두 층위로 조회한다.
+    #   가입 = conversion_action_category=SIGNUP 만. (conversion 세그먼트는 성과와 분리)
+    #   광고 단위: 검색·쇼핑·디스플레이·동영상은 ad_group_ad 로 광고별. Pmax 는 광고가
+    #   없어 ad_group_ad 에 안 잡히므로, 광고로 커버 안 된 캠페인만 캠페인 단위 폴백 →
+    #   총 지출은 그대로 보존하고 중복 없이 광고 단위까지 확장.
+    q_camp = ("SELECT campaign.name, campaign.advertising_channel_type, "
+              "metrics.impressions, metrics.clicks, metrics.cost_micros "
+              "FROM campaign WHERE segments.date = '%s'" % date_iso)
+    q_ad = ("SELECT campaign.name, campaign.advertising_channel_type, ad_group.name, "
+            "ad_group_ad.ad.id, ad_group_ad.ad.name, "
+            "metrics.impressions, metrics.clicks, metrics.cost_micros "
+            "FROM ad_group_ad WHERE segments.date = '%s'" % date_iso)
+    q_conv_c = ("SELECT campaign.name, segments.conversion_action_category, metrics.conversions "
+                "FROM campaign WHERE segments.date = '%s'" % date_iso)
+    q_conv_ad = ("SELECT campaign.name, ad_group.name, ad_group_ad.ad.id, "
+                 "segments.conversion_action_category, metrics.conversions "
+                 "FROM ad_group_ad WHERE segments.date = '%s'" % date_iso)
+    camp, adrows, conv_c, conv_ad = {}, {}, {}, {}
+    try:   # 캠페인 단위(필수) — 실패 시 구글 스킵
         svc = client.get_service("GoogleAdsService")
-        for batch in svc.search_stream(customer_id=cid, query=q_perf):
+        for batch in svc.search_stream(customer_id=cid, query=q_camp):
             for r in batch.results:
-                name = r.campaign.name
-                d = perf.setdefault(name, {"imp": 0, "clk": 0, "net": 0.0,
-                                          "chtp": r.campaign.advertising_channel_type.name})
+                d = camp.setdefault(r.campaign.name, {"imp": 0, "clk": 0, "net": 0.0,
+                                    "chtp": r.campaign.advertising_channel_type.name})
                 d["imp"] += int(r.metrics.impressions)
                 d["clk"] += int(r.metrics.clicks)
                 d["net"] += r.metrics.cost_micros / 1_000_000.0
-        for batch in svc.search_stream(customer_id=cid, query=q_conv):
+        for batch in svc.search_stream(customer_id=cid, query=q_conv_c):
             for r in batch.results:
                 if r.segments.conversion_action_category.name != "SIGNUP":
                     continue
-                signup[r.campaign.name] = signup.get(r.campaign.name, 0.0) + float(r.metrics.conversions)
+                conv_c[r.campaign.name] = conv_c.get(r.campaign.name, 0.0) + float(r.metrics.conversions)
     except Exception as e:
-        logs.append(f"[google-ads] {acc.get('label','')} 쿼리 오류: {e}")
+        logs.append(f"[google-ads] {acc.get('label','')} 캠페인 쿼리 오류: {e}")
         return []
+    try:   # 광고 단위(선택) — 실패해도 캠페인 단위로 폴백해 리포트 보존
+        for batch in svc.search_stream(customer_id=cid, query=q_ad):
+            for r in batch.results:
+                k = (r.campaign.name, r.ad_group.name, str(r.ad_group_ad.ad.id))
+                nm = (r.ad_group_ad.ad.name or "").strip() or f"광고 #{r.ad_group_ad.ad.id}"
+                d = adrows.setdefault(k, {"imp": 0, "clk": 0, "net": 0.0,
+                                     "chtp": r.campaign.advertising_channel_type.name,
+                                     "adg": r.ad_group.name, "ad": nm})
+                d["imp"] += int(r.metrics.impressions)
+                d["clk"] += int(r.metrics.clicks)
+                d["net"] += r.metrics.cost_micros / 1_000_000.0
+        for batch in svc.search_stream(customer_id=cid, query=q_conv_ad):
+            for r in batch.results:
+                if r.segments.conversion_action_category.name != "SIGNUP":
+                    continue
+                k = (r.campaign.name, r.ad_group.name, str(r.ad_group_ad.ad.id))
+                conv_ad[k] = conv_ad.get(k, 0.0) + float(r.metrics.conversions)
+    except Exception as e:
+        logs.append(f"[google-ads] {acc.get('label','')} 광고단위 쿼리 실패(캠페인단위 폴백): {str(e)[:80]}")
+        adrows.clear(); conv_ad.clear()
     ga4 = acc.get("signup_from_ga4")
+    covered = {k[0] for k in adrows}   # 광고 단위로 커버된 캠페인
+
+    def _row(name, chtp, adg, ad, imp, clk, net, sval):
+        return {
+            "서비스": ad_config.resolve_service(acc, name), "매체": "구글",
+            "캠페인 유형": C.norm_ct(_CHTP.get(chtp, "구글검색"), "구글"),
+            "캠페인": name, "광고그룹": adg, "광고": ad, "기간": date_iso,
+            "노출 수": imp, "클릭 수": clk, "총 비용": int(round(net)),
+            "가입": round(0.0 if ga4 else sval, 1),
+            "광고비(마크업포함,VAT포함)": ad_config.marked_cost(net, "구글", mk, vat),
+        }
     rows = []
-    for name, d in perf.items():
+    for (cname, adg, adid), d in adrows.items():            # (a) 광고 단위
         if d["imp"] == 0 and d["clk"] == 0 and d["net"] == 0:
             continue
-        sval = 0.0 if ga4 else signup.get(name, 0.0)
-        rows.append({
-            "서비스": ad_config.resolve_service(acc, name),
-            "매체": "구글",
-            "캠페인 유형": C.norm_ct(_CHTP.get(d["chtp"], "구글검색"), "구글"),
-            "캠페인": name,
-            "기간": date_iso,
-            "노출 수": d["imp"],
-            "클릭 수": d["clk"],
-            "총 비용": int(round(d["net"])),
-            "가입": round(sval, 1),
-            "광고비(마크업포함,VAT포함)": ad_config.marked_cost(d["net"], "구글", mk, vat),
-        })
-    logs.append(f"[google-ads] {acc.get('label','')} {date_iso} · {len(rows)}행")
+        rows.append(_row(cname, d["chtp"], adg, d["ad"], d["imp"], d["clk"], d["net"],
+                         conv_ad.get((cname, adg, adid), 0.0)))
+    for cname, d in camp.items():                            # (b) Pmax 등 광고없는 캠페인
+        if cname in covered or (d["imp"] == 0 and d["clk"] == 0 and d["net"] == 0):
+            continue
+        rows.append(_row(cname, d["chtp"], "", "", d["imp"], d["clk"], d["net"],
+                         conv_c.get(cname, 0.0)))
+    logs.append(f"[google-ads] {acc.get('label','')} {date_iso} · {len(rows)}행(광고 {len(adrows)})")
     return rows

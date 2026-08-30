@@ -92,7 +92,8 @@ def build_report(rows, days=None):
         sub = r["service"]
         if sub not in C.BRAND_MAP or r["date"] not in axisset:
             continue
-        key = (r["date"], sub, r["media"], r["camptype"])
+        key = (r["date"], sub, r["media"], r["camptype"],
+               r.get("campaign", "") or "", r.get("adgroup", "") or "", r.get("ad", "") or "")
         f = fmap.setdefault(key, {"imp": 0.0, "click": 0.0, "cost": 0.0, "signup": 0.0,
                                   "rnkw": 0.0, "rnki": 0.0})
         f["imp"] += r["imp"]; f["click"] += r["click"]
@@ -103,6 +104,7 @@ def build_report(rows, days=None):
             f["rnkw"] += rk * r["imp"]; f["rnki"] += r["imp"]
     facts = [{
         "d": k[0], "svc": k[1], "grp": C.BRAND_MAP[k[1]][0], "media": k[2], "ct": k[3],
+        "cmp": k[4], "adg": k[5], "ad": k[6],
         "imp": round(v["imp"]), "click": round(v["click"]),
         "cost": round(v["cost"]), "signup": round(v["signup"], 1),
         "rnkw": round(v["rnkw"]), "rnki": round(v["rnki"]),

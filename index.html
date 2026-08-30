@@ -573,7 +573,7 @@ const DUKeyword=(function(){
 
 /* ===================== CUSTOM REPORT (피벗) ===================== */
 const DUCustom=(function(){
-  const DIMS={"기간":"d","서비스":"svc","매체":"media","캠페인유형":"ct"};
+  const DIMS={"기간":"d","서비스":"svc","매체":"media","캠페인유형":"ct","캠페인":"cmp","광고그룹":"adg","광고":"ad"};
   const MET={
     cost:{label:"광고비",fmt:"won"}, imp:{label:"노출",fmt:"num"}, click:{label:"클릭",fmt:"num"},
     signup:{label:"가입",fmt:"num1"},
@@ -595,7 +595,7 @@ const DUCustom=(function(){
   function cutoff(F){const m=maxD(F);if(!m)return"";const d=new Date(m);d.setDate(d.getDate()-(st.N-1));return d.toISOString().slice(0,10)}
   function range(F){return(st.start||st.end)?[st.start||"0000-00-00",st.end||"9999-12-31"]:[cutoff(F),"9999-12-31"]}
   function bkt(d){if(st.gran==="일")return d;if(st.gran==="월")return d.slice(0,7);const dt=new Date(d),wd=(dt.getDay()+6)%7;dt.setDate(dt.getDate()-wd);return dt.toISOString().slice(0,10)}
-  function dimVal(r,dm){return dm==="기간"?bkt(r.d):r[DIMS[dm]]}
+  function dimVal(r,dm){if(dm==="기간")return bkt(r.d);const v=r[DIMS[dm]];return (v==null||v==="")?"(미지정)":v}
   function metVal(m,s){const d=MET[m];return d.calc?d.calc(s):s[m]}
   function build(){const F=facts();const[lo,hi]=range(F);const rows=F.filter(r=>r.d>=lo&&r.d<=hi&&(!st.group||r.grp===st.group)&&(!st.media||r.media===st.media));const gr={};for(const r of rows){const k=st.dims.map(dm=>dimVal(r,dm)).join("");let g=gr[k];if(!g){g={_k:st.dims.map(dm=>dimVal(r,dm)),cost:0,imp:0,click:0,signup:0,rnkw:0,rnki:0};gr[k]=g}g.cost+=r.cost;g.imp+=r.imp;g.click+=r.click;g.signup+=r.signup;g.rnkw+=r.rnkw||0;g.rnki+=r.rnki||0}
     let list=Object.values(gr);const sc=st.sort;

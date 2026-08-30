@@ -87,7 +87,19 @@ def _stats(acc, ids, date_iso, logs):
             out[str(cid)] = agg
         except Exception as e:
             logs.append(f"[naver-ads] stats 오류: {e}")
+        time.sleep(0.34)   # 초당 3회 제한 여유 (광고그룹 다수 조회 대비)
     return out
+
+
+def _adgroups(acc, campaign_id, logs):
+    """캠페인의 광고그룹 목록. 실패 시 []."""
+    uri = "/ncc/adgroups"
+    try:
+        r = requests.get(BASE + uri, params={"nccCampaignId": campaign_id},
+                         headers=_headers(acc, uri), timeout=20)
+        return (r.json() or []) if r.status_code == 200 else []
+    except Exception:
+        return []
 
 
 def fetch_day(acc, date_iso, defaults, logs=None):
@@ -102,36 +114,54 @@ def fetch_day(acc, date_iso, defaults, logs=None):
         return []
     if not camps:
         return []
-    by_id = {str(c.get("nccCampaignId")): c for c in camps}
-    stats = _stats(acc, list(by_id.keys()), date_iso, logs)
+    by_camp = {str(c.get("nccCampaignId")): c for c in camps}
     mk, vat = ad_config.markup_vat(acc, defaults)
+    ga4 = acc.get("signup_from_ga4")
 
+    def _mkrow(name, ctp, agname, s):
+        imp = float(s.get("impCnt", 0) or 0); clk = float(s.get("clkCnt", 0) or 0)
+        net = float(s.get("salesAmt", 0) or 0)
+        if imp == 0 and clk == 0 and net == 0:
+            return None
+        return {
+            "서비스": ad_config.resolve_service(acc, name), "매체": "네이버",
+            "캠페인 유형": C.norm_ct(_CTP.get(str(ctp), "파워링크"), "네이버"),
+            "캠페인": name, "광고그룹": agname, "광고": "", "기간": date_iso,
+            "노출 수": int(imp), "클릭 수": int(clk), "총 비용": int(net),
+            "가입": 0.0 if ga4 else float(s.get("ccnt", 0) or 0),
+            "광고비(마크업포함,VAT포함)": ad_config.marked_cost(net, "네이버", mk, vat),
+            "평균노출순위": round(float(s.get("avgRnk", 0) or 0), 2),
+        }
+
+    # 1) 광고그룹 단위 시도 — 캠페인별 광고그룹 목록 → 광고그룹 stats
+    ag_meta = {}   # adgroupId -> (campaignName, campTp, adgroupName)
+    for cid, c in by_camp.items():
+        for ag in (_adgroups(acc, cid, logs) or []):
+            agid = str(ag.get("nccAdgroupId") or "")
+            if agid:
+                ag_meta[agid] = (c.get("name", ""), c.get("campaignTp", ""), ag.get("name", ""))
+        time.sleep(0.34)
+    if ag_meta:
+        stats = _stats(acc, list(ag_meta.keys()), date_iso, logs)
+        rows = []
+        for agid, s in stats.items():
+            cn, ctp, an = ag_meta.get(agid, ("", "", ""))
+            row = _mkrow(cn, ctp, an, s)
+            if row:
+                rows.append(row)
+        if rows:
+            logs.append(f"[naver-ads] {acc.get('label','')} {date_iso} · {len(rows)}행(광고그룹 {len(ag_meta)})")
+            return rows
+
+    # 2) 폴백 — 광고그룹 조회/실적이 비면 캠페인 단위 (핵심 리포트 보존)
+    stats = _stats(acc, list(by_camp.keys()), date_iso, logs)
     rows = []
-    for cid, c in by_id.items():
+    for cid, c in by_camp.items():
         s = stats.get(cid)
         if not s:
             continue
-        imp = float(s.get("impCnt", 0) or 0)
-        clk = float(s.get("clkCnt", 0) or 0)
-        net = float(s.get("salesAmt", 0) or 0)
-        conv = 0.0 if acc.get("signup_from_ga4") else float(s.get("ccnt", 0) or 0)
-        rnk = float(s.get("avgRnk", 0) or 0)
-        if imp == 0 and clk == 0 and net == 0:
-            continue
-        name = c.get("name", "")
-        ctp_hint = _CTP.get(str(c.get("campaignTp", "")), "파워링크")
-        rows.append({
-            "서비스": ad_config.resolve_service(acc, name),
-            "매체": "네이버",
-            "캠페인 유형": C.norm_ct(ctp_hint, "네이버"),
-            "캠페인": name,
-            "기간": date_iso,
-            "노출 수": int(imp),
-            "클릭 수": int(clk),
-            "총 비용": int(net),
-            "가입": conv,
-            "광고비(마크업포함,VAT포함)": ad_config.marked_cost(net, "네이버", mk, vat),
-            "평균노출순위": round(rnk, 2),
-        })
-    logs.append(f"[naver-ads] {acc.get('label','')} {date_iso} · {len(rows)}행")
+        row = _mkrow(c.get("name", ""), c.get("campaignTp", ""), "", s)
+        if row:
+            rows.append(row)
+    logs.append(f"[naver-ads] {acc.get('label','')} {date_iso} · {len(rows)}행(캠페인 폴백)")
     return rows
