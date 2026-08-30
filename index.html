@@ -274,6 +274,7 @@
   .post .pm b{font-size:12.5px;font-weight:600;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
   .post .pm .sub{font-size:11px;color:var(--muted);margin-top:3px}
   .post:hover .pm b{color:var(--primary)}
+  .post-sort{display:inline-flex;margin-bottom:12px}
 </style>
 
 <header class="appnav">
@@ -383,7 +384,7 @@
     <div class="card"><div class="card-h"><h3>광고 경쟁 현황</h3><span class="hint">추정·상위노출</span></div><div class="card-b" style="overflow-x:auto"><div id="advTable"></div></div></div>
   </div>
   <div class="card" style="margin-top:14px"><div class="card-h"><h3>YouTube 콘텐츠 순위</h3><span class="hint">이 키워드 상위 영상</span></div><div class="card-b"><div id="ytList"></div></div></div>
-  <div class="card" style="margin-top:14px"><div class="card-h"><h3>블로그·카페 인기 글</h3><span class="hint">이 키워드 상위 문서 TOP 5</span></div><div class="card-b"><div id="postList"></div></div></div>
+  <div class="card" style="margin-top:14px"><div class="card-h"><h3>블로그·카페 글</h3><span class="hint">이 키워드 상위 문서 · 각 TOP 5</span></div><div class="card-b"><div id="postList"></div></div></div>
 </main>
 
 <!-- CUSTOM REPORT -->
@@ -527,11 +528,16 @@ const DUKeyword=(function(){
   function renderYT(d){const list=d.youtube||[];const box=document.getElementById('ytList');if(!box)return;if(d._demo){box.innerHTML='<div style="color:var(--muted);font-size:12.5px;padding:10px 2px;line-height:1.6">이 키워드는 <b>미리 수집된 키워드가 아니라</b> 실제 영상 순위를 표시하지 않아요.<br>추천 키워드를 쓰거나, 이 키워드를 <b>수집 목록에 등록</b>하면 실제 YouTube 순위가 나옵니다.</div>';return}if(!list.length){box.innerHTML='<div style="color:var(--muted);font-size:12.5px;padding:8px 2px">표시할 영상이 없어요. (YouTube 키 연동 시 실데이터)</div>';return}box.innerHTML='<div class="yt-grid">'+list.map((v,i)=>`<a class="yt" href="${v.url||'#'}" target="_blank" rel="noopener"><span class="rk">${i+1}</span><span class="thumb"><span class="ph"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>${v.thumb?`<img src="${v.thumb}" loading="lazy" onerror="this.remove()">`:''}${v.dur?`<span class="dur">${v.dur}</span>`:''}</span><span class="m"><b>${v.title||''}</b><span class="sub">${v.channel||''} · 조회 ${fmtViews(v.views)}${v.date?' · '+v.date:''}</span></span></a>`).join('')+'</div>';}
   function resolveKw(kw){const RK=window.DAOU_DATA&&window.DAOU_DATA.keyword;if(RK&&RK[kw])return Promise.resolve(adaptKw(RK[kw]));return fetch('/api/keyword?q='+encodeURIComponent(kw)).then(function(r){return r.ok?r.json():null}).then(function(o){return (o&&!o.error)?adaptKw(o):gen(kw)}).catch(function(){return gen(kw)})}
   function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
-  function renderPosts(d){const box=document.getElementById('postList');if(!box)return;const p=d.posts||{};const blog=p.blog||[],cafe=p.cafe||[];
+  var postSort='sim',lastPostsD=null;
+  function renderPosts(d){lastPostsD=d;const box=document.getElementById('postList');if(!box)return;const p=d.posts||{};
     if(d._demo){box.innerHTML='<div style="color:var(--muted);font-size:12.5px;padding:10px 2px;line-height:1.6">이 키워드는 <b>미리 수집된 키워드가 아니라</b> 실제 블로그·카페 글을 표시하지 않아요.<br>추천 키워드를 쓰거나 이 키워드를 <b>수집 목록에 등록</b>하면 실제 글이 나옵니다.</div>';return}
-    if(!blog.length&&!cafe.length){box.innerHTML='<div style="color:var(--muted);font-size:12.5px;padding:8px 2px">표시할 글이 없어요. (네이버 개발자 키 연동 시 실데이터)</div>';return}
+    var src=p[postSort]||p;var blog=src.blog||[],cafe=src.cafe||[];
+    var hasAny=(p.sim&&((p.sim.blog||[]).length||(p.sim.cafe||[]).length))||(p.date&&((p.date.blog||[]).length||(p.date.cafe||[]).length))||(p.blog||[]).length||(p.cafe||[]).length;
+    if(!hasAny){box.innerHTML='<div style="color:var(--muted);font-size:12.5px;padding:8px 2px">표시할 글이 없어요. (네이버 개발자 키 연동 시 실데이터)</div>';return}
+    var seg='<div class="post-sort seg sm cxseg"><button data-s="sim" class="'+(postSort==='sim'?'on':'')+'">관련순</button><button data-s="date" class="'+(postSort==='date'?'on':'')+'">최신순</button></div>';
     function col(title,color,list){var body=list.length?list.map(function(x,i){return '<a class="post" href="'+esc(x.url||'#')+'" target="_blank" rel="noopener"><span class="rk">'+(i+1)+'</span><span class="pm"><b>'+esc(x.title)+'</b><span class="sub">'+[esc(x.author),esc(x.date)].filter(Boolean).join(' · ')+'</span></span></a>'}).join(''):'<div style="color:var(--muted);font-size:11.5px;padding:6px 0">없음</div>';return '<div class="post-col"><h4><span class="pd" style="background:'+color+'"></span>'+title+'</h4>'+body+'</div>'}
-    box.innerHTML='<div class="post-cols">'+col('블로그',COL.success,blog)+col('카페',COL.c2,cafe)+'</div>'}
+    box.innerHTML=seg+'<div class="post-cols">'+col('블로그',COL.success,blog)+col('카페',COL.c2,cafe)+'</div>';
+    box.querySelectorAll('.post-sort button').forEach(function(b){b.onclick=function(){postSort=b.dataset.s;renderPosts(lastPostsD)}})}
   function render(kw){if(kw)current=kw;const cur=current;document.getElementById('kwInput').value=cur;const rc0=document.getElementById('rComp');if(rc0){rc0.textContent='조회 중…';rc0.style.color=COL.muted;rc0.style.background='transparent'}resolveKw(cur).then(function(d){if(current!==cur)return;paint(cur,d)})}
   function paint(cur,d){document.getElementById('rKw').textContent=cur;const rc=document.getElementById('rComp');rc.textContent="경쟁 "+d.comp.l;rc.style.color=d.comp.c;rc.style.background="color-mix(in srgb,"+d.comp.c+" 12%,transparent)";document.getElementById('kSearch').innerHTML=comma(d.total)+'<u>회</u>';document.getElementById('kPc').textContent=comma(d.pc);document.getElementById('kMob').textContent=comma(d.mob);document.getElementById('kBlog').innerHTML=comma(d.blog)+'<u>건</u>';document.getElementById('kSat').textContent="포화 "+d.sat.toFixed(1)+":1";const kc=document.getElementById('kComp');kc.textContent=d.comp.l;kc.style.color=d.comp.c;document.getElementById('kAdv').textContent="광고주 "+d.advertisers+"곳";document.getElementById('kCpc').innerHTML=kwon(d.cpc);
     var flags=[[d.commercial?'상업성':'정보성',COL.primary],['시즌성',d.seasonal?COL.c2:null],['이슈 급상승',d.issue?COL.warning:null]].filter(function(f){return f[1]});

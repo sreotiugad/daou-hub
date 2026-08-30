@@ -157,7 +157,7 @@ def build_sample_keyword(kw):
             "male": ex["male"], "female": ex["female"], "age": ex["age"],
             "dow": ex["dow"], "hourP": ex["hourP"], "related": related,
             "brands": ex["brands"], "youtube": yt,
-            "posts": {"blog": [], "cafe": []}}
+            "posts": {"sim": {"blog": [], "cafe": []}, "date": {"blog": [], "cafe": []}}}
 
 
 _YT_TYPES = ["완벽 정리", "도입 후기", "비교 리뷰", "튜토리얼", "추천 TOP5", "실사용 꿀팁"]

@@ -126,39 +126,49 @@ def _fmt_postdate(s):
     return f"{s[0:4]}.{s[4:6]}.{s[6:8]}" if len(s) == 8 and s.isdigit() else ""
 
 
+def _one_search(kw, endpoint, author_f, sort, n):
+    """블로그/카페 검색 1회 → (items, total). 실패 시 (None, 0)."""
+    try:
+        r = requests.get(SEARCH.format(endpoint), headers=_dev_headers(),
+                         params={"query": kw, "display": n, "sort": sort}, timeout=10)
+        if r.status_code != 200:
+            return None, 0
+        j = r.json()
+        items = [{
+            "title": _strip_tags(it.get("title")),
+            "desc": _strip_tags(it.get("description")),
+            "url": it.get("link", ""),
+            "author": _strip_tags(it.get(author_f)),
+            "date": _fmt_postdate(it.get("postdate")),
+        } for it in (j.get("items", []) or [])[:n]]
+        return items, int(j.get("total", 0))
+    except Exception:
+        return None, 0
+
+
 def fetch_posts(kw, n=5, logs=None):
-    """블로그·카페 상위 글 n개씩 + 총 문서수를 함께 반환.
-    {'blog':[{title,desc,url,author,date}...], 'cafe':[...], 'total':int}.
-    개발자 키 없거나 둘 다 실패 시 None."""
+    """블로그·카페 상위 글을 '관련순(sim)·최신순(date)' 둘 다 n개씩 + 총 문서수.
+    {'sim':{'blog':[...],'cafe':[...]}, 'date':{...}, 'total':int}.
+    개발자 키 없거나 전부 실패 시 None. (네이버 검색은 sim·date 두 정렬만 지원)"""
     logs = logs if logs is not None else []
     if not (DEV_ID() and DEV_SECRET()):
         return None
-    out = {"blog": [], "cafe": [], "total": 0}
+    out = {"sim": {"blog": [], "cafe": []}, "date": {"blog": [], "cafe": []}, "total": 0}
     got = False
-    # (엔드포인트, 결과키, 작성자 필드)
-    for endpoint, key, author_f in (("blog", "blog", "bloggername"),
-                                    ("cafearticle", "cafe", "cafename")):
-        try:
-            r = requests.get(SEARCH.format(endpoint), headers=_dev_headers(),
-                             params={"query": kw, "display": n, "sort": "sim"}, timeout=10)
-            if r.status_code != 200:
+    endpoints = (("blog", "blog", "bloggername"), ("cafearticle", "cafe", "cafename"))
+    for sort in ("sim", "date"):
+        for endpoint, key, author_f in endpoints:
+            items, total = _one_search(kw, endpoint, author_f, sort, n)
+            if items is None:
                 continue
-            j = r.json()
-            out["total"] += int(j.get("total", 0))
             got = True
-            for it in (j.get("items", []) or [])[:n]:
-                out[key].append({
-                    "title": _strip_tags(it.get("title")),
-                    "desc": _strip_tags(it.get("description")),
-                    "url": it.get("link", ""),
-                    "author": _strip_tags(it.get(author_f)),
-                    "date": _fmt_postdate(it.get("postdate")),
-                })
-        except Exception:
-            pass
+            out[sort][key] = items
+            if sort == "sim":       # total 은 정렬 무관 — 한 번만(sim) 합산
+                out["total"] += total
     if not got:
         return None
-    logs.append(f"[posts] {kw} 블로그 {len(out['blog'])}·카페 {len(out['cafe'])}건")
+    logs.append(f"[posts] {kw} 관련순 {len(out['sim']['blog'])}/{len(out['sim']['cafe'])}"
+                f"·최신순 {len(out['date']['blog'])}/{len(out['date']['cafe'])}")
     return out
 
 

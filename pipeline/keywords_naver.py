@@ -170,8 +170,8 @@ def fetch_keyword(kw, acc, logs=None):
             "male": male, "female": female, "age": age,
             "dow": ex["dow"], "hourP": ex["hourP"], "related": related,
             "brands": ex["brands"], "youtube": youtube,
-            "posts": {"blog": (posts or {}).get("blog", []),
-                      "cafe": (posts or {}).get("cafe", [])}}
+            "posts": {"sim": (posts or {}).get("sim", {"blog": [], "cafe": []}),
+                      "date": (posts or {}).get("date", {"blog": [], "cafe": []})}}
 
 
 def fetch_keywords(keywords, logs=None):
