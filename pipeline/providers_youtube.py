@@ -37,9 +37,12 @@ def fetch_videos(keyword, max_results=8, logs=None):
     if not key:
         return None
     try:
+        # 검색 결과에 영상 아닌 항목이 섞여 걸러질 수 있어 넉넉히 받아 유효 영상으로 채운다
+        # (search.list 쿼터는 개수와 무관하게 100units 고정 → 더 받아도 공짜).
+        fetch_n = min(50, max_results + 6)
         r = requests.get(SEARCH, params={
             "part": "snippet", "q": keyword, "type": "video",
-            "maxResults": max_results, "order": "relevance",
+            "maxResults": fetch_n, "order": "relevance",
             "regionCode": "KR", "relevanceLanguage": "ko", "key": key,
         }, timeout=15)
         if r.status_code != 200:
@@ -58,6 +61,8 @@ def fetch_videos(keyword, max_results=8, logs=None):
                 stats[v["id"]] = v
         out = []
         for it in items:
+            if len(out) >= max_results:
+                break
             vid = it.get("id", {}).get("videoId")
             if not vid:
                 continue
