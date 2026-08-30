@@ -200,9 +200,15 @@
   .cx-date.set{border-color:var(--primary);color:var(--primary)}
   .cx-mini{border:1px solid var(--border-soft);background:var(--bg);color:var(--muted);font-size:11px;width:24px;height:24px;border-radius:5px;cursor:pointer;padding:0}
   .cx-mini:hover{border-color:var(--danger);color:var(--danger)}
+  /* 필터·기간 줄: 컨트롤 높이·정렬 통일(들쭉날쭉 방지) */
+  .cx-sel,.cx-date{height:34px;box-sizing:border-box;vertical-align:middle}
+  .cx-row .seg,.cx-row .cxseg{height:34px;box-sizing:border-box;display:inline-flex;align-items:center;vertical-align:middle}
+  .cx-row .seg button,.cx-row .cxseg button{height:100%;display:inline-flex;align-items:center}
+  .cx-mini{height:34px;width:34px;display:inline-flex;align-items:center;justify-content:center;vertical-align:middle}
+  .cx-gran{align-items:center}
   /* custom report drag & drop 빌더 */
   .cx-builder{display:flex;flex-direction:column;gap:12px;padding:4px 0 12px;border-bottom:1px solid var(--border-soft);margin-bottom:6px}
-  .cx-zone-lab{font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .cx-zone-lab{font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-height:30px}
   .cx-hint{font-weight:400;font-size:11px;color:var(--muted);opacity:.7}
   .cx-zones{display:flex;gap:12px;flex-wrap:wrap}
   .cx-zone-col{flex:1 1 260px;min-width:0}
