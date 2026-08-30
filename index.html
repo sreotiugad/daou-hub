@@ -218,7 +218,13 @@
   .cx-drop{display:flex;gap:6px;flex-wrap:wrap;min-height:46px;padding:8px;border-radius:var(--r-sm);align-content:flex-start}
   .cx-drop.pal{background:var(--bg);border:1px dashed var(--border)}
   .cx-drop.zone{background:var(--surface);border:1.5px dashed var(--border);min-height:54px}
-  .cx-drop.zone.dim{border-color:color-mix(in srgb,var(--primary) 35%,var(--border))}
+  .cx-drop.zone.dim{border-color:color-mix(in srgb,var(--primary) 38%,var(--border));background:color-mix(in srgb,var(--primary) 5%,var(--surface))}
+  .cx-drop.zone.met{border-color:color-mix(in srgb,var(--c2,#0E7C7B) 38%,var(--border));background:color-mix(in srgb,var(--c2,#0E7C7B) 6%,var(--surface))}
+  .cx-zone-lab .zone-tag{font-family:var(--mono);font-size:.72rem;font-weight:700;padding:2px 9px;border-radius:6px;letter-spacing:.02em}
+  .zone-tag.dim-tag{background:var(--primary);color:var(--primary-fg)}
+  .zone-tag.met-tag{background:var(--c2,#0E7C7B);color:#fff}
+  .cx-gran-row{display:flex;align-items:center;gap:8px;margin-top:8px}
+  .cx-gran-row .gr-lab{font-family:var(--mono);font-size:11px;color:var(--muted)}
   .cx-drop.over{border-color:var(--primary);background:color-mix(in srgb,var(--primary) 7%,var(--surface))}
   .cx-chip{display:inline-flex;align-items:center;gap:5px;padding:6px 9px;border-radius:6px;font-size:12.5px;font-weight:600;cursor:grab;user-select:none;border:1px solid var(--border);background:var(--surface);color:var(--fg);white-space:nowrap;touch-action:none}
   .cx-chip:active{cursor:grabbing}
@@ -405,13 +411,12 @@
       </div>
       <div class="cx-zones">
         <div class="cx-zone-col">
-          <div class="cx-zone-lab">행 <span class="cx-hint">차원 · 위→아래 순서 = 그룹 순서</span>
-            <span class="cx-gran" id="cxGranWrap">· 기간단위 <span class="seg sm cxseg" id="cxGran"><button data-g="일">일</button><button data-g="주">주</button><button data-g="월" class="on">월</button></span></span>
-          </div>
+          <div class="cx-zone-lab"><span class="zone-tag dim-tag">행 · 차원</span><span class="cx-hint">위→아래 = 그룹 순서</span></div>
           <div class="cx-drop zone dim" id="cxDimZone" data-type="dim"></div>
+          <div class="cx-gran-row" id="cxGranWrap"><span class="gr-lab">기간 단위</span><span class="seg sm cxseg" id="cxGran"><button data-g="일">일</button><button data-g="주">주</button><button data-g="월" class="on">월</button></span></div>
         </div>
         <div class="cx-zone-col">
-          <div class="cx-zone-lab">값 <span class="cx-hint">지표 · 왼→오른 순서 = 열 순서</span></div>
+          <div class="cx-zone-lab"><span class="zone-tag met-tag">값 · 지표</span><span class="cx-hint">왼→오른 = 열 순서</span></div>
           <div class="cx-drop zone met" id="cxMetZone" data-type="met"></div>
         </div>
       </div>
