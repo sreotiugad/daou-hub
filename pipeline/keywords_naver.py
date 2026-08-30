@@ -125,7 +125,7 @@ def fetch_keyword(kw, acc, logs=None):
     from concurrent.futures import ThreadPoolExecutor
     with ThreadPoolExecutor(max_workers=6) as pool:
         f_ecpc = pool.submit(NX.estimate_cpc, kw, acc, logs)          # 예상 입찰가
-        f_cc = pool.submit(NX.content_count, kw, logs)               # 콘텐츠 문서수
+        f_posts = pool.submit(NX.fetch_posts, kw, 5, logs)           # 문서수+블로그·카페 상위글
         f_dl = pool.submit(NX.datalab, kw, total, m_share, logs)     # 추이·성별·연령
         f_yt = pool.submit(YT.fetch_videos, kw, 8, logs)            # 유튜브 영상
         f_rdoc = pool.submit(_attach_related_docs, related, logs)    # 연관 문서수(내부 병렬)
@@ -138,12 +138,13 @@ def fetch_keyword(kw, acc, logs=None):
             except Exception:
                 return default
         ecpc = _get(f_ecpc, None)
-        cc = _get(f_cc, None)
+        posts = _get(f_posts, None)
         dl = _get(f_dl, None) or {}
         yt = _get(f_yt, None)
         _get(f_rdoc, None)                    # related 에 doc 채움(부작용)
         rbids = _get(f_rcpc, {}) or {}
 
+    cc = posts.get("total") if posts else None
     if ecpc:
         cpc = ecpc
     # 연관키워드 CPC 실값 적용(실패분은 경쟁도 추정 유지)
@@ -168,7 +169,9 @@ def fetch_keyword(kw, acc, logs=None):
             "blog": blog, "sat": sat, "trend": trend,
             "male": male, "female": female, "age": age,
             "dow": ex["dow"], "hourP": ex["hourP"], "related": related,
-            "brands": ex["brands"], "youtube": youtube}
+            "brands": ex["brands"], "youtube": youtube,
+            "posts": {"blog": (posts or {}).get("blog", []),
+                      "cafe": (posts or {}).get("cafe", [])}}
 
 
 def fetch_keywords(keywords, logs=None):
