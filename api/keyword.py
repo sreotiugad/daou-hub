@@ -23,31 +23,68 @@ import keywords_naver as KW  # noqa: E402
 import sample as S           # noqa: E402
 
 
-def _lookup(kw):
-    """(data, demo) 반환. 네이버 실데이터 성공 시 demo=False."""
+def _lookup(kw, logs):
+    """(data, demo) 반환. 네이버 실데이터 성공 시 demo=False. 진단로그는 logs 에 누적."""
     acc = C.naver_account()
     if acc:
         try:
-            d = KW.fetch_keyword(kw, acc)
+            d = KW.fetch_keyword(kw, acc, logs)
             if d:
                 # YouTube 키 없으면 가짜 영상 대신 빈 목록(프론트가 안내문구 표시)
                 if not os.environ.get("YOUTUBE_API_KEY"):
                     d["youtube"] = []
                 return d, False
-        except Exception:
-            pass
+            logs.append("[lookup] fetch_keyword 결과 없음 → 추정치 폴백")
+        except Exception as e:
+            logs.append(f"[lookup] fetch_keyword 예외: {str(e)[:160]}")
+    else:
+        logs.append("[lookup] naver_account() 없음 → 네이버 키 미설정")
     return S.build_sample_keyword(kw), True
+
+
+def _diag(kw, logs):
+    """비밀값은 절대 노출하지 않고, 어느 단계에서 막혔는지 '유무/에러'만 반환."""
+    raw = os.environ.get("DAOU_AD_ACCOUNTS")
+    nfound = 0
+    parse_err = None
+    if raw:
+        try:
+            nfound = len(json.loads(raw).get("naver") or [])
+        except Exception as e:
+            parse_err = str(e)[:120]
+    acc = C.naver_account()
+    return {
+        "kw": kw,
+        "env_seen": {
+            "NAVER1_CUSTOMER_ID": bool(os.environ.get("NAVER1_CUSTOMER_ID")),
+            "NAVER1_API_KEY": bool(os.environ.get("NAVER1_API_KEY")),
+            "NAVER1_SECRET_KEY": bool(os.environ.get("NAVER1_SECRET_KEY")),
+            "DAOU_AD_ACCOUNTS": bool(raw),
+            "DAOU_AD_ACCOUNTS_naver_count": nfound,
+            "DAOU_AD_ACCOUNTS_parse_error": parse_err,
+            "NAVER_DEV_CLIENT_ID": bool(os.environ.get("NAVER_DEV_CLIENT_ID")),
+            "NAVER_DEV_CLIENT_SECRET": bool(os.environ.get("NAVER_DEV_CLIENT_SECRET")),
+            "YOUTUBE_API_KEY": bool(os.environ.get("YOUTUBE_API_KEY")),
+        },
+        "naver_account_resolved": bool(acc),
+        "logs": logs,
+    }
 
 
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
-        q = (parse_qs(urlparse(self.path).query).get("q", [""])[0] or "").strip()
+        qs = parse_qs(urlparse(self.path).query)
+        q = (qs.get("q", [""])[0] or "").strip()
+        debug = (qs.get("debug", [""])[0] or "").strip() in ("1", "true", "yes")
         if not q:
             return self._send({"error": "q(키워드) 파라미터가 필요합니다"}, 400)
+        logs = []
         try:
-            data, demo = _lookup(q)
+            data, demo = _lookup(q, logs)
         except Exception as e:
             return self._send({"error": str(e)[:200]}, 500)
+        if debug:
+            return self._send(_diag(q, logs), 200)
         out = dict(data)
         out["kw"] = q
         out["_demo"] = demo
