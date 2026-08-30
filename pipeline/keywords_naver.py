@@ -114,8 +114,8 @@ def fetch_keyword(kw, acc, logs=None):
             lv = "중간"
         related.append({"kw": str(x.get("relKeyword", "")).strip(), "v": rp,
                         "comp": lv, "cpc": _est_cpc(lv)})
-        if len(related) >= 12:
-            break
+    # 네이버가 준 '전체' 후보를 검색량순 정렬 후 top 8 (예전엔 앞 12개만 보고 정렬해
+    # 진짜 상위 키워드가 잘리는 버그가 있었음).
     related.sort(key=lambda z: -z["v"])
     related = related[:8]
     ex = S.model_extras(kw, total, m_share)
