@@ -534,15 +534,16 @@ const DUCustom=(function(){
     cpa:{label:"CPA",fmt:"won",calc:s=>s.signup>0?s.cost/s.signup:0},
     ctr:{label:"CTR",fmt:"pct",calc:s=>s.imp>0?s.click/s.imp*100:0},
     cpc:{label:"CPC",fmt:"won",calc:s=>s.click>0?s.cost/s.click:0},
-    cvr:{label:"전환율",fmt:"pct",calc:s=>s.click>0?s.signup/s.click*100:0}
+    cvr:{label:"전환율",fmt:"pct",calc:s=>s.click>0?s.signup/s.click*100:0},
+    rank:{label:"평균노출순위",fmt:"rank",calc:s=>s.rnki>0?s.rnkw/s.rnki:0}
   };
   let st={dims:["기간","서비스"],gran:"월",mets:["cost","signup","cpa"],group:"",media:"",N:365,start:"",end:"",sort:null,dir:-1};
   let _synth=null;
   const cma=n=>Math.round(n).toLocaleString();
   const wonf=n=>"₩"+Math.round(n).toLocaleString();
-  const fmtV=(m,v)=>{const f=MET[m].fmt;return f==="won"?wonf(v):f==="pct"?v.toFixed(2)+"%":f==="num1"?(Math.round(v*10)/10).toLocaleString():cma(v)};
+  const fmtV=(m,v)=>{const f=MET[m].fmt;return f==="won"?wonf(v):f==="pct"?v.toFixed(2)+"%":f==="rank"?(v>0?v.toFixed(1)+"위":"–"):f==="num1"?(Math.round(v*10)/10).toLocaleString():cma(v)};
   function facts(){const F=window.DAOU_DATA&&window.DAOU_DATA.report&&window.DAOU_DATA.report.facts;if(F&&F.length)return F;if(!_synth)_synth=synth();return _synth}
-  function synth(){const SB=[["사방넷","사방넷"],["사방넷미니","사방넷"],["풀필먼트","사방넷"],["엔팩스","애드콘"],["애드콘","애드콘"],["다우오피스","다우오피스"],["다우오피스HR","다우오피스"]];const CT=["브랜드검색","파워링크","쇼핑검색","구글검색","실적최대화","동영상","디스플레이"];const out=[];const end=new Date(2026,7,24);for(let i=0;i<365;i++){const dt=new Date(end);dt.setDate(end.getDate()-i);const ds=dt.toISOString().slice(0,10);for(const[svc,grp]of SB){const r=MUL(H(svc+ds));for(const media of["네이버","구글","메타"]){for(const ct of CT){if(r()<0.45)continue;const cost=Math.round((5000+r()*300000));const click=Math.max(1,Math.round(cost/(400+r()*500)));const imp=Math.round(click/(0.02+r()*0.05));const signup=Math.round(click/(8+r()*30)*10)/10;out.push({d:ds,svc,grp,media,ct,imp,click,cost,signup})}}}}return out}
+  function synth(){const SB=[["사방넷","사방넷"],["사방넷미니","사방넷"],["풀필먼트","사방넷"],["엔팩스","애드콘"],["애드콘","애드콘"],["다우오피스","다우오피스"],["다우오피스HR","다우오피스"]];const CT=["브랜드검색","파워링크","쇼핑검색","구글검색","실적최대화","동영상","디스플레이"];const out=[];const end=new Date(2026,7,24);for(let i=0;i<365;i++){const dt=new Date(end);dt.setDate(end.getDate()-i);const ds=dt.toISOString().slice(0,10);for(const[svc,grp]of SB){const r=MUL(H(svc+ds));for(const media of["네이버","구글","메타"]){for(const ct of CT){if(r()<0.45)continue;const cost=Math.round((5000+r()*300000));const click=Math.max(1,Math.round(cost/(400+r()*500)));const imp=Math.round(click/(0.02+r()*0.05));const signup=Math.round(click/(8+r()*30)*10)/10;const rnk=media==="네이버"?(1+r()*4):0;out.push({d:ds,svc,grp,media,ct,imp,click,cost,signup,rnkw:Math.round(rnk*imp),rnki:rnk>0?imp:0})}}}}return out}
   function maxD(F){let m="";for(const r of F)if(r.d>m)m=r.d;return m}
   function minD(F){let m="9999";for(const r of F)if(r.d<m)m=r.d;return m}
   function cutoff(F){const m=maxD(F);if(!m)return"";const d=new Date(m);d.setDate(d.getDate()-(st.N-1));return d.toISOString().slice(0,10)}
@@ -550,11 +551,11 @@ const DUCustom=(function(){
   function bkt(d){if(st.gran==="일")return d;if(st.gran==="월")return d.slice(0,7);const dt=new Date(d),wd=(dt.getDay()+6)%7;dt.setDate(dt.getDate()-wd);return dt.toISOString().slice(0,10)}
   function dimVal(r,dm){return dm==="기간"?bkt(r.d):r[DIMS[dm]]}
   function metVal(m,s){const d=MET[m];return d.calc?d.calc(s):s[m]}
-  function build(){const F=facts();const[lo,hi]=range(F);const rows=F.filter(r=>r.d>=lo&&r.d<=hi&&(!st.group||r.grp===st.group)&&(!st.media||r.media===st.media));const gr={};for(const r of rows){const k=st.dims.map(dm=>dimVal(r,dm)).join("");let g=gr[k];if(!g){g={_k:st.dims.map(dm=>dimVal(r,dm)),cost:0,imp:0,click:0,signup:0};gr[k]=g}g.cost+=r.cost;g.imp+=r.imp;g.click+=r.click;g.signup+=r.signup}
+  function build(){const F=facts();const[lo,hi]=range(F);const rows=F.filter(r=>r.d>=lo&&r.d<=hi&&(!st.group||r.grp===st.group)&&(!st.media||r.media===st.media));const gr={};for(const r of rows){const k=st.dims.map(dm=>dimVal(r,dm)).join("");let g=gr[k];if(!g){g={_k:st.dims.map(dm=>dimVal(r,dm)),cost:0,imp:0,click:0,signup:0,rnkw:0,rnki:0};gr[k]=g}g.cost+=r.cost;g.imp+=r.imp;g.click+=r.click;g.signup+=r.signup;g.rnkw+=r.rnkw||0;g.rnki+=r.rnki||0}
     let list=Object.values(gr);const sc=st.sort;
     if(sc&&DIMS[sc]!==undefined){const idx=st.dims.indexOf(sc);list.sort((a,b)=>{const x=a._k[idx],y=b._k[idx];return st.dir*(x<y?-1:x>y?1:0)})}
     else{const m0=sc&&MET[sc]?sc:st.mets[0];list.sort((a,b)=>st.dir*(metVal(m0,a)-metVal(m0,b)))}
-    const tot=list.reduce((t,g)=>{t.cost+=g.cost;t.imp+=g.imp;t.click+=g.click;t.signup+=g.signup;return t},{cost:0,imp:0,click:0,signup:0});
+    const tot=list.reduce((t,g)=>{t.cost+=g.cost;t.imp+=g.imp;t.click+=g.click;t.signup+=g.signup;t.rnkw+=g.rnkw;t.rnki+=g.rnki;return t},{cost:0,imp:0,click:0,signup:0,rnkw:0,rnki:0});
     return{list,tot}}
   function populate(){const F=facts();const gs=[];for(const r of F)if(gs.indexOf(r.grp)<0)gs.push(r.grp);const sel=document.getElementById('cxGroup');if(sel.options.length<=1)gs.forEach(g=>{const o=document.createElement('option');o.value=g;o.textContent=g;sel.appendChild(o)})}
   function syncSeg(id,active){document.querySelectorAll('#'+id+' button').forEach(b=>{const on=active(b);b.classList.toggle('on',on)})}

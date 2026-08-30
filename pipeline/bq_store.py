@@ -27,7 +27,8 @@ _SCHEMA = [
     ("date", "DATE"), ("service", "STRING"), ("media", "STRING"),
     ("camptype", "STRING"), ("campaign", "STRING"), ("imp", "INT64"),
     ("click", "INT64"), ("cost_net", "INT64"), ("signup", "FLOAT64"),
-    ("cost_marked", "INT64"), ("source", "STRING"), ("ingested_at", "TIMESTAMP"),
+    ("cost_marked", "INT64"), ("avg_rank", "FLOAT64"),
+    ("source", "STRING"), ("ingested_at", "TIMESTAMP"),
 ]
 
 # raw_store.HEADERS(한글) → BQ 컬럼
@@ -35,6 +36,7 @@ _H2C = {
     "서비스": "service", "매체": "media", "캠페인 유형": "camptype",
     "캠페인": "campaign", "기간": "date", "노출 수": "imp", "클릭 수": "click",
     "총 비용": "cost_net", "가입": "signup", "광고비(마크업포함,VAT포함)": "cost_marked",
+    "평균노출순위": "avg_rank",
 }
 
 
@@ -74,7 +76,13 @@ def _ensure(bq_client, bigquery, logs):
         logs.append(f"[bq] dataset 생성 {ds_id}")
     tid = _table_id(bq_client)
     try:
-        bq_client.get_table(tid)
+        tbl = bq_client.get_table(tid)
+        cols = {f.name for f in tbl.schema}
+        missing = [(n, t) for n, t in _SCHEMA if n not in cols]
+        if missing:
+            tbl.schema = list(tbl.schema) + [bigquery.SchemaField(n, t) for n, t in missing]
+            bq_client.update_table(tbl, ["schema"])
+            logs.append(f"[bq] 컬럼 추가 {[n for n, _ in missing]}")
     except Exception:
         schema = [bigquery.SchemaField(n, t) for n, t in _SCHEMA]
         bq_client.create_table(bigquery.Table(tid, schema=schema), exists_ok=True)
@@ -115,6 +123,7 @@ def write_day(source, date_iso, rows, logs=None):
         job_config = bigquery.LoadJobConfig(
             schema=[bigquery.SchemaField(n, t) for n, t in _SCHEMA],
             write_disposition="WRITE_APPEND",
+            schema_update_options=["ALLOW_FIELD_ADDITION"],
         )
         bq_client.load_table_from_json(payload, tid, job_config=job_config).result()
     logs.append(f"[bq] {source} {date_iso} · {len(payload)}행 적재")
@@ -132,7 +141,7 @@ def read_rows(logs=None):
     tid = _table_id(bq_client)
     try:
         it = bq_client.query(
-            f"SELECT date, service, media, camptype, imp, click, cost_marked, signup "
+            f"SELECT date, service, media, camptype, imp, click, cost_marked, signup, avg_rank "
             f"FROM `{tid}` WHERE source != 'sample'"
         ).result()
     except Exception as e:
@@ -153,6 +162,7 @@ def read_rows(logs=None):
             "click": float(r["click"] or 0),
             "cost": float(r["cost_marked"] or 0),
             "signup": float(r["signup"] or 0),
+            "rank": float(r["avg_rank"] or 0),
         })
     logs.append(f"[bq] {len(out)}행 읽음")
     return out

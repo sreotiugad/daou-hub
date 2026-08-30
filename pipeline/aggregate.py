@@ -93,13 +93,19 @@ def build_report(rows, days=None):
         if sub not in C.BRAND_MAP or r["date"] not in axisset:
             continue
         key = (r["date"], sub, r["media"], r["camptype"])
-        f = fmap.setdefault(key, {"imp": 0.0, "click": 0.0, "cost": 0.0, "signup": 0.0})
+        f = fmap.setdefault(key, {"imp": 0.0, "click": 0.0, "cost": 0.0, "signup": 0.0,
+                                  "rnkw": 0.0, "rnki": 0.0})
         f["imp"] += r["imp"]; f["click"] += r["click"]
         f["cost"] += r["cost"]; f["signup"] += r["signup"]
+        # 평균노출순위: 노출가중 합(rnkw=Σ순위×노출, rnki=Σ노출) — 순위 있는 행만. 어디서 합쳐도 rnkw/rnki 로 정확.
+        rk = r.get("rank", 0) or 0
+        if rk > 0:
+            f["rnkw"] += rk * r["imp"]; f["rnki"] += r["imp"]
     facts = [{
         "d": k[0], "svc": k[1], "grp": C.BRAND_MAP[k[1]][0], "media": k[2], "ct": k[3],
         "imp": round(v["imp"]), "click": round(v["click"]),
         "cost": round(v["cost"]), "signup": round(v["signup"], 1),
+        "rnkw": round(v["rnkw"]), "rnki": round(v["rnki"]),
     } for k, v in fmap.items()]
 
     return {

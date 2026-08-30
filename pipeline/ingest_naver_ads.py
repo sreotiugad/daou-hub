@@ -60,7 +60,8 @@ def _stats(acc, ids, date_iso, logs):
     """하루(since=until=date) 실적. 네이버 /stats 는 id(단수)로 하나씩 조회한다
     (실제 리포트 앱과 동일 — ids 배열은 'ID 형식 오류' 발생)."""
     uri = "/stats"
-    fields = json.dumps(["impCnt", "clkCnt", "salesAmt", "ccnt"])
+    # avgRnk = 평균노출순위(광고가 평균 몇 위에 노출됐는지). 노출가중 평균으로 캠페인 단위 산출.
+    fields = json.dumps(["impCnt", "clkCnt", "salesAmt", "ccnt", "avgRnk"])
     tr = json.dumps({"since": date_iso, "until": date_iso})
     out = {}
     warned = False
@@ -74,9 +75,15 @@ def _stats(acc, ids, date_iso, logs):
                     warned = True
                 continue
             agg = {"impCnt": 0.0, "clkCnt": 0.0, "salesAmt": 0.0, "ccnt": 0.0}
+            rnk_w = 0.0  # Σ(avgRnk × impCnt) — 노출가중
             for row in (r.json().get("data") or []):
+                imp_r = float(row.get("impCnt", 0) or 0)
                 for k in agg:
                     agg[k] += float(row.get(k, 0) or 0)
+                rnk_r = float(row.get("avgRnk", 0) or 0)
+                if rnk_r > 0:
+                    rnk_w += rnk_r * imp_r
+            agg["avgRnk"] = (rnk_w / agg["impCnt"]) if agg["impCnt"] > 0 else 0.0
             out[str(cid)] = agg
         except Exception as e:
             logs.append(f"[naver-ads] stats 오류: {e}")
@@ -108,6 +115,7 @@ def fetch_day(acc, date_iso, defaults, logs=None):
         clk = float(s.get("clkCnt", 0) or 0)
         net = float(s.get("salesAmt", 0) or 0)
         conv = 0.0 if acc.get("signup_from_ga4") else float(s.get("ccnt", 0) or 0)
+        rnk = float(s.get("avgRnk", 0) or 0)
         if imp == 0 and clk == 0 and net == 0:
             continue
         name = c.get("name", "")
@@ -123,6 +131,7 @@ def fetch_day(acc, date_iso, defaults, logs=None):
             "총 비용": int(net),
             "가입": conv,
             "광고비(마크업포함,VAT포함)": ad_config.marked_cost(net, "네이버", mk, vat),
+            "평균노출순위": round(rnk, 2),
         })
     logs.append(f"[naver-ads] {acc.get('label','')} {date_iso} · {len(rows)}행")
     return rows
