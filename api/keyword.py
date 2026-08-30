@@ -82,20 +82,25 @@ class handler(BaseHTTPRequestHandler):
         try:
             data, demo = _lookup(q, logs)
         except Exception as e:
-            return self._send({"error": str(e)[:200]}, 500)
+            return self._send({"error": str(e)[:200]}, 500, cache=False)
         if debug:
-            return self._send(_diag(q, logs), 200)
+            # 진단은 절대 캐시 안 함 — 매번 실시간 상태를 봐야 함
+            return self._send(_diag(q, logs), 200, cache=False)
         out = dict(data)
         out["kw"] = q
         out["_demo"] = demo
-        self._send(out, 200)
+        # 실데이터만 1시간 캐시. 추정치(폴백)는 캐시 안 함 → 키 고치면 즉시 반영.
+        self._send(out, 200, cache=not demo)
 
-    def _send(self, obj, code):
+    def _send(self, obj, code, cache=True):
         body = json.dumps(obj, ensure_ascii=False).encode("utf-8")
         self.send_response(code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
-        # 같은 키워드 1시간 캐시(브라우저/CDN) — YouTube·네이버 쿼터 절약
-        self.send_header("Cache-Control", "public, max-age=3600, s-maxage=3600")
+        if cache:
+            # 같은 키워드 1시간 캐시(브라우저/CDN) — YouTube·네이버 쿼터 절약
+            self.send_header("Cache-Control", "public, max-age=3600, s-maxage=3600")
+        else:
+            self.send_header("Cache-Control", "no-store, max-age=0")
         self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
         self.wfile.write(body)
