@@ -118,26 +118,39 @@ def fetch_keyword(kw, acc, logs=None):
             break
     related.sort(key=lambda z: -z["v"])
     related = related[:8]
-    _attach_related_docs(related, logs)  # 연관키워드 문서수도 실제 네이버 문서수로
-    # 연관키워드 CPC도 실제 예상입찰가로 (8개 한 번의 호출). 실패분은 경쟁도 추정 유지.
-    try:
-        bids = NX.estimate_cpc_batch([z["kw"] for z in related], acc, logs)
-        for z in related:
-            b = bids.get(z["kw"].replace(" ", ""))
-            if b:
-                z["cpc"] = b
-    except Exception:
-        pass
-
     ex = S.model_extras(kw, total, m_share)
 
-    # ── 실데이터 보강 (있으면 모델값을 덮어씀) ──
-    ecpc = NX.estimate_cpc(kw, acc, logs)         # 검색광고 예상 입찰가
+    # ── 실데이터 보강 ── 독립적인 소스들을 '동시에' 호출한다.
+    # 전에는 하나씩 순차 호출(전체 = 합)이라 느렸음 → 병렬(전체 = 가장 느린 하나).
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        f_ecpc = pool.submit(NX.estimate_cpc, kw, acc, logs)          # 예상 입찰가
+        f_cc = pool.submit(NX.content_count, kw, logs)               # 콘텐츠 문서수
+        f_dl = pool.submit(NX.datalab, kw, total, m_share, logs)     # 추이·성별·연령
+        f_yt = pool.submit(YT.fetch_videos, kw, 8, logs)            # 유튜브 영상
+        f_rdoc = pool.submit(_attach_related_docs, related, logs)    # 연관 문서수(내부 병렬)
+        f_rcpc = pool.submit(NX.estimate_cpc_batch,
+                             [z["kw"] for z in related], acc, logs)  # 연관 CPC(배치)
+
+        def _get(f, default):
+            try:
+                return f.result()
+            except Exception:
+                return default
+        ecpc = _get(f_ecpc, None)
+        cc = _get(f_cc, None)
+        dl = _get(f_dl, None) or {}
+        yt = _get(f_yt, None)
+        _get(f_rdoc, None)                    # related 에 doc 채움(부작용)
+        rbids = _get(f_rcpc, {}) or {}
+
     if ecpc:
         cpc = ecpc
-    cc = NX.content_count(kw, logs)               # 네이버 검색 API 콘텐츠수
-    dl = NX.datalab(kw, total, m_share, logs) or {}  # DataLab 추이·성별·연령
-    yt = YT.fetch_videos(kw, logs=logs)           # YouTube 영상 순위
+    # 연관키워드 CPC 실값 적용(실패분은 경쟁도 추정 유지)
+    for z in related:
+        b = rbids.get(z["kw"].replace(" ", ""))
+        if b:
+            z["cpc"] = b
 
     blog = cc if cc is not None else ex["blog"]
     sat = round(blog / total, 1) if total else 0
