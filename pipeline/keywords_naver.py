@@ -80,7 +80,7 @@ def fetch_keyword(kw, acc, logs=None):
     try:
         r = requests.get(BASE + uri, params=params, headers=_headers(acc, uri), timeout=15)
         if r.status_code != 200:
-            logs.append(f"[kw] {kw} status={r.status_code}")
+            logs.append(f"[kw] {kw} status={r.status_code} body={r.text[:200]}")
             return None
         rows = r.json().get("keywordList", []) or []
     except Exception as e:
