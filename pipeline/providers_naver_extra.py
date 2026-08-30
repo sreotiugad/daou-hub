@@ -126,21 +126,49 @@ def _fmt_postdate(s):
     return f"{s[0:4]}.{s[4:6]}.{s[6:8]}" if len(s) == 8 and s.isdigit() else ""
 
 
+def _relevant(kw, title, desc):
+    """이 글이 키워드와 실제로 관련 있나. 네이버 블로그 검색은 '그룹웨어'를
+    '그룹'+'웨어'로 쪼개 매칭해 엉뚱한 글(볼보그룹 등)을 올리므로 후처리로 거른다.
+    - 단어 1개: 공백 제거 키워드가 제목/본문에 통째로 포함돼야 함.
+    - 여러 단어: 모든 토큰이 포함돼야 함."""
+    tokens = [t for t in kw.split() if t]
+    if not tokens:
+        return True
+    joined = f"{title} {desc}"
+    nj = joined.replace(" ", "")
+    if len(tokens) == 1:
+        return kw.replace(" ", "") in nj
+    return all((t in joined) or (t in nj) for t in tokens)
+
+
 def _one_search(kw, endpoint, author_f, sort, n):
-    """블로그/카페 검색 1회 → (items, total). 실패 시 (None, 0)."""
+    """블로그/카페 검색 1회 → (items, total). 실패 시 (None, 0).
+    넉넉히(20개) 받아 키워드가 실제로 들어간 글만 상위 n개. 관련글이 아예 없으면
+    (극저볼륨 등) 원본 상위 n개로 폴백해 빈칸을 피한다. total 은 원본(느슨) 기준."""
     try:
         r = requests.get(SEARCH.format(endpoint), headers=_dev_headers(),
-                         params={"query": kw, "display": n, "sort": sort}, timeout=10)
+                         params={"query": kw, "display": 20, "sort": sort}, timeout=10)
         if r.status_code != 200:
             return None, 0
         j = r.json()
-        items = [{
-            "title": _strip_tags(it.get("title")),
-            "desc": _strip_tags(it.get("description")),
-            "url": it.get("link", ""),
-            "author": _strip_tags(it.get(author_f)),
-            "date": _fmt_postdate(it.get("postdate")),
-        } for it in (j.get("items", []) or [])[:n]]
+        raw = j.get("items", []) or []
+
+        def _mk(it):
+            return {
+                "title": _strip_tags(it.get("title")),
+                "desc": _strip_tags(it.get("description")),
+                "url": it.get("link", ""),
+                "author": _strip_tags(it.get(author_f)),
+                "date": _fmt_postdate(it.get("postdate")),
+            }
+        rel = []
+        for it in raw:
+            m = _mk(it)
+            if _relevant(kw, m["title"], m["desc"]):
+                rel.append(m)
+            if len(rel) >= n:
+                break
+        items = rel if rel else [_mk(it) for it in raw[:n]]
         return items, int(j.get("total", 0))
     except Exception:
         return None, 0
