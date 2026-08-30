@@ -47,6 +47,31 @@ def _est_cpc(level):
     return {"낮음": 550, "중간": 1100, "높음": 1650}.get(level, 900)
 
 
+def _attach_related_docs(related, logs):
+    """연관키워드 8개의 문서수를 실제 네이버 검색 문서수(블로그+카페)로 채운다.
+    상위 8개만·병렬로 조회해 쿼터/지연을 줄이고, 실패분은 프론트 추정값을 유지한다.
+    개발자 키(NAVER_DEV_*) 없으면 아무것도 안 하고 프론트 추정 유지."""
+    if not related or not (NX.DEV_ID() and NX.DEV_SECRET()):
+        return
+    from concurrent.futures import ThreadPoolExecutor
+
+    def one(item):
+        try:
+            dc = NX.content_count(item["kw"], [])  # 로그는 버림(스레드·과다로그 방지)
+            if dc is not None:
+                item["doc"] = dc
+        except Exception:
+            pass
+
+    try:
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            list(pool.map(one, related))
+        n = sum(1 for r in related if "doc" in r)
+        logs.append(f"[search] 연관키워드 문서수 {n}/{len(related)}건 실데이터")
+    except Exception as e:
+        logs.append(f"[search] 연관 문서수 오류: {str(e)[:80]}")
+
+
 def fetch_keyword(kw, acc, logs=None):
     """한 키워드 분석. 실패하면 None."""
     logs = logs if logs is not None else []
@@ -93,6 +118,7 @@ def fetch_keyword(kw, acc, logs=None):
             break
     related.sort(key=lambda z: -z["v"])
     related = related[:8]
+    _attach_related_docs(related, logs)  # 연관키워드 문서수도 실제 네이버 문서수로
 
     ex = S.model_extras(kw, total, m_share)
 

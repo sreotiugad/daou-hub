@@ -4,7 +4,8 @@
   "trailingSlash": false,
   "functions": {
     "api/keyword.py": {
-      "includeFiles": "pipeline/**"
+      "includeFiles": "pipeline/**",
+      "maxDuration": 30
     }
   }
 }
