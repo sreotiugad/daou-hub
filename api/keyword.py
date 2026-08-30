@@ -75,6 +75,12 @@ class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         qs = parse_qs(urlparse(self.path).query)
         q = (qs.get("q", [""])[0] or "").strip()
+        # Vercel 서버리스가 쿼리스트링을 latin-1로 디코드해 한글이 깨지는 경우 UTF-8 복원.
+        # (한글은 latin-1 인코딩이 안 되므로 이미 정상인 문자열은 예외로 그대로 유지 → 안전)
+        try:
+            q = q.encode("latin-1").decode("utf-8")
+        except UnicodeError:
+            pass
         debug = (qs.get("debug", [""])[0] or "").strip() in ("1", "true", "yes")
         if not q:
             return self._send({"error": "q(키워드) 파라미터가 필요합니다"}, 400)
