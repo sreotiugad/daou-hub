@@ -123,11 +123,23 @@ def sheet_ready() -> bool:
 
 # ── 네이버 검색광고 (키워드툴/실검색량) ─────────────────
 def naver_account():
+    """검색광고 API(키워드툴/검색량) 자격증명.
+    NAVER1_* 우선, 없으면 DAOU_AD_ACCOUNTS 의 네이버 광고 계정을 재사용한다.
+    (검색광고 API는 /stats(광고성과)·/keywordstool(검색량) 동일 인증)."""
     cid = os.environ.get("NAVER1_CUSTOMER_ID")
     key = os.environ.get("NAVER1_API_KEY")
     sec = os.environ.get("NAVER1_SECRET_KEY")
     if cid and key and sec:
         return {"customer_id": cid, "api_key": key, "secret_key": sec}
+    raw = os.environ.get("DAOU_AD_ACCOUNTS")
+    if raw:
+        try:
+            for a in (json.loads(raw).get("naver") or []):
+                if a.get("customer_id") and a.get("api_key") and a.get("secret_key"):
+                    return {"customer_id": a["customer_id"],
+                            "api_key": a["api_key"], "secret_key": a["secret_key"]}
+        except Exception:
+            pass
     return None
 
 # 경쟁 분석에서 미리 계산해 둘 키워드(프리셋 + 필요시 추가)
