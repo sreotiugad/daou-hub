@@ -143,10 +143,10 @@ def naver_account():
     return None
 
 # 경쟁 분석에서 미리 계산해 둘 키워드(프리셋 + 필요시 추가)
-KEYWORDS = [k.strip() for k in os.environ.get(
-    "DAOU_KEYWORDS",
-    "그룹웨어,전자결재,쇼핑몰 통합관리,재고관리 프로그램,채용 사이트,모바일 쿠폰"
-).split(",") if k.strip()]
+# 주의: 워크플로가 빈 문자열로 넘길 수 있어 default 대신 `or`로 폴백 (빈 env가 default를 이기지 않게)
+KEYWORDS = [k.strip() for k in (os.environ.get("DAOU_KEYWORDS")
+    or "그룹웨어,전자결재,쇼핑몰 통합관리,재고관리 프로그램,채용 사이트,모바일 쿠폰"
+    ).split(",") if k.strip()]
 
 # 광고 경쟁현황 표에서 '우리'로 강조할 브랜드
-OUR_BRAND = os.environ.get("DAOU_OUR_BRAND", "다우오피스")
+OUR_BRAND = os.environ.get("DAOU_OUR_BRAND") or "다우오피스"
