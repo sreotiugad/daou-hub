@@ -57,24 +57,27 @@ def _campaigns(acc, logs):
 
 
 def _stats(acc, ids, date_iso, logs):
-    """하루(since=until=date) 실적. ids 최대 100개씩."""
+    """하루(since=until=date) 실적. 네이버 /stats 는 id(단수)로 하나씩 조회한다
+    (실제 리포트 앱과 동일 — ids 배열은 'ID 형식 오류' 발생)."""
     uri = "/stats"
-    fields = ["impCnt", "clkCnt", "salesAmt", "ccnt"]
+    fields = json.dumps(["impCnt", "clkCnt", "salesAmt", "ccnt"])
+    tr = json.dumps({"since": date_iso, "until": date_iso})
     out = {}
-    for i in range(0, len(ids), 100):
-        chunk = ids[i:i + 100]
-        params = {
-            "ids": json.dumps(chunk),
-            "fields": json.dumps(fields),
-            "timeRange": json.dumps({"since": date_iso, "until": date_iso}),
-        }
+    warned = False
+    for cid in ids:
+        params = {"id": cid, "fields": fields, "timeRange": tr, "timeIncrement": "1"}
         try:
             r = requests.get(BASE + uri, params=params, headers=_headers(acc, uri), timeout=25)
             if r.status_code != 200:
-                logs.append(f"[naver-ads] stats status={r.status_code} {r.text[:120]}")
+                if not warned:
+                    logs.append(f"[naver-ads] stats status={r.status_code} {r.text[:120]}")
+                    warned = True
                 continue
+            agg = {"impCnt": 0.0, "clkCnt": 0.0, "salesAmt": 0.0, "ccnt": 0.0}
             for row in (r.json().get("data") or []):
-                out[str(row.get("id"))] = row
+                for k in agg:
+                    agg[k] += float(row.get(k, 0) or 0)
+            out[str(cid)] = agg
         except Exception as e:
             logs.append(f"[naver-ads] stats 오류: {e}")
     return out
