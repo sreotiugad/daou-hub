@@ -119,6 +119,15 @@ def fetch_keyword(kw, acc, logs=None):
     related.sort(key=lambda z: -z["v"])
     related = related[:8]
     _attach_related_docs(related, logs)  # 연관키워드 문서수도 실제 네이버 문서수로
+    # 연관키워드 CPC도 실제 예상입찰가로 (8개 한 번의 호출). 실패분은 경쟁도 추정 유지.
+    try:
+        bids = NX.estimate_cpc_batch([z["kw"] for z in related], acc, logs)
+        for z in related:
+            b = bids.get(z["kw"].replace(" ", ""))
+            if b:
+                z["cpc"] = b
+    except Exception:
+        pass
 
     ex = S.model_extras(kw, total, m_share)
 

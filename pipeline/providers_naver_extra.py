@@ -164,3 +164,31 @@ def estimate_cpc(kw, acc, logs=None):
     except Exception as e:
         logs.append(f"[estimate] {kw} 오류: {e}")
     return None
+
+
+def estimate_cpc_batch(keywords, acc, logs=None):
+    """여러 키워드의 예상 입찰가를 '한 번의 호출'로 받는다(position 2 기준).
+    {공백제거_키워드: bid} 반환. 실패/누락분은 생략 → 상위에서 기존 추정값 유지."""
+    logs = logs if logs is not None else []
+    if not acc or not keywords:
+        return {}
+    uri = "/estimate/average-position-bid/keyword"
+    items = [{"key": k.replace(" ", ""), "position": 2} for k in keywords]
+    body = {"device": "MOBILE", "items": items}
+    try:
+        r = requests.post(SEARCHAD + uri, headers=_sa_headers(acc, uri),
+                          data=json.dumps(body), timeout=15)
+        if r.status_code != 200:
+            logs.append(f"[estimate] 연관 CPC status={r.status_code}")
+            return {}
+        est = r.json().get("estimate", [])
+        out = {}
+        for it, e in zip(items, est):
+            bid = e.get("bid") if isinstance(e, dict) else None
+            if bid:
+                out[it["key"]] = int(bid)
+        logs.append(f"[estimate] 연관 CPC {len(out)}/{len(items)}건 실값")
+        return out
+    except Exception as e:
+        logs.append(f"[estimate] 연관 CPC 오류: {str(e)[:80]}")
+        return {}
