@@ -91,14 +91,18 @@ def write_day(source, date_iso, rows, logs=None):
     if bq_client is None:
         return False
     tid = _ensure(bq_client, bigquery, logs)
-    # 멱등: 같은 날짜+소스 삭제 후 삽입
-    bq_client.query(
-        f"DELETE FROM `{tid}` WHERE date=@d AND source=@s",
-        job_config=bigquery.QueryJobConfig(query_parameters=[
-            bigquery.ScalarQueryParameter("d", "DATE", date_iso),
-            bigquery.ScalarQueryParameter("s", "STRING", source),
-        ]),
-    ).result()
+    # 멱등: 같은 날짜+소스 삭제 후 적재. (로드잡 방식이라 스트리밍 버퍼가 없어 DELETE 정상)
+    try:
+        bq_client.query(
+            f"DELETE FROM `{tid}` WHERE date=@d AND source=@s",
+            job_config=bigquery.QueryJobConfig(query_parameters=[
+                bigquery.ScalarQueryParameter("d", "DATE", date_iso),
+                bigquery.ScalarQueryParameter("s", "STRING", source),
+            ]),
+        ).result()
+    except Exception as e:
+        # 과거 스트리밍 적재분이 버퍼에 남아있으면 DELETE가 막힐 수 있다 → 스킵하고 계속.
+        logs.append(f"[bq] {source} {date_iso} 기존행 삭제 스킵: {str(e)[:90]}")
     now = datetime.now(timezone.utc).isoformat()
     payload = []
     for r in rows:
@@ -107,10 +111,12 @@ def write_day(source, date_iso, rows, logs=None):
         rec["ingested_at"] = now
         payload.append(rec)
     if payload:
-        errs = bq_client.insert_rows_json(tid, payload)
-        if errs:
-            logs.append(f"[bq] insert 오류: {errs[:2]}")
-            return False
+        # 스트리밍(insert_rows_json) 대신 로드잡 — 스트리밍 버퍼가 없어 DELETE/MERGE 즉시 가능.
+        job_config = bigquery.LoadJobConfig(
+            schema=[bigquery.SchemaField(n, t) for n, t in _SCHEMA],
+            write_disposition="WRITE_APPEND",
+        )
+        bq_client.load_table_from_json(payload, tid, job_config=job_config).result()
     logs.append(f"[bq] {source} {date_iso} · {len(payload)}행 적재")
     return True
 
