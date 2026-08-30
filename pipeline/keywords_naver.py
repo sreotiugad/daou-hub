@@ -94,6 +94,8 @@ def fetch_keyword(kw, acc, logs=None):
     pc = _int(head.get("monthlyPcQcCnt"))
     mob = _int(head.get("monthlyMobileQcCnt"))
     total = pc + mob
+    # 월평균 클릭수(광고 클릭) — 월광고비 추정용. 키워드툴이 showDetail=1 에서 제공.
+    ad_clk = _int(head.get("monthlyAvePcClkCnt")) + _int(head.get("monthlyAveMobileClkCnt"))
     if total <= 0:
         total = 10
     m_share = (mob / total) if total else .7
@@ -124,7 +126,7 @@ def fetch_keyword(kw, acc, logs=None):
     # 전에는 하나씩 순차 호출(전체 = 합)이라 느렸음 → 병렬(전체 = 가장 느린 하나).
     from concurrent.futures import ThreadPoolExecutor
     with ThreadPoolExecutor(max_workers=6) as pool:
-        f_ecpc = pool.submit(NX.estimate_cpc, kw, acc, logs)          # 예상 입찰가
+        f_pos = pool.submit(NX.estimate_position_bids, kw, acc, (1, 2, 3), logs)  # 순위별 예상 입찰가
         f_posts = pool.submit(NX.fetch_posts, kw, 5, logs)           # 문서수+블로그·카페 상위글
         f_dl = pool.submit(NX.datalab, kw, total, m_share, logs)     # 추이·성별·연령
         f_yt = pool.submit(YT.fetch_videos, kw, 8, logs)            # 유튜브 영상
@@ -137,7 +139,7 @@ def fetch_keyword(kw, acc, logs=None):
                 return f.result()
             except Exception:
                 return default
-        ecpc = _get(f_ecpc, None)
+        posbids = _get(f_pos, {}) or {}
         posts = _get(f_posts, None)
         dl = _get(f_dl, None) or {}
         yt = _get(f_yt, None)
@@ -145,8 +147,12 @@ def fetch_keyword(kw, acc, logs=None):
         rbids = _get(f_rcpc, {}) or {}
 
     cc = posts.get("total") if posts else None
+    ecpc = posbids.get(2)          # 2위 기준 예상 입찰가 = 대표 CPC
     if ecpc:
         cpc = ecpc
+    # 추정 월광고비 = 월평균 광고클릭수 × CPC. 클릭수 미제공(저볼륨) 시 검색량×2% 로 근사.
+    eff_clk = ad_clk if ad_clk > 0 else max(1, round(total * 0.02))
+    spend = round(eff_clk * cpc)
     # 연관키워드 CPC 실값 적용(실패분은 경쟁도 추정 유지)
     for z in related:
         b = rbids.get(z["kw"].replace(" ", ""))
@@ -166,6 +172,8 @@ def fetch_keyword(kw, acc, logs=None):
 
     return {"total": total, "pc": pc, "mob": mob, "mShare": round(m_share, 4),
             "advertisers": advertisers, "comp": level, "cpc": cpc,
+            "clk": ad_clk, "spend": spend,
+            "posBids": {str(p): b for p, b in sorted(posbids.items())},
             "blog": blog, "sat": sat, "trend": trend,
             "male": male, "female": female, "age": age,
             "dow": ex["dow"], "hourP": ex["hourP"], "related": related,

@@ -224,6 +224,34 @@ def estimate_cpc(kw, acc, logs=None):
     return None
 
 
+def estimate_position_bids(kw, acc, positions=(1, 2, 3), logs=None):
+    """한 키워드의 '목표 노출순위별' 예상 입찰가를 한 번의 호출로. {position: bid}.
+    average-position-bid 의 items 에 같은 키워드를 순위별로 넣어 1콜로 받는다.
+    실패/누락분 생략 → {}. cpc(2위)와 '몇 위 노리면 얼마' 슬라이더에 함께 쓴다."""
+    logs = logs if logs is not None else []
+    if not acc:
+        return {}
+    uri = "/estimate/average-position-bid/keyword"
+    k = kw.replace(" ", "")
+    items = [{"key": k, "position": int(p)} for p in positions]
+    body = {"device": "MOBILE", "items": items}
+    try:
+        r = requests.post(SEARCHAD + uri, headers=_sa_headers(acc, uri),
+                          data=json.dumps(body), timeout=12)
+        if r.status_code != 200:
+            return {}
+        est = r.json().get("estimate", [])
+        out = {}
+        for it, e in zip(items, est):
+            bid = e.get("bid") if isinstance(e, dict) else None
+            if bid:
+                out[it["position"]] = int(bid)
+        return out
+    except Exception as e:
+        logs.append(f"[estimate] {kw} 순위별 오류: {str(e)[:80]}")
+        return {}
+
+
 def estimate_cpc_batch(keywords, acc, logs=None):
     """여러 키워드의 예상 입찰가를 '한 번의 호출'로 받는다(position 2 기준).
     {공백제거_키워드: bid} 반환. 실패/누락분은 생략 → 상위에서 기존 추정값 유지."""

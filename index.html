@@ -122,6 +122,9 @@
   @media(max-width:900px){.kband{grid-template-columns:1fr 1fr}}
   .kpi{padding:14px 16px}
   .kpi .lab{font-size:12px;color:var(--muted);font-weight:500;display:flex;align-items:center;gap:6px}
+  .kpi .lab .src{font-family:var(--mono);font-size:9px;font-weight:600;padding:1px 5px;border-radius:4px;letter-spacing:.02em;line-height:1.4}
+  .src.ok{background:color-mix(in srgb,var(--success) 15%,transparent);color:var(--success)}
+  .src.est{background:color-mix(in srgb,var(--warning) 18%,transparent);color:var(--warning)}
   .kpi .val{font-size:24px;font-weight:600;margin-top:8px;line-height:1;font-variant-numeric:tabular-nums}
   .kpi .val u{font-style:normal;font-size:13px;color:var(--muted);font-weight:500;text-decoration:none;margin-left:2px}
   .kpi.hero .val{font-size:38px}
@@ -362,11 +365,12 @@
   </div>
   <div class="kw-head"><h2 id="rKw">그룹웨어</h2><span class="badge" id="rComp"></span><span class="kflags" id="rFlags"></span><span class="upd">2026.08.22 · 최근 30일</span></div>
   <div class="card kwdiag" id="kwDiag" style="margin-bottom:14px"></div>
-  <div class="kband" style="grid-template-columns:1.7fr 1fr 1fr 1fr">
-    <div class="card kpi hero"><div class="lab">월간 검색량</div><div class="val num" id="kSearch">–</div><div class="split"><div class="s"><small>PC</small><b id="kPc">–</b></div><div class="s"><small>MOBILE</small><b id="kMob">–</b></div></div></div>
-    <div class="card kpi"><div class="lab">콘텐츠 발행량</div><div class="val num" id="kBlog">–</div><div class="foot"><span class="delta flat mono" id="kSat">–</span></div></div>
-    <div class="card kpi"><div class="lab">광고 경쟁</div><div class="val" id="kComp">–</div><div class="foot"><span class="delta flat mono" id="kAdv">–</span></div></div>
-    <div class="card kpi"><div class="lab">예상 CPC</div><div class="val num" id="kCpc">–</div><div class="foot"><span class="delta flat mono">클릭당·VAT별도</span></div></div>
+  <div class="kband" style="grid-template-columns:1.5fr 1fr 1fr 1fr 1.25fr">
+    <div class="card kpi hero"><div class="lab">월간 검색량 <span class="src ok">실측</span></div><div class="val num" id="kSearch">–</div><div class="split"><div class="s"><small>PC</small><b id="kPc">–</b></div><div class="s"><small>MOBILE</small><b id="kMob">–</b></div></div></div>
+    <div class="card kpi"><div class="lab">콘텐츠 발행량 <span class="src ok">실측</span></div><div class="val num" id="kBlog">–</div><div class="foot"><span class="delta flat mono" id="kSat">–</span></div></div>
+    <div class="card kpi"><div class="lab">광고 경쟁 <span class="src ok">실측</span></div><div class="val" id="kComp">–</div><div class="foot"><span class="delta flat mono" id="kAdv">–</span></div></div>
+    <div class="card kpi"><div class="lab">예상 CPC <span class="src est">추정</span></div><div class="val num" id="kCpc">–</div><div class="foot"><span class="delta flat mono" id="kCpcSub">2위 기준·VAT별도</span></div></div>
+    <div class="card kpi"><div class="lab">추정 월광고비 <span class="src est">추정</span></div><div class="val num" id="kSpend">–</div><div class="foot"><span class="delta flat mono" id="kSpendSub">이 키워드 광고시장</span></div></div>
   </div>
   <div class="card" style="margin-bottom:14px"><div class="card-h"><h3>월간 검색량 추이</h3><span class="hint">최근 12개월</span></div><div class="card-b"><div id="trend"></div><div class="legend c"><span><i style="background:var(--c1)"></i>PC</span><span><i style="background:var(--c2)"></i>모바일</span></div></div></div>
   <div class="grid k2" style="margin-bottom:14px">
@@ -503,6 +507,7 @@ const DUKeyword=(function(){
   const AD_COPY=["30일 무료체험 시작","도입 문의 1위 솔루션","합리적 요금·중소기업","전자결재·근태 올인원","무료 상담 예약"];
   let current="그룹웨어";
   const kwon=v=>"₩"+comma(v);
+  const kwonM=v=>v>=1e8?"₩"+(v/1e8).toFixed(1)+"억":v>=1e4?"₩"+Math.round(v/1e4).toLocaleString()+"만":"₩"+comma(Math.round(v));
   function comp(adv){return adv<=3?{l:"낮음",c:COL.success}:adv<=8?{l:"중간",c:COL.warning}:{l:"높음",c:COL.danger}}
   function compC(l){return l==="낮음"?{l,c:COL.success}:l==="중간"?{l,c:COL.warning}:{l,c:COL.danger}}
   function adaptKw(o){return enrich(Object.assign({},o,{_demo:!!o._demo,comp:compC(o.comp),related:(o.related||[]).map(x=>Object.assign({},x,{comp:compC(x.comp)}))}))}
@@ -540,6 +545,11 @@ const DUKeyword=(function(){
     box.querySelectorAll('.post-sort button').forEach(function(b){b.onclick=function(){postSort=b.dataset.s;renderPosts(lastPostsD)}})}
   function render(kw){if(kw)current=kw;const cur=current;document.getElementById('kwInput').value=cur;const rc0=document.getElementById('rComp');if(rc0){rc0.textContent='조회 중…';rc0.style.color=COL.muted;rc0.style.background='transparent'}resolveKw(cur).then(function(d){if(current!==cur)return;paint(cur,d)})}
   function paint(cur,d){document.getElementById('rKw').textContent=cur;const rc=document.getElementById('rComp');rc.textContent="경쟁 "+d.comp.l;rc.style.color=d.comp.c;rc.style.background="color-mix(in srgb,"+d.comp.c+" 12%,transparent)";document.getElementById('kSearch').innerHTML=comma(d.total)+'<u>회</u>';document.getElementById('kPc').textContent=comma(d.pc);document.getElementById('kMob').textContent=comma(d.mob);document.getElementById('kBlog').innerHTML=comma(d.blog)+'<u>건</u>';document.getElementById('kSat').textContent="포화 "+d.sat.toFixed(1)+":1";const kc=document.getElementById('kComp');kc.textContent=d.comp.l;kc.style.color=d.comp.c;document.getElementById('kAdv').textContent="광고주 "+d.advertisers+"곳";document.getElementById('kCpc').innerHTML=kwon(d.cpc);
+    const _spend=d.spend||Math.round((d.clk||Math.round(d.total*0.02))*(d.cpc||0));
+    document.getElementById('kSpend').innerHTML=kwonM(_spend);
+    const _pb=d.posBids||{};const _sub=[1,2,3].filter(p=>_pb[p]).map(p=>p+"위 "+kwon(_pb[p])).join(" · ");
+    document.getElementById('kCpcSub').textContent=_sub||"2위 기준·VAT별도";
+    document.getElementById('kSpendSub').textContent=d.clk?("월 광고클릭 "+comma(d.clk)+"회 × CPC"):"검색량 기반 추정";
     var flags=[[d.commercial?'상업성':'정보성',COL.primary],['시즌성',d.seasonal?COL.c2:null],['이슈 급상승',d.issue?COL.warning:null]].filter(function(f){return f[1]});
     if(d._demo)flags.unshift(['추정치(미수집)',COL.danger]);
     document.getElementById('rFlags').innerHTML=flags.map(function(f){return '<span class="kf" style="color:'+f[1]+';border-color:color-mix(in srgb,'+f[1]+' 38%,var(--border-soft))">'+f[0]+'</span>'}).join('');
