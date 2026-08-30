@@ -21,8 +21,9 @@ import requests
 
 DEV_ID = lambda: os.environ.get("NAVER_DEV_CLIENT_ID", "")
 DEV_SECRET = lambda: os.environ.get("NAVER_DEV_CLIENT_SECRET", "")
-DATALAB = "https://openapi.naver.com/v1/datalab/search"
-SEARCH = "https://openapi.naver.com/v1/search/{}.json"
+# NAVER API HUB(NCP) 엔드포인트 — 2026-07-31 개발자센터 openapi.naver.com 신규종료 이관
+DATALAB = "https://naverapihub.apigw.ntruss.com/search-trend/v1/search"
+SEARCH = "https://naverapihub.apigw.ntruss.com/search/v1/{}"
 SEARCHAD = "https://api.searchad.naver.com"
 
 # DataLab 연령대 코드 → 프론트 6버킷
@@ -37,7 +38,8 @@ AGE_BUCKETS = [
 
 
 def _dev_headers():
-    return {"X-Naver-Client-Id": DEV_ID(), "X-Naver-Client-Secret": DEV_SECRET(),
+    # NAVER API HUB 인증 헤더 (구 개발자센터 X-Naver-Client-* → X-NCP-APIGW-*)
+    return {"X-NCP-APIGW-API-KEY-ID": DEV_ID(), "X-NCP-APIGW-API-KEY": DEV_SECRET(),
             "Content-Type": "application/json"}
 
 
