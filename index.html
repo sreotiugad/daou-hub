@@ -868,7 +868,14 @@ const DUBudget=(function(){
   var brand=null,dim='media',editing=false;
   function el(id){return document.getElementById(id)}
   function facts(){return (window.DAOU_DATA&&window.DAOU_DATA.report&&window.DAOU_DATA.report.facts)||[]}
-  function brandsList(){var s=[];facts().forEach(function(f){if(s.indexOf(f.svc)<0)s.push(f.svc)});return s}
+  function ents(){var F=facts(),grps=[],byG={};
+    F.forEach(function(f){if(grps.indexOf(f.grp)<0){grps.push(f.grp);byG[f.grp]=[]}if(byG[f.grp].indexOf(f.svc)<0)byG[f.grp].push(f.svc)});
+    var out=[];grps.forEach(function(g){var multi=byG[g].length>1;
+      out.push({id:'g:'+g,label:g+(multi?' (그룹 전체)':''),name:g+(multi?' 그룹':''),grp:g});
+      if(multi)byG[g].forEach(function(s){out.push({id:'s:'+s,label:'　└ '+s,name:s,svc:s})})});
+    return out;}
+  function entById(id){var e=ents();for(var i=0;i<e.length;i++)if(e[i].id===id)return e[i];return e[0]||{id:'',name:'',grp:''}}
+  function matchFn(e){return e.svc?function(f){return f.svc===e.svc}:function(f){return f.grp===e.grp}}
   function keyOf(f){return dim==='media'?f.media:(f.media+' · '+f.ct)}
   function mediaOf(k){return dim==='media'?k:k.split(' · ')[0]}
   function bmap(br){budgets[br]=budgets[br]||{};budgets[br][dim]=budgets[br][dim]||{};return budgets[br][dim]}
@@ -877,13 +884,13 @@ const DUBudget=(function(){
   function won(n){return Math.round(n||0).toLocaleString('ko-KR')}
   function pctc(p){return p>100?COL.danger:p>90?COL.warning:p>70?(COL.c3||COL.warning):COL.success}
   function daysInMonth(ym){return new Date(+ym.slice(0,4),+ym.slice(5,7),0).getDate()}
-  function calc(br){
+  function calc(id){
     var F=facts(),ref='';F.forEach(function(f){if(f.d>ref)ref=f.d});
-    var ym=ref?ref.slice(0,7):'';var byK={},byDate={},present={},dset={};
-    F.forEach(function(f){if(f.svc!==br||f.d.slice(0,7)!==ym)return;var k=keyOf(f);present[k]=1;dset[f.d]=1;
+    var ym=ref?ref.slice(0,7):'';var m=matchFn(entById(id));var byK={},byDate={},present={},dset={};
+    F.forEach(function(f){if(!m(f)||f.d.slice(0,7)!==ym)return;var k=keyOf(f);present[k]=1;dset[f.d]=1;
       byK[k]=(byK[k]||0)+(f.cost||0);(byDate[f.d]=byDate[f.d]||{});byDate[f.d][k]=(byDate[f.d][k]||0)+(f.cost||0);});
     // 예산만 있고 소진 없는 항목도 표시
-    Object.keys(bmap(br)).forEach(function(k){if(bget(br,k)>0)present[k]=1});
+    Object.keys(bmap(id)).forEach(function(k){if(bget(id,k)>0)present[k]=1});
     var items;
     if(dim==='media'){items=MEDIA.filter(function(m){return present[m]});if(!items.length)items=['네이버','구글']}
     else{items=Object.keys(present).sort(function(a,b){return (byK[b]||0)-(byK[a]||0)})}
@@ -891,13 +898,14 @@ const DUBudget=(function(){
     return {ref:ref,ym:ym,dm:dm,dom:dom,rem:rem,items:items,byK:byK,byDate:byDate,dates:Object.keys(dset).sort()};
   }
   function render(){
-    var sel=el('bgBrand');if(!sel)return;var bl=brandsList();
-    if(!bl.length){el('bgOverview').innerHTML='<div class="cmp-empty">데이터를 불러오는 중…</div>';return}
-    if(!brand||bl.indexOf(brand)<0)brand=bl.indexOf('애드콘')>=0?'애드콘':bl[0];
-    if(sel.options.length!==bl.length)sel.innerHTML=bl.map(function(b){return '<option>'+b+'</option>'}).join('');
+    var sel=el('bgBrand');if(!sel)return;var E=ents();
+    if(!E.length){el('bgOverview').innerHTML='<div class="cmp-empty">데이터를 불러오는 중…</div>';return}
+    var ids=E.map(function(e){return e.id});
+    if(!brand||ids.indexOf(brand)<0)brand=ids.indexOf('s:애드콘')>=0?'s:애드콘':(ids.indexOf('g:애드콘')>=0?'g:애드콘':ids[0]);
+    if(sel.options.length!==E.length)sel.innerHTML=E.map(function(e){return '<option value="'+e.id+'">'+e.label+'</option>'}).join('');
     sel.value=brand;
     Array.prototype.forEach.call(el('bgDimSeg').querySelectorAll('button'),function(b){b.classList.toggle('on',b.dataset.d===dim)});
-    var dimLab=dim==='media'?'매체':'유형';
+    var dimLab=dim==='media'?'매체':'유형';var name=entById(brand).name;
     var c=calc(brand);
     el('bgSub').textContent=(c.ref||'')+' 기준 · 이번 달 '+c.dm+'일 · 남은 '+c.rem+'일';
     var totB=c.items.reduce(function(s,k){return s+bget(brand,k)},0);
@@ -906,7 +914,7 @@ const DUBudget=(function(){
     var totPct=totB>0?totCum/totB*100:0,timeP=c.dm>0?c.dom/c.dm*100:0;
     var totRem=Math.max(totB-totCum,0),recDaily=totRem/c.rem;
     el('bgOverview').innerHTML=
-      '<div class="bg-ov-top"><div><div style="font-size:13px;font-weight:700">'+brand+' 채널 전체</div>'
+      '<div class="bg-ov-top"><div><div style="font-size:13px;font-weight:700">'+name+' 채널 전체</div>'
       +'<div class="hint" style="margin-top:3px;color:var(--muted)">월 총예산 '+won(totB)+'원 · 오늘 소진 '+won(totToday)+'원</div></div>'
       +'<div style="text-align:right"><div class="bg-ov-big" style="color:'+pctc(totPct)+'">'+won(totCum)+'원</div>'
       +'<div class="hint" style="margin-top:2px;color:var(--muted)">월예산 대비 '+(totB>0?totPct.toFixed(1)+'%':'예산 미설정')+'</div></div></div>'
@@ -925,7 +933,7 @@ const DUBudget=(function(){
     el('bgDaily').innerHTML='<table><thead>'+dhead+'</thead><tbody>'+cumRow+drows+'</tbody></table>';
     var ep=el('bgEditPanel');
     if(editing){ep.hidden=false;
-      ep.innerHTML='<div class="card-h" style="border:0;padding:0 0 4px"><h3>'+brand+' 월 예산 설정 — '+dimLab+'별 (원)</h3></div><div class="hint" style="margin-bottom:14px;color:var(--muted)">이번 달 '+dimLab+'별 총 예산을 입력하면 누적 소진과 비교합니다.</div><div class="bg-edit-grid">'
+      ep.innerHTML='<div class="card-h" style="border:0;padding:0 0 4px"><h3>'+name+' 월 예산 설정 — '+dimLab+'별 (원)</h3></div><div class="hint" style="margin-bottom:14px;color:var(--muted)">이번 달 '+dimLab+'별 총 예산을 입력하면 누적 소진과 비교합니다.</div><div class="bg-edit-grid">'
         +c.items.map(function(k){return '<div class="bg-edit-row"><label title="'+k+'">'+k+'</label><input type="number" min="0" step="100000" data-k="'+k.replace(/"/g,'')+'" value="'+(bget(brand,k)||'')+'" placeholder="0"></div>'}).join('')
         +'</div><div style="display:flex;gap:10px;margin-top:16px"><button id="bgSave" class="kw-btn" style="background:var(--primary);color:var(--primary-fg);border-color:var(--primary)">저장</button><button id="bgCancel" class="kw-btn">취소</button></div>';
       el('bgSave').addEventListener('click',function(){Array.prototype.forEach.call(ep.querySelectorAll('input[data-k]'),function(inp){bset(brand,inp.dataset.k,+inp.value||0)});editing=false;render()});
