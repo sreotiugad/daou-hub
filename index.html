@@ -542,6 +542,7 @@
     <div><h2 id="bgTitle">예산 관리</h2><div class="s" id="bgSub">이번 달 예산 대비 소진 현황</div></div>
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
       <select id="bgBrand" class="cx-sel"></select>
+      <div class="seg sm cxseg" id="bgDimSeg"><button data-d="media" class="on">매체별</button><button data-d="type">유형별</button></div>
       <button id="bgEdit" class="kw-btn">⚙ 예산 설정</button>
     </div>
   </div>
@@ -862,25 +863,32 @@ const DUCustom=(function(){
 const DUBudget=(function(){
   var MEDIA=['네이버','구글','메타'];
   var MCOL={'네이버':COL.naver,'구글':COL.google,'메타':COL.meta};
-  var LS='daouhub_budget_v1';
+  var LS='daouhub_budget_v2';
   var budgets={};try{budgets=JSON.parse(localStorage.getItem(LS)||'{}')||{}}catch(e){}
-  var brand=null,editing=false;
+  var brand=null,dim='media',editing=false;
   function el(id){return document.getElementById(id)}
   function facts(){return (window.DAOU_DATA&&window.DAOU_DATA.report&&window.DAOU_DATA.report.facts)||[]}
   function brandsList(){var s=[];facts().forEach(function(f){if(s.indexOf(f.svc)<0)s.push(f.svc)});return s}
-  function bget(br,m){return (budgets[br]&&+budgets[br][m])||0}
-  function bset(br,m,v){budgets[br]=budgets[br]||{};budgets[br][m]=v;try{localStorage.setItem(LS,JSON.stringify(budgets))}catch(e){}}
+  function keyOf(f){return dim==='media'?f.media:(f.media+' · '+f.ct)}
+  function mediaOf(k){return dim==='media'?k:k.split(' · ')[0]}
+  function bmap(br){budgets[br]=budgets[br]||{};budgets[br][dim]=budgets[br][dim]||{};return budgets[br][dim]}
+  function bget(br,k){return (+bmap(br)[k])||0}
+  function bset(br,k,v){bmap(br)[k]=v;try{localStorage.setItem(LS,JSON.stringify(budgets))}catch(e){}}
   function won(n){return Math.round(n||0).toLocaleString('ko-KR')}
   function pctc(p){return p>100?COL.danger:p>90?COL.warning:p>70?(COL.c3||COL.warning):COL.success}
   function daysInMonth(ym){return new Date(+ym.slice(0,4),+ym.slice(5,7),0).getDate()}
   function calc(br){
     var F=facts(),ref='';F.forEach(function(f){if(f.d>ref)ref=f.d});
-    var ym=ref?ref.slice(0,7):'';var byM={},byDate={},present={},dset={};
-    F.forEach(function(f){if(f.svc!==br||f.d.slice(0,7)!==ym)return;var m=f.media;present[m]=1;dset[f.d]=1;
-      byM[m]=(byM[m]||0)+(f.cost||0);(byDate[f.d]=byDate[f.d]||{});byDate[f.d][m]=(byDate[f.d][m]||0)+(f.cost||0);});
-    var media=MEDIA.filter(function(m){return present[m]||bget(br,m)>0});if(!media.length)media=['네이버','구글'];
-    var dim=ym?daysInMonth(ym):30,dom=ref?+ref.slice(8,10):1,rem=Math.max(dim-dom,1);
-    return {ref:ref,ym:ym,dim:dim,dom:dom,rem:rem,media:media,byM:byM,byDate:byDate,dates:Object.keys(dset).sort()};
+    var ym=ref?ref.slice(0,7):'';var byK={},byDate={},present={},dset={};
+    F.forEach(function(f){if(f.svc!==br||f.d.slice(0,7)!==ym)return;var k=keyOf(f);present[k]=1;dset[f.d]=1;
+      byK[k]=(byK[k]||0)+(f.cost||0);(byDate[f.d]=byDate[f.d]||{});byDate[f.d][k]=(byDate[f.d][k]||0)+(f.cost||0);});
+    // 예산만 있고 소진 없는 항목도 표시
+    Object.keys(bmap(br)).forEach(function(k){if(bget(br,k)>0)present[k]=1});
+    var items;
+    if(dim==='media'){items=MEDIA.filter(function(m){return present[m]});if(!items.length)items=['네이버','구글']}
+    else{items=Object.keys(present).sort(function(a,b){return (byK[b]||0)-(byK[a]||0)})}
+    var dm=ym?daysInMonth(ym):30,dom=ref?+ref.slice(8,10):1,rem=Math.max(dm-dom,1);
+    return {ref:ref,ym:ym,dm:dm,dom:dom,rem:rem,items:items,byK:byK,byDate:byDate,dates:Object.keys(dset).sort()};
   }
   function render(){
     var sel=el('bgBrand');if(!sel)return;var bl=brandsList();
@@ -888,42 +896,45 @@ const DUBudget=(function(){
     if(!brand||bl.indexOf(brand)<0)brand=bl.indexOf('애드콘')>=0?'애드콘':bl[0];
     if(sel.options.length!==bl.length)sel.innerHTML=bl.map(function(b){return '<option>'+b+'</option>'}).join('');
     sel.value=brand;
+    Array.prototype.forEach.call(el('bgDimSeg').querySelectorAll('button'),function(b){b.classList.toggle('on',b.dataset.d===dim)});
+    var dimLab=dim==='media'?'매체':'유형';
     var c=calc(brand);
-    el('bgSub').textContent=(c.ref||'')+' 기준 · 이번 달 '+c.dim+'일 · 남은 '+c.rem+'일';
-    var totB=c.media.reduce(function(s,m){return s+bget(brand,m)},0);
-    var totCum=c.media.reduce(function(s,m){return s+(c.byM[m]||0)},0);
-    var totToday=c.media.reduce(function(s,m){return s+(((c.byDate[c.ref]||{})[m])||0)},0);
-    var totPct=totB>0?totCum/totB*100:0,timeP=c.dim>0?c.dom/c.dim*100:0;
+    el('bgSub').textContent=(c.ref||'')+' 기준 · 이번 달 '+c.dm+'일 · 남은 '+c.rem+'일';
+    var totB=c.items.reduce(function(s,k){return s+bget(brand,k)},0);
+    var totCum=c.items.reduce(function(s,k){return s+(c.byK[k]||0)},0);
+    var totToday=c.items.reduce(function(s,k){return s+(((c.byDate[c.ref]||{})[k])||0)},0);
+    var totPct=totB>0?totCum/totB*100:0,timeP=c.dm>0?c.dom/c.dm*100:0;
     var totRem=Math.max(totB-totCum,0),recDaily=totRem/c.rem;
     el('bgOverview').innerHTML=
       '<div class="bg-ov-top"><div><div style="font-size:13px;font-weight:700">'+brand+' 채널 전체</div>'
       +'<div class="hint" style="margin-top:3px;color:var(--muted)">월 총예산 '+won(totB)+'원 · 오늘 소진 '+won(totToday)+'원</div></div>'
       +'<div style="text-align:right"><div class="bg-ov-big" style="color:'+pctc(totPct)+'">'+won(totCum)+'원</div>'
       +'<div class="hint" style="margin-top:2px;color:var(--muted)">월예산 대비 '+(totB>0?totPct.toFixed(1)+'%':'예산 미설정')+'</div></div></div>'
-      +'<div class="bg-row"><div class="lab"><span style="color:var(--muted)">월 시간 진척 ('+c.dom+'/'+c.dim+'일)</span><span>'+timeP.toFixed(1)+'%</span></div><div class="bg-bar"><i style="width:'+Math.min(timeP,100)+'%;background:'+COL.c2+'"></i></div></div>'
+      +'<div class="bg-row"><div class="lab"><span style="color:var(--muted)">월 시간 진척 ('+c.dom+'/'+c.dm+'일)</span><span>'+timeP.toFixed(1)+'%</span></div><div class="bg-bar"><i style="width:'+Math.min(timeP,100)+'%;background:'+COL.c2+'"></i></div></div>'
       +'<div class="bg-row"><div class="lab"><span style="color:var(--muted)">예산 소진 진척</span><span style="color:'+pctc(totPct)+'">'+(totB>0?totPct.toFixed(1)+'%':'-')+'</span></div><div class="bg-bar"><i style="width:'+Math.min(totPct,100)+'%;background:'+pctc(totPct)+'"></i></div></div>'
-      +'<div class="bg-note">'+(totB<=0?'⚙ 예산 설정을 눌러 이번 달 매체별 예산을 입력하세요.':(totPct>timeP?'⚠️ 소진이 시간보다 <b>'+(totPct-timeP).toFixed(1)+'%p 빠릅니다</b> (과지출 페이스)':'✓ 소진이 시간보다 <b>'+(timeP-totPct).toFixed(1)+'%p 여유</b> 있습니다')+' · 권장 일예산(잔여 ÷ 남은 '+c.rem+'일): <b>'+won(recDaily)+'원/일</b>')+'</div>';
-    var body=c.media.map(function(m){var b=bget(brand,m),cum=c.byM[m]||0,p=b>0?cum/b*100:0,rem=b-cum,rd=Math.max(rem,0)/c.rem;
-      return '<tr><td><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:'+(MCOL[m]||COL.muted)+';margin-right:7px"></span>'+m+'</td><td>'+won(b)+'</td><td>'+won(cum)+'</td><td style="color:'+pctc(p)+';font-weight:600">'+(b>0?p.toFixed(1)+'%':'-')+'</td><td style="color:'+(rem>=0?'inherit':COL.danger)+'">'+won(rem)+'</td><td style="color:'+COL.success+'">'+won(rd)+'</td></tr>'}).join('');
-    el('bgTable').innerHTML='<table><thead><tr><th>매체</th><th>월예산</th><th>누적 소진</th><th>소진율</th><th>잔여</th><th>권장 일예산</th></tr></thead><tbody>'+body
+      +'<div class="bg-note">'+(totB<=0?'⚙ 예산 설정을 눌러 이번 달 '+dimLab+'별 예산을 입력하세요.':(totPct>timeP?'⚠️ 소진이 시간보다 <b>'+(totPct-timeP).toFixed(1)+'%p 빠릅니다</b> (과지출 페이스)':'✓ 소진이 시간보다 <b>'+(timeP-totPct).toFixed(1)+'%p 여유</b> 있습니다')+' · 권장 일예산(잔여 ÷ 남은 '+c.rem+'일): <b>'+won(recDaily)+'원/일</b>')+'</div>';
+    var body=c.items.map(function(k){var b=bget(brand,k),cum=c.byK[k]||0,p=b>0?cum/b*100:0,rem=b-cum,rd=Math.max(rem,0)/c.rem;
+      return '<tr><td><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:'+(MCOL[mediaOf(k)]||COL.muted)+';margin-right:7px"></span>'+k+'</td><td>'+won(b)+'</td><td>'+won(cum)+'</td><td style="color:'+pctc(p)+';font-weight:600">'+(b>0?p.toFixed(1)+'%':'-')+'</td><td style="color:'+(rem>=0?'inherit':COL.danger)+'">'+won(rem)+'</td><td style="color:'+COL.success+'">'+won(rd)+'</td></tr>'}).join('');
+    el('bgTable').innerHTML='<table><thead><tr><th>'+dimLab+'</th><th>월예산</th><th>누적 소진</th><th>소진율</th><th>잔여</th><th>권장 일예산</th></tr></thead><tbody>'+body
       +'<tr class="tot"><td>합계</td><td>'+won(totB)+'</td><td>'+won(totCum)+'</td><td style="color:'+pctc(totPct)+'">'+(totB>0?totPct.toFixed(1)+'%':'-')+'</td><td style="color:'+(totRem>=0?'inherit':COL.danger)+'">'+won(totB-totCum)+'</td><td style="color:'+COL.success+'">'+won(recDaily)+'</td></tr></tbody></table>';
-    el('bgDayHint').textContent=c.ym;
-    var dhead='<tr><th>일자</th>'+c.media.map(function(m){return '<th>'+m+'</th>'}).join('')+'<th>합계</th></tr>';
-    var cumRow='<tr class="cum"><td>누적</td>'+c.media.map(function(m){return '<td>'+won(c.byM[m]||0)+'</td>'}).join('')+'<td>'+won(totCum)+'</td></tr>';
-    var drows=c.dates.map(function(dt){var row=c.byDate[dt]||{};var rt=c.media.reduce(function(s,m){return s+(row[m]||0)},0);
-      return '<tr class="'+(dt===c.ref?'today':'')+'"><td>'+dt.slice(5)+'</td>'+c.media.map(function(m){var v=row[m]||0;return '<td>'+(v?won(v):'-')+'</td>'}).join('')+'<td style="font-weight:600">'+(rt?won(rt):'-')+'</td></tr>'}).join('');
+    el('bgDayHint').textContent=c.ym+' · '+dimLab+'별';
+    var dhead='<tr><th>일자</th>'+c.items.map(function(k){return '<th>'+k+'</th>'}).join('')+'<th>합계</th></tr>';
+    var cumRow='<tr class="cum"><td>누적</td>'+c.items.map(function(k){return '<td>'+won(c.byK[k]||0)+'</td>'}).join('')+'<td>'+won(totCum)+'</td></tr>';
+    var drows=c.dates.map(function(dt){var row=c.byDate[dt]||{};var rt=c.items.reduce(function(s,k){return s+(row[k]||0)},0);
+      return '<tr class="'+(dt===c.ref?'today':'')+'"><td>'+dt.slice(5)+'</td>'+c.items.map(function(k){var v=row[k]||0;return '<td>'+(v?won(v):'-')+'</td>'}).join('')+'<td style="font-weight:600">'+(rt?won(rt):'-')+'</td></tr>'}).join('');
     el('bgDaily').innerHTML='<table><thead>'+dhead+'</thead><tbody>'+cumRow+drows+'</tbody></table>';
     var ep=el('bgEditPanel');
     if(editing){ep.hidden=false;
-      ep.innerHTML='<div class="card-h" style="border:0;padding:0 0 4px"><h3>'+brand+' 월 예산 설정 (원)</h3></div><div class="hint" style="margin-bottom:14px;color:var(--muted)">이번 달 매체별 총 예산을 입력하면 누적 소진과 비교합니다.</div><div class="bg-edit-grid">'
-        +c.media.map(function(m){return '<div class="bg-edit-row"><label>'+m+'</label><input type="number" min="0" step="100000" data-m="'+m+'" value="'+(bget(brand,m)||'')+'" placeholder="0"></div>'}).join('')
+      ep.innerHTML='<div class="card-h" style="border:0;padding:0 0 4px"><h3>'+brand+' 월 예산 설정 — '+dimLab+'별 (원)</h3></div><div class="hint" style="margin-bottom:14px;color:var(--muted)">이번 달 '+dimLab+'별 총 예산을 입력하면 누적 소진과 비교합니다.</div><div class="bg-edit-grid">'
+        +c.items.map(function(k){return '<div class="bg-edit-row"><label title="'+k+'">'+k+'</label><input type="number" min="0" step="100000" data-k="'+k.replace(/"/g,'')+'" value="'+(bget(brand,k)||'')+'" placeholder="0"></div>'}).join('')
         +'</div><div style="display:flex;gap:10px;margin-top:16px"><button id="bgSave" class="kw-btn" style="background:var(--primary);color:var(--primary-fg);border-color:var(--primary)">저장</button><button id="bgCancel" class="kw-btn">취소</button></div>';
-      el('bgSave').addEventListener('click',function(){Array.prototype.forEach.call(ep.querySelectorAll('input[data-m]'),function(inp){bset(brand,inp.dataset.m,+inp.value||0)});editing=false;render()});
+      el('bgSave').addEventListener('click',function(){Array.prototype.forEach.call(ep.querySelectorAll('input[data-k]'),function(inp){bset(brand,inp.dataset.k,+inp.value||0)});editing=false;render()});
       el('bgCancel').addEventListener('click',function(){editing=false;render()});
     }else{ep.hidden=true;ep.innerHTML=''}
   }
   var bsel=document.getElementById('bgBrand');if(bsel)bsel.addEventListener('change',function(e){brand=e.target.value;editing=false;render()});
   var bed=document.getElementById('bgEdit');if(bed)bed.addEventListener('click',function(){editing=!editing;render()});
+  var bseg=document.getElementById('bgDimSeg');if(bseg)bseg.addEventListener('click',function(e){if(e.target.tagName==='BUTTON'){dim=e.target.dataset.d;editing=false;render()}});
   return {render:render};
 })();
 
