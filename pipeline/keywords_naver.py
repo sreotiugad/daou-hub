@@ -18,6 +18,7 @@ import config as C
 import sample as S
 import providers_youtube as YT
 import providers_naver_extra as NX
+import providers_firecrawl as FC
 
 BASE = "https://api.searchad.naver.com"
 
@@ -125,7 +126,7 @@ def fetch_keyword(kw, acc, logs=None):
     # ── 실데이터 보강 ── 독립적인 소스들을 '동시에' 호출한다.
     # 전에는 하나씩 순차 호출(전체 = 합)이라 느렸음 → 병렬(전체 = 가장 느린 하나).
     from concurrent.futures import ThreadPoolExecutor
-    with ThreadPoolExecutor(max_workers=6) as pool:
+    with ThreadPoolExecutor(max_workers=7) as pool:
         f_pos = pool.submit(NX.estimate_position_bids, kw, acc, (1, 2, 3), logs)  # 순위별 예상 입찰가
         f_posts = pool.submit(NX.fetch_posts, kw, 5, logs)           # 문서수+블로그·카페 상위글
         f_dl = pool.submit(NX.datalab, kw, total, m_share, logs)     # 추이·성별·연령
@@ -133,6 +134,9 @@ def fetch_keyword(kw, acc, logs=None):
         f_rdoc = pool.submit(_attach_related_docs, related, logs)    # 연관 문서수(내부 병렬)
         f_rcpc = pool.submit(NX.estimate_cpc_batch,
                              [z["kw"] for z in related], acc, logs)  # 연관 CPC(배치)
+        # 네이버 SERP 실제 광고주·자연검색 경쟁사(Firecrawl) — 키 없으면 None
+        f_serp = pool.submit(FC.serp_competitors, kw,
+                             list(C.BRAND_MAP.keys()) + [C.OUR_BRAND], logs)
 
         def _get(f, default):
             try:
@@ -145,6 +149,7 @@ def fetch_keyword(kw, acc, logs=None):
         yt = _get(f_yt, None)
         _get(f_rdoc, None)                    # related 에 doc 채움(부작용)
         rbids = _get(f_rcpc, {}) or {}
+        serp = _get(f_serp, None)
 
     cc = posts.get("total") if posts else None
     ecpc = posbids.get(2)          # 2위 기준 예상 입찰가 = 대표 CPC
@@ -167,8 +172,20 @@ def fetch_keyword(kw, acc, logs=None):
     age = dl.get("age", ex["age"])
     youtube = yt if yt is not None else S.model_youtube(kw)
 
-    for b in ex["brands"]:
-        b["bid"] = cpc if b["us"] else round(cpc * 0.9)
+    # 광고 경쟁 브랜드: Firecrawl 이 실제 네이버 SERP 광고주를 잡았으면 실측으로 교체,
+    # 못 잡았으면(키없음·실패) 모델 추정 브랜드 유지. 입찰가는 순위별 예상입찰가로 채움.
+    serp_real = bool(serp and serp.get("ads"))
+    if serp_real:
+        brands = []
+        for i, a in enumerate(serp["ads"][:6]):
+            bid = posbids.get(i + 1) or (cpc if a["us"] else round(cpc * 0.9))
+            brands.append({"name": a["name"], "us": a["us"], "bid": bid,
+                           "copy": a.get("copy", ""), "url": a.get("url", "")})
+    else:
+        for b in ex["brands"]:
+            b["bid"] = cpc if b["us"] else round(cpc * 0.9)
+        brands = ex["brands"]
+    organic = (serp or {}).get("organic", []) if serp else []
 
     return {"total": total, "pc": pc, "mob": mob, "mShare": round(m_share, 4),
             "advertisers": advertisers, "comp": level, "cpc": cpc,
@@ -177,7 +194,7 @@ def fetch_keyword(kw, acc, logs=None):
             "blog": blog, "sat": sat, "trend": trend,
             "male": male, "female": female, "age": age,
             "dow": ex["dow"], "hourP": ex["hourP"], "related": related,
-            "brands": ex["brands"], "youtube": youtube,
+            "brands": brands, "serp": organic, "serpReal": serp_real, "youtube": youtube,
             "posts": {"sim": (posts or {}).get("sim", {"blog": [], "cafe": []}),
                       "date": (posts or {}).get("date", {"blog": [], "cafe": []})}}
 
