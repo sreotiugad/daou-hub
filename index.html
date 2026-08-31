@@ -284,6 +284,16 @@
   .post .pm .sub{font-size:11px;color:var(--muted);margin-top:3px}
   .post:hover .pm b{color:var(--primary)}
   .post-sort{display:inline-flex;margin-bottom:12px}
+  /* 키워드 분석 로딩 오버레이 */
+  #kwLoading{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;background:color-mix(in srgb,var(--bg) 55%,transparent)}
+  #kwLoading.on{display:flex}
+  #kwLoading .box{display:flex;flex-direction:column;align-items:center;gap:13px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:26px 36px;box-shadow:0 14px 44px rgba(0,0,0,.16)}
+  .spin{width:34px;height:34px;border-radius:50%;border:3px solid var(--border);border-top-color:var(--primary);animation:kwspin .7s linear infinite}
+  @keyframes kwspin{to{transform:rotate(360deg)}}
+  #kwLoading .lb{font-size:13px;color:var(--fg);font-weight:600}
+  #kwLoading .sb{font-size:11.5px;color:var(--muted);margin-top:-4px}
+  .kw-btn{border:1px solid var(--border);background:var(--surface);color:var(--fg);font-size:12px;font-weight:600;padding:6px 12px;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+  .kw-btn:hover{border-color:var(--primary);color:var(--primary)}
 </style>
 
 <header class="appnav">
@@ -365,11 +375,12 @@
     <input id="kwInput" placeholder="키워드 입력 (예: 그룹웨어)" value="그룹웨어">
     <button id="kwBtn">분석</button>
   </div>
+  <div id="kwLoading"><div class="box"><div class="spin"></div><div class="lb">분석 중…</div><div class="sb">네이버·유튜브 실시간 조회 중</div></div></div>
   <div class="presets" id="presets">
     <span class="lab">추천</span>
     <span>그룹웨어</span><span>전자결재</span><span>쇼핑몰 통합관리</span><span>재고관리 프로그램</span><span>채용 사이트</span><span>모바일 쿠폰</span>
   </div>
-  <div class="kw-head"><h2 id="rKw">그룹웨어</h2><span class="badge" id="rComp"></span><span class="kflags" id="rFlags"></span><span class="upd">2026.08.22 · 최근 30일</span></div>
+  <div class="kw-head"><h2 id="rKw">그룹웨어</h2><span class="badge" id="rComp"></span><span class="kflags" id="rFlags"></span><button id="kwCsv" class="kw-btn" style="margin-left:auto" title="이 분석을 CSV로 내려받기"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16"/></svg>CSV</button></div>
   <div class="card kwdiag" id="kwDiag" style="margin-bottom:14px"></div>
   <div class="kband" style="grid-template-columns:1.5fr 1fr 1fr 1fr 1.25fr">
     <div class="card kpi hero"><div class="lab">월간 검색량 <span class="src ok">실측</span></div><div class="val num" id="kSearch">–</div><div class="split"><div class="s"><small>PC</small><b id="kPc">–</b></div><div class="s"><small>MOBILE</small><b id="kMob">–</b></div></div></div>
@@ -388,7 +399,7 @@
     <div class="card"><div class="card-h"><h3>요일별 비율</h3><span class="hint">%</span></div><div class="card-b"><div id="dowBar"></div></div></div>
   </div>
   <div class="card" style="margin-bottom:14px"><div class="card-h"><h3>시간대별 검색</h3><span class="hint">0–23시</span></div><div class="card-b"><div id="hourBar"></div></div></div>
-  <div class="card" style="margin-bottom:14px"><div class="card-h"><h3>네이버 통합검색 노출 섹션</h3><span class="hint">이 키워드 검색 시 · 추정</span></div><div class="card-b"><div id="secGrid"></div></div></div>
+  <div class="card" style="margin-bottom:14px"><div class="card-h"><h3>네이버 통합검색 노출 섹션</h3><span class="hint">이 키워드 검색 시 실제 노출 · 실측</span></div><div class="card-b"><div id="secGrid"></div></div></div>
   <div class="grid k21">
     <div class="card"><div class="card-h"><h3>연관 키워드</h3><span class="hint">클릭 시 분석</span></div><div class="card-b" style="overflow-x:auto"><div id="relTable"></div></div></div>
     <div class="card"><div class="card-h"><h3>광고 경쟁 현황</h3><span class="hint">추정·상위노출</span></div><div class="card-b" style="overflow-x:auto"><div id="advTable"></div></div></div>
@@ -521,7 +532,7 @@ const DUKeyword=(function(){
   function enrich(d){const total=d.total||0,sat=d.sat||0;const blue=Math.max(0,Math.min(1,1-(sat-1)/12));const vol=Math.max(0,Math.min(1,total>0?Math.log10(total)/Math.log10(300000):0));const opp=+(0.62*blue+0.38*vol).toFixed(3);d.opp=opp;d.grade=grade5(opp);d.satBand=satBand(sat);d.blue=blue;
     const mt=(d.trend||[]).map(m=>(m.pc||0)+(m.mob||0));if(mt.length){const mx=Math.max(...mt)||1,mn=Math.min(...mt)||1,mean=mt.reduce((a,b)=>a+b,0)/mt.length,last=mt[mt.length-1];d.seasonal=mx/mn>=1.9;d.issue=last>=mean*1.5;d.peakMonth=MONTHS[mt.indexOf(Math.max(...mt))];d.curIdx=Math.round(last/mx*100)}else{d.seasonal=false;d.issue=false;d.peakMonth="–";d.curIdx=100}
     d.commercial=(d.advertisers||0)>=6;
-    const rs=MUL(H((d.kw||"")+"sec"));const pool=[["파워링크",(d.advertisers||0)>=2?1:.3],["브랜드검색",.22],["블로그",.96],["카페",.7],["지식iN",.72],["인플루언서",.5],["VIEW",.8],["쇼핑",d.commercial?.7:.35],["이미지",.85],["동영상",.6],["뉴스",.4],["지식스니펫",.3]];d.sections=pool.map(function(p){return{n:p[0],on:rs()<p[1]}});
+    var _pb=(d.posts&&((d.posts.sim&&d.posts.sim.blog)||d.posts.blog))||[];var _pc=(d.posts&&((d.posts.sim&&d.posts.sim.cafe)||d.posts.cafe))||[];d.sections=[{n:'파워링크(광고)',on:(d.advertisers||0)>0},{n:'블로그',on:_pb.length>0},{n:'카페',on:_pc.length>0}];
     (d.related||[]).forEach(function(r){if(r.doc==null){const rr=MUL(H(r.kw+"doc"));r.doc=Math.round((r.v||0)*(1.2+rr()*10))}});
     return d}
   function gen(kw){const RK=window.DAOU_DATA&&window.DAOU_DATA.keyword;if(RK&&RK[kw])return adaptKw(RK[kw]);const r=MUL(H(kw)+kw.length*131);const total=Math.round((4000+r()*260000)/10)*10;const mShare=.58+r()*.32;const pc=Math.round(total*(1-mShare)/10)*10,mob=total-pc;const advertisers=1+Math.floor(r()*15);const cc=comp(advertisers);const cpc=Math.round((250+r()*1500+(cc.l==="높음"?1650:cc.l==="중간"?1100:550))/10)*10;const blog=Math.round(total*(1.4+r()*13));const sat=blog/total;const trend=[];for(let i=0;i<12;i++){const seas=1+.28*Math.sin(i/12*6.28+r()*3);const nz=.85+r()*.3;const v=total*seas*nz;trend.push({pc:Math.round(v*(1-mShare)),mob:Math.round(v*mShare)})}const male=28+Math.round(r()*44),female=100-male;let ageRaw=[6,18,26,22,16,12].map(x=>x*(.6+r()*.8));const as=ageRaw.reduce((a,b)=>a+b,0);const age=ageRaw.map(x=>Math.round(x/as*100));let dowRaw=[1,1,1,1,1.05,.75,.7].map(x=>x*(.85+r()*.3));const ds=dowRaw.reduce((a,b)=>a+b,0);const dow=dowRaw.map(x=>+(x/ds*100).toFixed(1));const hour=[];for(let h=0;h<24;h++){let b=Math.exp(-Math.pow(h-14,2)/40)+.5*Math.exp(-Math.pow(h-21,2)/24)+.06;b*=(.85+r()*.3);hour.push(b)}const hs=hour.reduce((a,b)=>a+b,0);const hourP=hour.map(x=>+(x/hs*100).toFixed(1));
@@ -548,8 +559,16 @@ const DUKeyword=(function(){
     function col(title,color,list){var body=list.length?list.map(function(x,i){return '<a class="post" href="'+esc(x.url||'#')+'" target="_blank" rel="noopener"><span class="rk">'+(i+1)+'</span><span class="pm"><b>'+esc(x.title)+'</b><span class="sub">'+[esc(x.author),esc(x.date)].filter(Boolean).join(' · ')+'</span></span></a>'}).join(''):'<div style="color:var(--muted);font-size:11.5px;padding:6px 0">없음</div>';return '<div class="post-col"><h4><span class="pd" style="background:'+color+'"></span>'+title+'</h4>'+body+'</div>'}
     box.innerHTML=seg+'<div class="post-cols">'+col('블로그',COL.success,blog)+col('카페',COL.c2,cafe)+'</div>';
     box.querySelectorAll('.post-sort button').forEach(function(b){b.onclick=function(){postSort=b.dataset.s;renderPosts(lastPostsD)}})}
-  function render(kw){if(kw)current=kw;const cur=current;document.getElementById('kwInput').value=cur;const rc0=document.getElementById('rComp');if(rc0){rc0.textContent='조회 중…';rc0.style.color=COL.muted;rc0.style.background='transparent'}resolveKw(cur).then(function(d){if(current!==cur)return;paint(cur,d)})}
-  function paint(cur,d){document.getElementById('rKw').textContent=cur;const rc=document.getElementById('rComp');rc.textContent="경쟁 "+d.comp.l;rc.style.color=d.comp.c;rc.style.background="color-mix(in srgb,"+d.comp.c+" 12%,transparent)";document.getElementById('kSearch').innerHTML=comma(d.total)+'<u>회</u>';document.getElementById('kPc').textContent=comma(d.pc);document.getElementById('kMob').textContent=comma(d.mob);document.getElementById('kBlog').innerHTML=comma(d.blog)+'<u>건</u>';document.getElementById('kSat').textContent="포화 "+d.sat.toFixed(1)+":1";const kc=document.getElementById('kComp');kc.textContent=d.comp.l;kc.style.color=d.comp.c;document.getElementById('kAdv').textContent="광고주 "+d.advertisers+"곳";document.getElementById('kCpc').innerHTML=kwon(d.cpc);
+  var lastKwD=null;
+  function showKwLoading(kw){var el=document.getElementById('kwLoading');if(el){var lb=el.querySelector('.lb');if(lb)lb.textContent='"'+kw+'" 분석 중…';el.classList.add('on')}}
+  function hideKwLoading(){var el=document.getElementById('kwLoading');if(el)el.classList.remove('on')}
+  function csvCell(v){v=String(v==null?'':v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}
+  function exportKwCsv(){var d=lastKwD;if(!d)return;var rows=[['키워드',current],['월간검색량',d.total],['PC',d.pc],['모바일',d.mob],['경쟁정도',d.comp&&d.comp.l||''],['예상CPC',d.cpc],['문서수(블로그+카페)',d.blog],['기회등급',d.grade&&d.grade.g||''],[],['연관키워드','월검색량','문서수','경쟁','CPC']];
+    (d.related||[]).forEach(function(r){rows.push([r.kw,r.v,r.doc||'',r.comp&&r.comp.l||'',r.cpc])});
+    var csv=rows.map(function(r){return r.map(csvCell).join(',')}).join('\r\n');
+    var blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download='키워드분석_'+current+'.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url)},1000)}
+  function render(kw){if(kw)current=kw;const cur=current;document.getElementById('kwInput').value=cur;const rc0=document.getElementById('rComp');if(rc0){rc0.textContent='조회 중…';rc0.style.color=COL.muted;rc0.style.background='transparent'}const RK=window.DAOU_DATA&&window.DAOU_DATA.keyword;if(!(RK&&RK[cur]))showKwLoading(cur);resolveKw(cur).then(function(d){if(current!==cur){hideKwLoading();return}paint(cur,d)})}
+  function paint(cur,d){hideKwLoading();lastKwD=d;document.getElementById('rKw').textContent=cur;const rc=document.getElementById('rComp');rc.textContent="경쟁 "+d.comp.l;rc.style.color=d.comp.c;rc.style.background="color-mix(in srgb,"+d.comp.c+" 12%,transparent)";document.getElementById('kSearch').innerHTML=comma(d.total)+'<u>회</u>';document.getElementById('kPc').textContent=comma(d.pc);document.getElementById('kMob').textContent=comma(d.mob);document.getElementById('kBlog').innerHTML=comma(d.blog)+'<u>건</u>';document.getElementById('kSat').textContent="포화 "+d.sat.toFixed(1)+":1";const kc=document.getElementById('kComp');kc.textContent=d.comp.l;kc.style.color=d.comp.c;document.getElementById('kAdv').textContent="광고주 "+d.advertisers+"곳";document.getElementById('kCpc').innerHTML=kwon(d.cpc);
     const _spend=d.spend||Math.round((d.clk||Math.round(d.total*0.02))*(d.cpc||0));
     document.getElementById('kSpend').innerHTML=kwonM(_spend);
     const _pb=d.posBids||{};const _sub=[1,2,3].filter(p=>_pb[p]).map(p=>p+"위 "+kwon(_pb[p])).join(" · ");
@@ -560,7 +579,7 @@ const DUKeyword=(function(){
     document.getElementById('rFlags').innerHTML=flags.map(function(f){return '<span class="kf" style="color:'+f[1]+';border-color:color-mix(in srgb,'+f[1]+' 38%,var(--border-soft))">'+f[0]+'</span>'}).join('');
     var g=d.grade,verdict=(g.g==='A'||g.g==='B')?'상위노출·유입 기회가 큰 키워드입니다.':g.g==='C'?'경쟁과 기회가 균형적인 키워드입니다.':'경쟁이 치열해 신중한 접근이 필요합니다.';
     document.getElementById('kwDiag').innerHTML='<div class="diag"><div class="grade" style="background:'+g.c+'"><div class="g">'+g.g+'</div><div class="gl">'+g.l+'</div></div><div class="diag-b"><div class="dt">이 키워드는 검색량 <b>'+comma(d.total)+'회</b> · 문서 포화 <b>'+d.satBand.t+'</b>('+d.sat.toFixed(1)+':1) · 최고 검색월 <b>'+d.peakMonth+'월</b>(현재 지수 '+d.curIdx+'). '+verdict+'</div><div class="gauge"><div class="gh"><span>블루오션</span><span>기회지수 '+Math.round(d.opp*100)+'</span><span>레드오션</span></div><div class="gt"><div class="gk" style="left:calc('+Math.round((1-d.opp)*100)+'% - 2px)"></div></div></div></div></div>';
-    document.getElementById('secGrid').innerHTML='<div class="secgrid">'+d.sections.map(function(s){return '<div class="sec '+(s.on?'on':'off')+'" title="'+(s.on?'노출':'미노출')+'"><span class="sd"></span>'+s.n+'</div>'}).join('')+'</div>';
+    document.getElementById('secGrid').innerHTML=d._demo?'<div style="color:var(--muted);font-size:12.5px;padding:6px 2px">추정치 키워드라 노출 섹션은 표시하지 않아요. (실데이터 키워드에서 표시)</div>':'<div class="secgrid">'+d.sections.map(function(s){return '<div class="sec '+(s.on?'on':'off')+'" title="'+(s.on?'노출':'미노출')+'"><span class="sd"></span>'+s.n+'</div>'}).join('')+'</div>';
     drawTrend(d);donut('devDonut',[{l:"PC",v:d.pc,c:COL.c1},{l:"모바일",v:d.mob,c:COL.c2}],{t:"모바일",v:Math.round(d.mShare*100)+"%"});donut('genDonut',[{l:"남",v:d.male,c:COL.c1},{l:"여",v:d.female,c:COL.accent}],{t:(d.male>=d.female?"남성":"여성"),v:Math.max(d.male,d.female)+"%"});bars('ageBar',["10대","20대","30대","40대","50대","60+"].map((l,i)=>({l,v:d.age[i]})),COL.c1);bars('dowBar',DOW.map((l,i)=>({l,v:d.dow[i]})),COL.c1);hourBars('hourBar',d.hourP,COL.c1);
     document.getElementById('relTable').innerHTML=`<table><thead><tr><th>키워드</th><th class="r">월 검색량</th><th class="r">문서수</th><th class="r">경쟁</th><th class="r">CPC</th></tr></thead><tbody>${d.related.map(r=>`<tr style="cursor:pointer" data-kw="${r.kw}"><td><div class="kwc"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="${COL.muted}" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><b>${r.kw}</b></div></td><td class="r mono">${comma(r.v)}</td><td class="r mono" style="color:var(--muted)">${comma(r.doc)}</td><td class="r"><span class="comp-pill" style="color:${r.comp.c};background:color-mix(in srgb,${r.comp.c} 12%,transparent)">${r.comp.l}</span></td><td class="r mono">${kwon(r.cpc)}</td></tr>`).join('')}</tbody></table>`;
     document.querySelectorAll('#relTable tr[data-kw]').forEach(tr=>tr.addEventListener('click',()=>{render(tr.dataset.kw);window.scrollTo({top:0,behavior:'smooth'})}));
@@ -568,6 +587,7 @@ const DUKeyword=(function(){
   document.getElementById('kwBtn').addEventListener('click',()=>{const v=document.getElementById('kwInput').value.trim();if(v)render(v)});
   document.getElementById('kwInput').addEventListener('keydown',e=>{if(e.key==='Enter'){const v=e.target.value.trim();if(v)render(v)}});
   document.getElementById('presets').addEventListener('click',e=>{if(e.target.tagName==='SPAN'&&!e.target.classList.contains('lab'))render(e.target.textContent)});
+  document.getElementById('kwCsv').addEventListener('click',exportKwCsv);
   return {render,setKw(kw){current=kw;document.getElementById('kwInput').value=kw}};
 })();
 
