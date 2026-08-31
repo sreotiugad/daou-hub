@@ -294,6 +294,19 @@
   #kwLoading .sb{font-size:11.5px;color:var(--muted);margin-top:-4px}
   .kw-btn{border:1px solid var(--border);background:var(--surface);color:var(--fg);font-size:12px;font-weight:600;padding:6px 12px;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
   .kw-btn:hover{border-color:var(--primary);color:var(--primary)}
+  .cmp-add{display:flex;gap:8px;margin-bottom:12px}
+  .cmp-add input{flex:1;border:1px solid var(--border);background:var(--bg);color:var(--fg);font-size:13px;padding:9px 12px;border-radius:9px;font-family:inherit}
+  .cmp-add input:focus{outline:none;border-color:var(--primary)}
+  .cmp-chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px}
+  .cmp-chip{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;padding:5px 9px 5px 11px;border-radius:999px;border:1px solid var(--border);background:var(--surface)}
+  .cmp-chip .cd{width:9px;height:9px;border-radius:50%;flex:none}
+  .cmp-chip .cx{cursor:pointer;color:var(--muted);font-size:14px;line-height:1;opacity:.7}
+  .cmp-chip .cx:hover{opacity:1;color:var(--danger)}
+  .cmp-chip.loading{opacity:.55}
+  .cmp-legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:6px;font-size:12px;color:var(--muted)}
+  .cmp-legend span{display:inline-flex;align-items:center;gap:6px}
+  .cmp-legend i{width:12px;height:3px;border-radius:2px}
+  .cmp-empty{color:var(--muted);font-size:12.5px;padding:26px 4px;text-align:center}
   /* AI 챗봇 */
   #duChatBtn{position:fixed;right:22px;bottom:22px;z-index:70;display:inline-flex;align-items:center;gap:9px;
     background:linear-gradient(135deg,var(--primary),color-mix(in srgb,var(--accent) 52%,var(--primary)));
@@ -438,6 +451,12 @@
     <div class="card kpi"><div class="lab">추정 월광고비 <span class="src est">추정</span></div><div class="val num" id="kSpend">–</div><div class="foot"><span class="delta flat mono" id="kSpendSub">이 키워드 광고시장</span></div></div>
   </div>
   <div class="card" style="margin-bottom:14px"><div class="card-h"><h3>월간 검색량 추이</h3><span class="hint">최근 12개월</span></div><div class="card-b"><div id="trend"></div><div class="legend c"><span><i style="background:var(--c1)"></i>PC</span><span><i style="background:var(--c2)"></i>모바일</span></div></div></div>
+  <div class="card" style="margin-bottom:14px"><div class="card-h"><h3>키워드 비교</h3><span class="hint">여러 키워드의 월 검색량 추이를 겹쳐보기 (최대 5개)</span></div><div class="card-b">
+    <div class="cmp-add"><input id="cmpInput" placeholder="비교할 키워드 추가 (예: 전자결재)"><button id="cmpAdd" class="kw-btn">+ 추가</button></div>
+    <div id="cmpChips" class="cmp-chips"></div>
+    <div id="cmpChart"></div>
+    <div id="cmpLegend" class="cmp-legend"></div>
+  </div></div>
   <div class="grid k2" style="margin-bottom:14px">
     <div class="card"><div class="card-h"><h3>기기별 비율</h3></div><div class="card-b"><div class="donut-wrap" id="devDonut"></div><div class="legend c"><span><i style="background:var(--c1)"></i>PC</span><span><i style="background:var(--c2)"></i>모바일</span></div></div></div>
     <div class="card"><div class="card-h"><h3>성별 비율</h3></div><div class="card-b"><div class="donut-wrap" id="genDonut"></div><div class="legend c"><span><i style="background:var(--c1)"></i>남성</span><span><i style="background:var(--accent)"></i>여성</span></div></div></div>
@@ -624,6 +643,29 @@ const DUKeyword=(function(){
     (d.related||[]).forEach(function(r){rows.push([r.kw,r.v,r.doc||'',r.comp&&r.comp.l||'',r.cpc])});
     var csv=rows.map(function(r){return r.map(csvCell).join(',')}).join('\r\n');
     var blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download='키워드분석_'+current+'.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url)},1000)}
+  /* ── 키워드 비교(추이 겹쳐보기) ── */
+  var cmpList=[],CMP_COLORS=[COL.c1,COL.accent||COL.primary,COL.warning,COL.success,COL.danger];
+  function cmpEsc(s){return String(s==null?'':s).replace(/[&<>]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;'}[c]})}
+  function cmpDraw(){var host=document.getElementById('cmpChart');if(!host)return;var chips=document.getElementById('cmpChips'),leg=document.getElementById('cmpLegend');
+    chips.innerHTML=cmpList.map(function(c,i){return '<span class="cmp-chip'+(c.trend?'':' loading')+'"><span class="cd" style="background:'+c.color+'"></span>'+cmpEsc(c.kw)+(c.trend?' <span class="cx" data-i="'+i+'">✕</span>':' …')+'</span>'}).join('');
+    Array.prototype.forEach.call(chips.querySelectorAll('.cx'),function(x){x.addEventListener('click',function(){cmpList.splice(+x.dataset.i,1);cmpList.forEach(function(c,i){c.color=CMP_COLORS[i%CMP_COLORS.length]});cmpDraw()})});
+    var ready=cmpList.filter(function(c){return c.trend&&c.trend.length});
+    if(!ready.length){host.innerHTML='<div class="cmp-empty">비교할 키워드를 추가하세요. (현재 키워드는 자동 포함)</div>';leg.innerHTML='';return}
+    var W=760,Hh=240,pl=44,pr=14,pt=14,pb=26,iw=W-pl-pr,ih=Hh-pt-pb,N=12;
+    var series=ready.map(function(c){return c.trend.slice(-12).map(function(m){return (m.pc||0)+(m.mob||0)})});
+    var max=niceMax(Math.max.apply(null,series.map(function(a){return Math.max.apply(null,a.concat([0]))}))*1.12)||1;
+    var x=function(i){return pl+iw*i/(N-1)},y=function(v){return pt+ih*(1-v/max)};
+    var g='';for(var k=0;k<=4;k++){var t=max*k/4;g+='<line x1="'+pl+'" y1="'+y(t)+'" x2="'+(W-pr)+'" y2="'+y(t)+'" stroke="'+COL.line+'"/><text x="'+(pl-6)+'" y="'+(y(t)+3.5)+'" text-anchor="end" font-size="10" fill="'+COL.muted+'" font-family="IBM Plex Mono">'+(t>=1000?(t/1000).toFixed(0)+'k':t)+'</text>'}
+    var xl='';for(var i=0;i<N;i++)xl+='<text x="'+x(i)+'" y="'+(Hh-8)+'" text-anchor="middle" font-size="10" fill="'+COL.muted+'" font-family="IBM Plex Mono">'+MONTHS[i]+'</text>';
+    var paths='';ready.forEach(function(c,ci){var a=series[ci];if(a.length<N)a=Array(N-a.length).fill(0).concat(a);var dd='M'+x(0)+','+y(a[0]);for(var i=0;i<N-1;i++){var x1=x(i)+iw/(N-1)/2;dd+='C'+x1+','+y(a[i])+' '+x1+','+y(a[i+1])+' '+x(i+1)+','+y(a[i+1])}paths+='<path d="'+dd+'" fill="none" stroke="'+c.color+'" stroke-width="2.2" stroke-linecap="round"/><circle cx="'+x(N-1)+'" cy="'+y(a[N-1])+'" r="3.2" fill="'+COL.surface+'" stroke="'+c.color+'" stroke-width="2.2"/>'});
+    host.innerHTML='<svg viewBox="0 0 '+W+' '+Hh+'" width="100%">'+g+xl+paths+'</svg>';
+    leg.innerHTML=ready.map(function(c,ci){var a=series[ci],last=a[a.length-1]||0;return '<span><i style="background:'+c.color+'"></i>'+cmpEsc(c.kw)+' <b style="color:var(--fg);font-weight:600">'+comma(last)+'</b></span>'}).join('');
+  }
+  function cmpAddKw(kw){kw=(kw||'').trim();if(!kw||cmpList.length>=5)return;if(cmpList.some(function(c){return c.kw===kw}))return;
+    var item={kw:kw,trend:null,color:CMP_COLORS[cmpList.length%CMP_COLORS.length]};cmpList.push(item);cmpDraw();
+    resolveKw(kw).then(function(d){item.trend=(d&&d.trend)||[];cmpDraw()}).catch(function(){item.trend=[];cmpDraw()});
+  }
+  function cmpEnsure(kw,trend){if(cmpList.length===0||(cmpList.length===1&&cmpList[0]._auto)){cmpList=[{kw:kw,trend:trend||[],color:CMP_COLORS[0],_auto:true}];cmpDraw()}}
   function render(kw){if(kw)current=kw;const cur=current;document.getElementById('kwInput').value=cur;const rc0=document.getElementById('rComp');if(rc0){rc0.textContent='조회 중…';rc0.style.color=COL.muted;rc0.style.background='transparent'}const RK=window.DAOU_DATA&&window.DAOU_DATA.keyword;if(!(RK&&RK[cur]))showKwLoading(cur);resolveKw(cur).then(function(d){if(current!==cur){hideKwLoading();return}paint(cur,d)})}
   function paint(cur,d){hideKwLoading();lastKwD=d;document.getElementById('rKw').textContent=cur;const rc=document.getElementById('rComp');rc.textContent="경쟁 "+d.comp.l;rc.style.color=d.comp.c;rc.style.background="color-mix(in srgb,"+d.comp.c+" 12%,transparent)";document.getElementById('kSearch').innerHTML=comma(d.total)+'<u>회</u>';document.getElementById('kPc').textContent=comma(d.pc);document.getElementById('kMob').textContent=comma(d.mob);document.getElementById('kBlog').innerHTML=comma(d.blog)+'<u>건</u>';document.getElementById('kSat').textContent="포화 "+d.sat.toFixed(1)+":1";const kc=document.getElementById('kComp');kc.textContent=d.comp.l;kc.style.color=d.comp.c;document.getElementById('kAdv').textContent="광고주 "+d.advertisers+"곳";document.getElementById('kCpc').innerHTML=kwon(d.cpc);
     const _spend=d.spend||Math.round((d.clk||Math.round(d.total*0.02))*(d.cpc||0));
@@ -646,11 +688,13 @@ const DUKeyword=(function(){
     document.getElementById('advTable').innerHTML=`<table><thead><tr><th>순위</th><th>광고 노출 브랜드</th><th class="r">${d.serpReal?'예상 입찰':'추정 입찰'}</th></tr></thead><tbody>${d.brands.map((b,i)=>`<tr class="${b.us?'us':''}"><td><span class="rank${i===0?' top':''}">${i+1}</span></td><td><div><b style="font-weight:600">${_esc(b.name)}</b>${b.us?'<span class="tag-us">우리</span>':''}${b.url?`<span style="color:var(--muted);font-size:11px;margin-left:6px">${_dom(b.url)}</span>`:''}</div><div class="ad-copy">${_esc(b.copy)}</div></td><td class="r mono">${kwon(b.bid)}</td></tr>`).join('')}</tbody></table>`;
     var _sc=document.getElementById('serpCard'),_st=document.getElementById('serpTable'),_org=d.serp||[];
     if(_sc&&_st){if(_org.length){_sc.style.display='';_st.innerHTML=`<table><thead><tr><th>순위</th><th>사이트</th><th>도메인</th></tr></thead><tbody>${_org.map((o,i)=>`<tr class="${o.us?'us':''}"><td><span class="rank${i===0?' top':''}">${i+1}</span></td><td><div><b style="font-weight:600">${_esc(o.title||o.domain)}</b>${o.us?'<span class="tag-us">우리</span>':''}</div></td><td class="mono" style="color:var(--muted)">${_esc(o.domain)}</td></tr>`).join('')}</tbody></table>`;}else{_sc.style.display='none';}}
-    renderYT(d);renderPosts(d)}
+    renderYT(d);renderPosts(d);cmpEnsure(cur,d.trend)}
   document.getElementById('kwBtn').addEventListener('click',()=>{const v=document.getElementById('kwInput').value.trim();if(v)render(v)});
   document.getElementById('kwInput').addEventListener('keydown',e=>{if(e.key==='Enter'){const v=e.target.value.trim();if(v)render(v)}});
   document.getElementById('presets').addEventListener('click',e=>{if(e.target.tagName==='SPAN'&&!e.target.classList.contains('lab'))render(e.target.textContent)});
   document.getElementById('kwCsv').addEventListener('click',exportKwCsv);
+  document.getElementById('cmpAdd').addEventListener('click',function(){var el=document.getElementById('cmpInput');if(el.value.trim()){cmpAddKw(el.value.trim());el.value=''}});
+  document.getElementById('cmpInput').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();if(e.target.value.trim()){cmpAddKw(e.target.value.trim());e.target.value=''}}});
   return {render,setKw(kw){current=kw;document.getElementById('kwInput').value=kw}};
 })();
 
