@@ -405,7 +405,10 @@
 <main id="v-report" class="view" hidden>
   <div class="rep-head">
     <div><h2 id="repTitle">광고 리포트</h2><div class="s" id="repSub"></div></div>
-    <div class="seg" id="periodChips"><button data-n="14">14D</button><button data-n="30" class="on">30D</button><button data-n="90">90D</button><button data-n="365">1년</button></div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <button id="repAi" class="kw-btn" title="이 화면을 AI가 분석"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 4.5L18.5 9l-4.6 1.5L12 15l-1.9-4.5L5.5 9l4.6-1.5z"/><circle cx="18" cy="18" r="2.4"/></svg>AI 분석</button>
+      <div class="seg" id="periodChips"><button data-n="14">14D</button><button data-n="30" class="on">30D</button><button data-n="90">90D</button><button data-n="365">1년</button></div>
+    </div>
   </div>
   <div class="tabbar" id="tabbar"></div>
   <div class="pills" id="pills"></div>
@@ -589,6 +592,7 @@ const DUReport=(function(){
   function renderTable(){const rows=GROUP_SUBS[state.group];const body=rows.map(n=>{const a=aggregate([n],state.N),g=SUBS[n].group,dl=a.d.cost;return `<tr class="mrow"><td><div class="bname"><span class="bdot" style="background:${GCOLOR[g]}"></span><b>${n}</b></div></td><td class="r mono">${won(a.tCost)}</td><td class="r mono">${comma(a.tSign)}</td><td class="r mono">${cpaF(a.cpa)}</td><td class="r mono">${pct(a.ctr)}</td><td class="r mono" style="color:var(--muted)">${comma(a.tImp)}</td><td class="r mono" style="color:var(--muted)">${comma(a.tClick)}</td><td class="r"><span class="delta ${dl>=0?'up':'down'}">${dl>=0?'▲':'▼'} ${Math.abs(dl).toFixed(1)}%</span></td></tr>`}).join('');document.getElementById('tableWrap').innerHTML=`<table><thead><tr><th>브랜드</th><th class="r">광고비</th><th class="r">가입</th><th class="r">CPA</th><th class="r">CTR</th><th class="r">노출</th><th class="r">클릭</th><th class="r">증감</th></tr></thead><tbody>${body}</tbody></table>`;document.getElementById('tblTitle').textContent=`${state.group} 세부 브랜드별 성과`;document.getElementById('tblPeriod').textContent=periodText()}
   function render(){buildDates(state.N);const subs=currentSubs();const agg=aggregate(subs,state.N);document.getElementById('repTitle').textContent=state.sub==="전체"?`${state.group} 광고 리포트`:`${state.sub}`;document.getElementById('repSub').textContent=`${GROUP_SUBS[state.group].join(" · ")} · 최근 ${state.N}일 (${periodText()})`;document.getElementById('trendHint').textContent=periodText();renderTabs();renderPills();renderKPIs(agg);drawLine(agg);drawDonut(agg);drawBar(agg);buildComment(state.group,agg);renderTable()}
   document.getElementById('periodChips').addEventListener('click',e=>{if(e.target.tagName!=='BUTTON')return;document.querySelectorAll('#periodChips button').forEach(b=>b.classList.remove('on'));e.target.classList.add('on');state.N=+e.target.dataset.n;render()});
+  document.getElementById('repAi').addEventListener('click',function(){if(!window.DUChat)return;var who=state.sub==='전체'?state.group+' 그룹('+GROUP_SUBS[state.group].join('·')+')':state.sub;window.DUChat.open(who+' 최근 '+state.N+'일 광고 실적을 분석하고, 잘된 점과 개선이 필요한 지점·다음 액션을 알려줘.')});
   return {render,setBrand(b){state.group=b;state.sub="전체"}};
 })();
 
@@ -867,5 +871,6 @@ const DUCustom=(function(){
   var rb=el('dcReset');if(rb)rb.addEventListener('click',reset);
   el('dcSend').addEventListener('click',function(){send()});
   el('dcInput').addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}});
+  window.DUChat={open:function(q){toggle(true);if(q)setTimeout(function(){send(q)},80)}};
 })();
 </script>
