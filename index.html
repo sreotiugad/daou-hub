@@ -294,6 +294,28 @@
   #kwLoading .sb{font-size:11.5px;color:var(--muted);margin-top:-4px}
   .kw-btn{border:1px solid var(--border);background:var(--surface);color:var(--fg);font-size:12px;font-weight:600;padding:6px 12px;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
   .kw-btn:hover{border-color:var(--primary);color:var(--primary)}
+  /* AI 챗봇 */
+  #duChatBtn{position:fixed;right:22px;bottom:22px;z-index:70;display:flex;align-items:center;gap:8px;background:var(--primary);color:var(--primary-fg);border:none;border-radius:999px;padding:12px 18px;font-size:13.5px;font-weight:700;cursor:pointer;box-shadow:0 8px 26px rgba(0,0,0,.22)}
+  #duChatBtn:hover{filter:brightness(1.06)}
+  #duChatBtn svg{width:18px;height:18px}
+  #duChat{position:fixed;right:22px;bottom:22px;z-index:71;width:390px;max-width:calc(100vw - 32px);height:560px;max-height:calc(100vh - 44px);background:var(--surface);border:1px solid var(--border);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.28);display:none;flex-direction:column;overflow:hidden}
+  #duChat.on{display:flex}
+  .dc-h{display:flex;align-items:center;gap:10px;padding:13px 16px;background:var(--primary);color:var(--primary-fg)}
+  .dc-h .t{font-size:14px;font-weight:700}.dc-h .s{font-size:11px;opacity:.85;margin-top:1px}
+  .dc-h .x{margin-left:auto;background:transparent;border:none;color:var(--primary-fg);cursor:pointer;font-size:17px;opacity:.85;line-height:1}
+  .dc-body{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;background:var(--bg)}
+  .dc-msg{max-width:85%;padding:9px 12px;border-radius:12px;font-size:13px;line-height:1.55;white-space:pre-wrap;word-break:break-word}
+  .dc-msg.u{align-self:flex-end;background:var(--primary);color:var(--primary-fg);border-bottom-right-radius:4px}
+  .dc-msg.a{align-self:flex-start;background:var(--surface);border:1px solid var(--border-soft);border-bottom-left-radius:4px}
+  .dc-msg.err{align-self:flex-start;background:color-mix(in srgb,var(--danger) 12%,var(--surface));border:1px solid var(--danger)}
+  .dc-typing{align-self:flex-start;color:var(--muted);font-size:12px;padding:2px 2px}
+  .dc-sug{display:flex;flex-wrap:wrap;gap:6px;padding:0 14px 10px;background:var(--bg)}
+  .dc-sug button{border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:11.5px;padding:5px 10px;border-radius:999px;cursor:pointer}
+  .dc-sug button:hover{border-color:var(--primary);color:var(--primary)}
+  .dc-in{display:flex;gap:8px;padding:12px;border-top:1px solid var(--border-soft);background:var(--surface)}
+  .dc-in textarea{flex:1;resize:none;border:1px solid var(--border);border-radius:10px;padding:9px 11px;font-size:13px;font-family:inherit;background:var(--bg);color:var(--fg);height:40px;max-height:110px}
+  .dc-in button{border:none;background:var(--primary);color:var(--primary-fg);border-radius:10px;padding:0 15px;font-weight:700;font-size:13px;cursor:pointer}
+  .dc-in button:disabled{opacity:.5;cursor:default}
 </style>
 
 <header class="appnav">
@@ -445,6 +467,14 @@
 </main>
 
 <div class="tip" id="tip"></div>
+
+<button id="duChatBtn" title="AI 분석 어시스턴트"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>AI 분석</button>
+<div id="duChat" role="dialog" aria-label="AI 분석 어시스턴트">
+  <div class="dc-h"><div><div class="t">AI 분석 어시스턴트</div><div class="s">우리 광고 실데이터 기반</div></div><button class="x" id="dcClose" title="닫기">✕</button></div>
+  <div class="dc-body" id="dcBody"></div>
+  <div class="dc-sug" id="dcSug"></div>
+  <div class="dc-in"><textarea id="dcInput" placeholder="예: 사방넷 최근 성과 어때?" rows="1"></textarea><button id="dcSend">전송</button></div>
+</div>
 
 <script>
 const CSS=getComputedStyle(document.documentElement);
@@ -694,5 +724,48 @@ const DUCustom=(function(){
   function hs(){const v=document.getElementById('homeSearch').value.trim();if(v){DUKeyword.setKw(v);show('keyword')}}
   document.getElementById('homeSearchBtn').addEventListener('click',hs);
   document.getElementById('homeSearch').addEventListener('keydown',e=>{if(e.key==='Enter')hs()});
+})();
+
+/* ── AI 분석 어시스턴트(챗봇) ── 우리 광고 실데이터를 컨텍스트로 Claude 에게 질의 */
+(function(){
+  var open=false,busy=false,hist=[];
+  var SUG=['이번 기간 실적 요약해줘','성과가 가장 좋은 브랜드는?','CPA 높은 브랜드랑 개선안 알려줘','최근 광고비 늘어난 브랜드 있어?'];
+  function el(id){return document.getElementById(id)}
+  function sum(a){return (a||[]).reduce(function(x,y){return x+(+y||0)},0)}
+  function tailWeeks(a,n){a=a||[];var out=[];for(var w=n;w>=1;w--){var e=a.length-(w-1)*7,s=Math.max(0,e-7);if(s>=e){out.push(0);continue}var t=0;for(var i=s;i<e;i++)t+=(+a[i]||0);out.push(Math.round(t))}return out}
+  function ctx(){
+    var D=window.DAOU_DATA;if(!D||!D.report)return '(대시보드 데이터가 아직 로딩되지 않음)';
+    var P=D.period||{},subs=D.report.subs||{};
+    var L=['기간 '+(P.start||'?')+'~'+(P.end||'?')+' ('+(P.days||0)+'일), 데이터소스='+(D.source||'')];
+    Object.keys(subs).forEach(function(nm){var s=subs[nm];var c=sum(s.cost),g=sum(s.signup),im=sum(s.imp),ck=sum(s.click);
+      var cpa=g>0?Math.round(c/g):0,ctr=im>0?(ck/im*100):0;
+      var media=Object.keys(s.media||{}).map(function(k){return k+' '+Math.round((s.media[k]||0)*100)+'%'}).join('/');
+      L.push('· '+nm+'('+s.group+'): 광고비 '+Math.round(c).toLocaleString()+'원, 가입 '+Math.round(g)+', CPA '+cpa+'원, CTR '+ctr.toFixed(2)+'%, 노출 '+Math.round(im).toLocaleString()+', 클릭 '+Math.round(ck).toLocaleString()+' | 매체 '+media+' | 최근4주 광고비 '+tailWeeks(s.cost,4).join('→')+' | 최근4주 가입 '+tailWeeks(s.signup,4).join('→'));
+    });
+    return L.join('\n');
+  }
+  function add(role,text){var b=el('dcBody');var d=document.createElement('div');d.className='dc-msg '+(role==='user'?'u':role==='err'?'err':'a');d.textContent=text;b.appendChild(d);b.scrollTop=b.scrollHeight}
+  function typing(on){var b=el('dcBody'),t=el('dcTyping');if(on){if(!t){t=document.createElement('div');t.id='dcTyping';t.className='dc-typing';t.textContent='분석 중…';b.appendChild(t);b.scrollTop=b.scrollHeight}}else if(t){t.remove()}}
+  function send(q){
+    q=(q||el('dcInput').value).trim();if(!q||busy)return;
+    el('dcInput').value='';el('dcSug').style.display='none';
+    add('user',q);hist.push({role:'user',content:q});busy=true;el('dcSend').disabled=true;typing(true);
+    fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:hist.slice(-10),context:ctx()})})
+      .then(function(r){return r.json()}).then(function(j){typing(false);
+        if(j&&j.reply){add('assistant',j.reply);hist.push({role:'assistant',content:j.reply})}
+        else{add('err',(j&&j.error)||'응답을 받지 못했어요.')}
+      }).catch(function(){typing(false);add('err','네트워크 오류로 답을 못 받았어요.')})
+      .then(function(){busy=false;el('dcSend').disabled=false});
+  }
+  function toggle(v){open=(v==null?!open:v);el('duChat').classList.toggle('on',open);el('duChatBtn').style.display=open?'none':'';
+    if(open&&!el('dcBody').children.length){add('assistant','안녕하세요! 다우 허브 AI 분석 어시스턴트예요. 우리 광고 실데이터를 보고 답해드려요. 무엇이 궁금하세요?');
+      el('dcSug').innerHTML=SUG.map(function(s){return '<button type="button">'+s+'</button>'}).join('');
+      Array.prototype.forEach.call(el('dcSug').querySelectorAll('button'),function(bt){bt.addEventListener('click',function(){send(bt.textContent)})})}
+    if(open)setTimeout(function(){el('dcInput').focus()},60);
+  }
+  el('duChatBtn').addEventListener('click',function(){toggle(true)});
+  el('dcClose').addEventListener('click',function(){toggle(false)});
+  el('dcSend').addEventListener('click',function(){send()});
+  el('dcInput').addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}});
 })();
 </script>

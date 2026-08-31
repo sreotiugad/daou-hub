@@ -6,6 +6,9 @@
     "api/keyword.py": {
       "includeFiles": "pipeline/**",
       "maxDuration": 30
+    },
+    "api/chat.py": {
+      "maxDuration": 30
     }
   }
 }
