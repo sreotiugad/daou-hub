@@ -543,6 +543,7 @@
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
       <select id="bgBrand" class="cx-sel"></select>
       <div class="seg sm cxseg" id="bgDimSeg"><button data-d="media" class="on">매체별</button><button data-d="type">유형별</button></div>
+      <button id="bgCsv" class="kw-btn" title="예산 현황 CSV 내보내기">CSV</button>
       <button id="bgEdit" class="kw-btn">⚙ 예산 설정</button>
     </div>
   </div>
@@ -942,6 +943,17 @@ const DUBudget=(function(){
   }
   var bsel=document.getElementById('bgBrand');if(bsel)bsel.addEventListener('change',function(e){brand=e.target.value;editing=false;render()});
   var bed=document.getElementById('bgEdit');if(bed)bed.addEventListener('click',function(){editing=!editing;render()});
+  function cell(v){v=String(v==null?'':v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}
+  function csv(){if(!brand)return;var name=entById(brand).name,c=calc(brand),dimLab=dim==='media'?'매체':'유형';
+    var rows=[['# '+name+' 예산 현황 ('+c.ym+' · '+dimLab+'별)'],[],[dimLab,'월예산','누적소진','소진율(%)','잔여','권장일예산']];
+    var tb=0,tc=0;
+    c.items.forEach(function(k){var b=bget(brand,k),cum=c.byK[k]||0,rem=b-cum;tb+=b;tc+=cum;rows.push([k,b,Math.round(cum),b>0?(cum/b*100).toFixed(1):'',Math.round(rem),Math.round(Math.max(rem,0)/c.rem)])});
+    rows.push(['합계',tb,Math.round(tc),tb>0?(tc/tb*100).toFixed(1):'',Math.round(tb-tc),Math.round(Math.max(tb-tc,0)/c.rem)]);
+    rows.push([]);rows.push(['# 일자별 소진']);rows.push(['일자'].concat(c.items).concat(['합계']));
+    c.dates.forEach(function(dt){var row=c.byDate[dt]||{},rt=0,r=[dt];c.items.forEach(function(k){var v=row[k]||0;rt+=v;r.push(Math.round(v))});r.push(Math.round(rt));rows.push(r)});
+    var out=rows.map(function(r){return (r||[]).map(cell).join(',')}).join('\r\n');
+    var blob=new Blob(['﻿'+out],{type:'text/csv;charset=utf-8'});var u=URL.createObjectURL(blob);var a=document.createElement('a');a.href=u;a.download='예산현황_'+name+'_'+c.ym+'.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(u)},1000)}
+  var bcsv=document.getElementById('bgCsv');if(bcsv)bcsv.addEventListener('click',csv);
   var bseg=document.getElementById('bgDimSeg');if(bseg)bseg.addEventListener('click',function(e){if(e.target.tagName==='BUTTON'){dim=e.target.dataset.d;editing=false;render()}});
   return {render:render};
 })();
