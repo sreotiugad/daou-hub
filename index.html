@@ -516,7 +516,7 @@
 
 <button id="duChatBtn" title="AI 분석 어시스턴트"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>AI 분석</button>
 <div id="duChat" role="dialog" aria-label="AI 분석 어시스턴트">
-  <div class="dc-h"><span class="dc-ava"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 4.5L18.5 9l-4.6 1.5L12 15l-1.9-4.5L5.5 9l4.6-1.5z"/><circle cx="18" cy="18" r="2.4"/></svg></span><div><div class="t">AI 분석 어시스턴트</div><div class="s">우리 광고 실데이터 기반</div></div><button class="x" id="dcClose" title="닫기">✕</button></div>
+  <div class="dc-h"><span class="dc-ava"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 4.5L18.5 9l-4.6 1.5L12 15l-1.9-4.5L5.5 9l4.6-1.5z"/><circle cx="18" cy="18" r="2.4"/></svg></span><div><div class="t">AI 분석 어시스턴트</div><div class="s">우리 광고 실데이터 기반</div></div><button class="x" id="dcReset" title="새 대화" style="margin-left:auto"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></button><button class="x" id="dcClose" title="닫기" style="margin-left:0">✕</button></div>
   <div class="dc-body" id="dcBody"></div>
   <div class="dc-sug" id="dcSug"></div>
   <div class="dc-in"><textarea id="dcInput" placeholder="예: 사방넷 최근 성과 어때?" rows="1"></textarea><button id="dcSend">전송</button></div>
@@ -810,14 +810,21 @@ const DUCustom=(function(){
   function el(id){return document.getElementById(id)}
   function sum(a){return (a||[]).reduce(function(x,y){return x+(+y||0)},0)}
   function tailWeeks(a,n){a=a||[];var out=[];for(var w=n;w>=1;w--){var e=a.length-(w-1)*7,s=Math.max(0,e-7);if(s>=e){out.push(0);continue}var t=0;for(var i=s;i<e;i++)t+=(+a[i]||0);out.push(Math.round(t))}return out}
+  function pctd(cur,prev){if(!prev)return cur>0?'신규':'0%';var d=(cur-prev)/prev*100;return (d>=0?'+':'')+d.toFixed(0)+'%'}
   function ctx(){
     var D=window.DAOU_DATA;if(!D||!D.report)return '(대시보드 데이터가 아직 로딩되지 않음)';
     var P=D.period||{},subs=D.report.subs||{};
-    var L=['기간 '+(P.start||'?')+'~'+(P.end||'?')+' ('+(P.days||0)+'일), 데이터소스='+(D.source||'')];
+    var L=['[다우 허브 광고 실데이터] 기간 '+(P.start||'?')+'~'+(P.end||'?')+' ('+(P.days||0)+'일), 소스='+(D.source||''),
+           '규칙: 광고비=마크업·VAT포함, CPA=광고비/가입, CTR=클릭/노출. WoW=최근7일 대비 직전7일.'];
     Object.keys(subs).forEach(function(nm){var s=subs[nm];var c=sum(s.cost),g=sum(s.signup),im=sum(s.imp),ck=sum(s.click);
       var cpa=g>0?Math.round(c/g):0,ctr=im>0?(ck/im*100):0;
+      var wc=tailWeeks(s.cost,2),wg=tailWeeks(s.signup,2);
       var media=Object.keys(s.media||{}).map(function(k){return k+' '+Math.round((s.media[k]||0)*100)+'%'}).join('/');
-      L.push('· '+nm+'('+s.group+'): 광고비 '+Math.round(c).toLocaleString()+'원, 가입 '+Math.round(g)+', CPA '+cpa+'원, CTR '+ctr.toFixed(2)+'%, 노출 '+Math.round(im).toLocaleString()+', 클릭 '+Math.round(ck).toLocaleString()+' | 매체 '+media+' | 최근4주 광고비 '+tailWeeks(s.cost,4).join('→')+' | 최근4주 가입 '+tailWeeks(s.signup,4).join('→'));
+      var ct=Object.keys(s.ct||{}).filter(function(k){return (s.ct[k]||0)>0}).sort(function(a,b){return s.ct[b]-s.ct[a]}).slice(0,4).map(function(k){return k+' '+Math.round(s.ct[k]*100)+'%'}).join('/');
+      L.push('· '+nm+'('+s.group+'): 광고비 '+Math.round(c).toLocaleString()+'원, 가입 '+Math.round(g)+', CPA '+cpa+'원, CTR '+ctr.toFixed(2)+'%, 노출 '+Math.round(im).toLocaleString()+', 클릭 '+Math.round(ck).toLocaleString()
+        +' | 매체 '+media+(ct?' | 유형 '+ct:'')
+        +' | 최근주 광고비 '+wc[1].toLocaleString()+'('+pctd(wc[1],wc[0])+' WoW)·가입 '+wg[1]+'('+pctd(wg[1],wg[0])+' WoW)'
+        +' | 4주 광고비추이 '+tailWeeks(s.cost,4).join('→')+' | 4주 가입추이 '+tailWeeks(s.signup,4).join('→'));
     });
     return L.join('\n');
   }
@@ -847,14 +854,17 @@ const DUCustom=(function(){
       }).catch(function(){typing(false);add('err','네트워크 오류로 답을 못 받았어요.')})
       .then(function(){busy=false;el('dcSend').disabled=false});
   }
+  function greet(){add('assistant','안녕하세요! 다우 허브 AI 분석 어시스턴트예요. 우리 광고 실데이터를 보고 답해드려요. 무엇이 궁금하세요?');
+    el('dcSug').style.display='';el('dcSug').innerHTML=SUG.map(function(s){return '<button type="button">'+s+'</button>'}).join('');
+    Array.prototype.forEach.call(el('dcSug').querySelectorAll('button'),function(bt){bt.addEventListener('click',function(){send(bt.textContent)})})}
+  function reset(){hist=[];el('dcBody').innerHTML='';greet();el('dcInput').focus()}
   function toggle(v){open=(v==null?!open:v);el('duChat').classList.toggle('on',open);el('duChatBtn').style.display=open?'none':'';
-    if(open&&!el('dcBody').children.length){add('assistant','안녕하세요! 다우 허브 AI 분석 어시스턴트예요. 우리 광고 실데이터를 보고 답해드려요. 무엇이 궁금하세요?');
-      el('dcSug').innerHTML=SUG.map(function(s){return '<button type="button">'+s+'</button>'}).join('');
-      Array.prototype.forEach.call(el('dcSug').querySelectorAll('button'),function(bt){bt.addEventListener('click',function(){send(bt.textContent)})})}
+    if(open&&!el('dcBody').children.length)greet();
     if(open)setTimeout(function(){el('dcInput').focus()},60);
   }
   el('duChatBtn').addEventListener('click',function(){toggle(true)});
   el('dcClose').addEventListener('click',function(){toggle(false)});
+  var rb=el('dcReset');if(rb)rb.addEventListener('click',reset);
   el('dcSend').addEventListener('click',function(){send()});
   el('dcInput').addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}});
 })();
