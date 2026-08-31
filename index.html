@@ -323,6 +323,10 @@
   .dc-msg{max-width:86%;padding:10px 13px;border-radius:15px;font-size:13px;line-height:1.6;white-space:pre-wrap;word-break:break-word;box-shadow:0 1px 2px rgba(0,0,0,.05)}
   .dc-msg.u{align-self:flex-end;background:linear-gradient(135deg,var(--primary),color-mix(in srgb,var(--accent) 38%,var(--primary)));color:var(--primary-fg);border-bottom-right-radius:5px}
   .dc-msg.a{align-self:flex-start;background:var(--surface);border:1px solid var(--border-soft);border-bottom-left-radius:5px}
+  .dc-msg.md p{margin:0 0 7px}.dc-msg.md p:last-child{margin-bottom:0}
+  .dc-msg.md ul{margin:4px 0 7px;padding-left:18px}.dc-msg.md li{margin:2px 0}
+  .dc-msg.md b{font-weight:700}
+  .dc-msg.md code{font-family:var(--mono,monospace);font-size:11.5px;background:var(--bg);padding:1px 5px;border-radius:4px;border:1px solid var(--border-soft)}
   .dc-msg.err{align-self:flex-start;background:color-mix(in srgb,var(--danger) 10%,var(--surface));border:1px solid color-mix(in srgb,var(--danger) 45%,var(--border))}
   .dc-typing{align-self:flex-start;display:flex;align-items:center;gap:4px;padding:12px 14px;background:var(--surface);border:1px solid var(--border-soft);border-radius:15px;border-bottom-left-radius:5px}
   .dc-typing i{width:6px;height:6px;border-radius:50%;background:var(--muted);animation:dcbounce 1.2s infinite}
@@ -773,7 +777,20 @@ const DUCustom=(function(){
     });
     return L.join('\n');
   }
-  function add(role,text){var b=el('dcBody');var d=document.createElement('div');d.className='dc-msg '+(role==='user'?'u':role==='err'?'err':'a');d.textContent=text;b.appendChild(d);b.scrollTop=b.scrollHeight}
+  function mdEsc(s){return String(s==null?'':s).replace(/[&<>]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;'}[c]})}
+  function md(t){t=mdEsc(t);
+    t=t.replace(/`([^`]+)`/g,'<code>$1</code>');
+    t=t.replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>');
+    var lines=t.split(/\n/),out=[],inList=false;
+    for(var i=0;i<lines.length;i++){var ln=lines[i];
+      var m=ln.match(/^\s*(?:[-*·•]|\d+\.)\s+(.*)/);
+      if(m){if(!inList){out.push('<ul>');inList=true}out.push('<li>'+m[1]+'</li>')}
+      else{if(inList){out.push('</ul>');inList=false}if(ln.trim())out.push('<p>'+ln+'</p>')}
+    }
+    if(inList)out.push('</ul>');
+    return out.join('');
+  }
+  function add(role,text){var b=el('dcBody');var d=document.createElement('div');d.className='dc-msg '+(role==='user'?'u':role==='err'?'err':'a');if(role==='assistant'){d.classList.add('md');d.innerHTML=md(text)}else{d.textContent=text}b.appendChild(d);b.scrollTop=b.scrollHeight}
   function typing(on){var b=el('dcBody'),t=el('dcTyping');if(on){if(!t){t=document.createElement('div');t.id='dcTyping';t.className='dc-typing';t.innerHTML='<i></i><i></i><i></i>';b.appendChild(t);b.scrollTop=b.scrollHeight}}else if(t){t.remove()}}
   function send(q){
     q=(q||el('dcInput').value).trim();if(!q||busy)return;

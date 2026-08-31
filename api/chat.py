@@ -43,7 +43,9 @@ def _reply(messages, context):
             clean.append({"role": role, "content": content})
     if not clean or clean[0]["role"] != "user":
         return None, "질문을 입력해 주세요."
-    system = SYSTEM + "\n\n<데이터>\n" + (context or "(데이터 없음)") + "\n</데이터>"
+    system_text = SYSTEM + "\n\n<데이터>\n" + (context or "(데이터 없음)") + "\n</데이터>"
+    # 프롬프트 캐싱: 시스템+데이터(안정 프리픽스)를 캐시 → 같은 세션 반복 질문은 1/10 값.
+    system = [{"type": "text", "text": system_text, "cache_control": {"type": "ephemeral"}}]
     try:
         client = anthropic.Anthropic()  # ANTHROPIC_API_KEY 자동 사용
         msg = client.messages.create(
