@@ -12,7 +12,7 @@ import os
 import json
 from http.server import BaseHTTPRequestHandler
 
-MODEL = os.environ.get("DAOU_CHAT_MODEL") or "claude-opus-5"
+MODEL = os.environ.get("DAOU_CHAT_MODEL") or "claude-sonnet-5"
 
 SYSTEM = (
     "너는 '다우 허브'의 AI 마케팅 분석 어시스턴트다. 다우기술의 광고 브랜드"
