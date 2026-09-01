@@ -798,7 +798,16 @@ const DUCustom=(function(){
   function build(){const F=facts();const[lo,hi]=range(F);const rows=F.filter(r=>r.d>=lo&&r.d<=hi&&(!st.group||r.grp===st.group)&&(!st.media||r.media===st.media));const gr={};for(const r of rows){const k=st.dims.map(dm=>dimVal(r,dm)).join("");let g=gr[k];if(!g){g={_k:st.dims.map(dm=>dimVal(r,dm)),cost:0,imp:0,click:0,signup:0,rnkw:0,rnki:0};gr[k]=g}g.cost+=r.cost;g.imp+=r.imp;g.click+=r.click;g.signup+=r.signup;g.rnkw+=r.rnkw||0;g.rnki+=r.rnki||0}
     let list=Object.values(gr);const sc=st.sort;
     if(sc&&DIMS[sc]!==undefined){const idx=st.dims.indexOf(sc);list.sort((a,b)=>{const x=a._k[idx],y=b._k[idx];return st.dir*(x<y?-1:x>y?1:0)})}
-    else{const m0=sc&&MET[sc]?sc:st.mets[0];list.sort((a,b)=>st.dir*(metVal(m0,a)-metVal(m0,b)))}
+    else if(sc&&MET[sc]){list.sort((a,b)=>st.dir*(metVal(sc,a)-metVal(sc,b)))}
+    else{
+      // 기본 정렬: 기간이 차원에 있으면 기간(최근 먼저)로 그룹을 유지하고 그 안에서 첫 지표 내림차순.
+      // (그러지 않으면 월이 값 순으로 뒤섞여 보임) · 기간이 없으면 첫 지표 내림차순.
+      const m0=st.mets[0],pIdx=st.dims.indexOf('기간');
+      list.sort((a,b)=>{
+        if(pIdx>=0){const pa=a._k[pIdx],pb=b._k[pIdx];if(pa!==pb)return pa<pb?1:-1;}
+        return metVal(m0,b)-metVal(m0,a);
+      });
+    }
     const tot=list.reduce((t,g)=>{t.cost+=g.cost;t.imp+=g.imp;t.click+=g.click;t.signup+=g.signup;t.rnkw+=g.rnkw;t.rnki+=g.rnki;return t},{cost:0,imp:0,click:0,signup:0,rnkw:0,rnki:0});
     return{list,tot}}
   function populate(){const F=facts();const gs=[];for(const r of F)if(gs.indexOf(r.grp)<0)gs.push(r.grp);const sel=document.getElementById('cxGroup');if(sel.options.length<=1)gs.forEach(g=>{const o=document.createElement('option');o.value=g;o.textContent=g;sel.appendChild(o)})}
