@@ -9,7 +9,7 @@
     },
     "api/competitor.py": {
       "includeFiles": "pipeline/**",
-      "maxDuration": 30
+      "maxDuration": 60
     },
     "api/chat.py": {
       "maxDuration": 30

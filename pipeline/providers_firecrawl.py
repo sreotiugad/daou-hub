@@ -320,7 +320,7 @@ def scrape_ads(url, logs=None, timeout=27):
     return {"ads": ads, "imgCount": n_img}
 
 
-def page_shot(url, logs=None, timeout=27, full=True):
+def page_shot(url, logs=None, timeout=55, full=True):
     """광고 라이브러리 페이지를 통째로 스크린샷 → 광고 그리드 이미지 한 장.
     fbcdn 개별 핫링크(만료·403) 대신, Firecrawl 이 렌더한 화면을 이미지로 박제한다.
     반환 {'shot': <스크린샷 이미지 URL>} 또는 None."""
