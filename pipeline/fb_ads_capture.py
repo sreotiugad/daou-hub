@@ -91,10 +91,21 @@ def main():
             found[s] = 1
         # 진단
         try:
+            body_txt = page.evaluate("document.body.innerText") or ""
+            html = page.content()
             res["title"] = (page.title() or "")[:80]
             res["finalUrl"] = page.url[:120]
-            res["bodyText"] = (page.evaluate("document.body.innerText") or "")[:200].replace("\n", " ")
+            res["bodyText"] = body_txt[:220].replace("\n", " ")
             res["allImgs"] = page.eval_on_selector_all("img", "els => els.length")
+            res["videoEls"] = page.eval_on_selector_all("video", "els => els.length")
+            res["scontentInHTML"] = html.count("scontent")     # 원시 HTML 내 fbcdn 미디어 URL 수
+            res["fbcdnInHTML"] = html.count("fbcdn")
+            res["hasResults"] = ("결과" in body_txt) or ("라이브러리 ID" in body_txt)
+            # video poster/src 에 fbcdn 있으면 수집
+            vsrc = page.eval_on_selector_all(
+                "video", "els=>els.map(e=>e.poster||e.currentSrc||e.src).filter(s=>s&&s.includes('fbcdn'))")
+            for s in vsrc:
+                found[s] = 1
         except Exception as e:
             res["diagErr"] = str(e)[:80]
         srcs = [s for s in found.keys() if not _is_profile(s)]
