@@ -136,8 +136,8 @@ class handler(BaseHTTPRequestHandler):
         name = _fix_kr((qs.get("name", [""])[0] or "").strip())
         kw = _fix_kr((qs.get("kw", [""])[0] or "").strip()) or name
         promo = (qs.get("promo", [""])[0] or "").strip()
-        meta = (qs.get("meta", [""])[0] or "").strip()
-        google = (qs.get("google", [""])[0] or "").strip()
+        meta = _fix_kr((qs.get("meta", [""])[0] or "").strip())
+        google = _fix_kr((qs.get("google", [""])[0] or "").strip())
         debug = (qs.get("debug", [""])[0] or "").strip() in ("1", "true", "yes")
         if not name and not kw and not promo and not meta and not google:
             return self._send({"error": "name·kw·promo·meta·google 중 하나는 필요합니다"}, 400, cache=False)
