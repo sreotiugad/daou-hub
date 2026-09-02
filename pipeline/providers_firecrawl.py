@@ -278,11 +278,21 @@ def scrape_ads(url, logs=None, timeout=50):
     except Exception as e:
         logs.append(f"[firecrawl] ads {url[:60]} 오류: {str(e)[:100]}")
         return None
+    # LLM 환각 방지: 페이지에서 광고를 못 읽으면 example.com·placeholder 이미지나
+    # 뻔한 문구를 지어낸다. 가짜 이미지는 버리고, 진짜 이미지가 하나도 없으면 실패로 본다.
+    _FAKE = ("example.com", "example.org", "example.net", "placeholder", "lorempix",
+             "via.placeholder", "yourdomain", "dummyimage", "/ad1.", "/ad2.", "/ad3.")
+
+    def _real_img(u):
+        u = str(u or "").strip()
+        if not u.startswith("http"):
+            return ""
+        lo = u.lower()
+        return "" if any(f in lo for f in _FAKE) else u
+
     ads = []
     for a in (j.get("ads") or []):
-        img = str(a.get("image", "")).strip()
-        if img and not img.startswith("http"):
-            img = ""
+        img = _real_img(a.get("image"))
         hd = str(a.get("headline", "")).strip()
         bd = str(a.get("body", "")).strip()
         if not (img or hd or bd):
@@ -295,7 +305,9 @@ def scrape_ads(url, logs=None, timeout=50):
         if len(ads) >= 12:
             break
     n_img = sum(1 for a in ads if a["image"])
-    logs.append(f"[firecrawl] ads {url[:50]} · 소재 {len(ads)}개(이미지 {n_img}) · md {len(md)}자")
-    if not ads:
+    logs.append(f"[firecrawl] ads {url[:50]} · 소재 {len(ads)}개(진짜이미지 {n_img}) · md {len(md)}자")
+    # 진짜 이미지가 0개면 = 렌더 실패/환각으로 간주 → 링크 폴백하도록 None
+    if n_img == 0:
         return None
+    ads = [a for a in ads if a["image"]]   # 이미지 있는 소재만(갤러리용)
     return {"ads": ads, "imgCount": n_img}

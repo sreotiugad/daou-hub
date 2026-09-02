@@ -377,6 +377,18 @@
   .comp-form-act{display:flex;gap:8px;margin-top:14px}
   .kw-btn.primary{background:var(--primary);color:var(--primary-fg);border-color:var(--primary)}
   .kw-btn.danger{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 40%,var(--border))}
+  .comp-da .da-block{margin-bottom:18px}.comp-da .da-block:last-child{margin-bottom:0}
+  .da-h{display:flex;align-items:center;gap:9px;margin-bottom:10px;font-size:13.5px;font-weight:600}
+  .da-h a{font-size:11.5px;font-weight:500}
+  .da-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(138px,1fr));gap:12px}
+  .da-item{border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--surface);display:flex;flex-direction:column}
+  .da-item .thumb{width:100%;aspect-ratio:1/1;object-fit:cover;background:var(--bg);display:block}
+  .da-item .meta{padding:8px 10px}
+  .da-item .meta .hl{font-size:12px;font-weight:600;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .da-item .meta .cta{display:inline-block;margin-top:6px;font-size:10.5px;font-weight:600;color:var(--primary);background:var(--primary-weak);border-radius:5px;padding:1px 7px}
+  .da-item .meta .plat{font-size:10px;color:var(--muted);margin-top:5px}
+  .da-fallback{font-size:12.5px;color:var(--muted);line-height:1.6}
+  .da-loading{font-size:12.5px;color:var(--muted)}
   /* AI 챗봇 */
   #duChatBtn{position:fixed;right:22px;bottom:22px;z-index:70;display:inline-flex;align-items:center;gap:9px;
     background:linear-gradient(135deg,var(--primary),color-mix(in srgb,var(--accent) 52%,var(--primary)));
@@ -528,6 +540,7 @@
       <div id="compHero" class="card comp-hero"></div>
       <div class="comp-grid" id="compCards"></div>
       <div id="compAi" class="card comp-ai"></div>
+      <div id="compDA" style="margin-top:14px"></div>
     </div>
   </section>
   <section id="compKeyword" class="ctab-pane" hidden>
@@ -1120,8 +1133,28 @@ const DUComp=(function(){
     cards.push('<div class="card comp-card"><div class="card-h"><h3>SERP 광고 관측</h3>'+accHTML(d.adsLabel||'미확인')+'</div><div class="card-b">'+ab+'</div></div>');
     cards.push('<div class="card comp-card"><div class="card-h"><h3>이번 주 변화</h3>'+accHTML('미확인')+'</div><div class="card-b"><div class="comp-sub">지난주 대비 변화(신규 광고·카피·프로모션)는 다음 단계에서 주간 스냅샷을 쌓아 보여드려요.</div></div></div>');
     el('compCards').innerHTML=cards.join('');
-    renderAi(d,c);
+    renderAi(d,c);renderDA(c);
     el('compUpdated').textContent='업데이트 '+new Date().toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});}
+
+  const DASRC=[['meta','Meta 광고 라이브러리'],['google','Google 광고 투명성센터']];
+  function daFail(url){return '<div class="da-fallback">소재를 자동으로 가져오지 못했어요(봇차단·로딩 지연). <a href="'+esc(url)+'" target="_blank" rel="noopener">라이브러리에서 직접 보기 ↗</a></div>';}
+  function renderDA(c){const box=el('compDA');if(!box)return;
+    const blocks=DASRC.map(([src,label])=>{const url=c[src];
+      return '<div class="da-block" data-src="'+src+'"><div class="da-h">'+label
+        +(url?' · <a href="'+esc(url)+'" target="_blank" rel="noopener">라이브러리 열기 ↗</a>':'')+'</div>'
+        +'<div class="da-body">'+(url?'<div class="da-loading">소재 불러오는 중…</div>':'<div class="da-fallback">URL 미등록 — <b>편집</b>에서 '+label+' URL을 넣으면 게재 광고를 관측해요.</div>')+'</div></div>';});
+    box.innerHTML='<div class="card"><div class="card-h"><h3>운영 중인 DA 광고 소재</h3><span class="hint">광고 라이브러리 관측 · 공식 API 미제공</span></div><div class="card-b comp-da">'+blocks.join('')+'</div></div>';
+    DASRC.forEach(([src])=>{if(c[src])loadGallery(src,c[src],0);});}
+  function loadGallery(src,url,retry){const blk=el('compDA')&&el('compDA').querySelector('.da-block[data-src="'+src+'"] .da-body');if(!blk)return;
+    fetch('/api/competitor?only='+src+'&url='+encodeURIComponent(url)).then(r=>r.json()).then(d=>{const ads=(d&&d.ads)||[];
+      if(ads.length){blk.innerHTML='<div class="da-grid">'+ads.map(a=>'<div class="da-item">'
+        +(a.image?'<img class="thumb" src="'+esc(a.image)+'" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">':'')
+        +'<div class="meta"><div class="hl">'+esc(a.headline||a.body||'광고')+'</div>'
+        +(a.cta?'<span class="cta">'+esc(a.cta)+'</span>':'')
+        +(a.platform?'<div class="plat">'+esc(a.platform)+'</div>':'')+'</div></div>').join('')+'</div>';}
+      else if(!retry){blk.innerHTML='<div class="da-loading">소재 불러오는 중… (재시도)</div>';setTimeout(()=>loadGallery(src,url,1),1800);}
+      else{blk.innerHTML=daFail(url);}})
+    .catch(()=>{if(!retry){setTimeout(()=>loadGallery(src,url,1),1800);}else{blk.innerHTML=daFail(url);}});}
 
   function renderAi(d,c){const box=el('compAi');box.innerHTML='<div class="h">AI 대응 제안</div><div class="line" style="color:var(--muted)">분석 중…</div>';
     const it=d.intensity||{},content=d.content||{},trend=d.trend||{},promo=d.promo,ads=d.ads||[];
