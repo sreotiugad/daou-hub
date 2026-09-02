@@ -143,3 +143,79 @@ def serp_competitors(kw, our_names=None, logs=None, timeout=45):
         return None
     logs.append(f"[firecrawl] {kw} 광고 {len(ads)} · 자연검색 {len(organic)} 실수집")
     return {"ads": ads, "organic": organic}
+
+
+_PROMO_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "headline": {"type": "string", "description": "페이지 대표 헤드라인"},
+        "summary": {"type": "string", "description": "이 페이지가 지금 밀고 있는 핵심 메시지 한 줄"},
+        "promos": {
+            "type": "array",
+            "description": "현재 진행 중인 프로모션/혜택",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "kind": {"type": "string", "description": "할인/무료체험/이벤트/증정/기타"},
+                    "headline": {"type": "string", "description": "프로모션 제목"},
+                    "detail": {"type": "string", "description": "혜택 상세"},
+                    "price": {"type": "string", "description": "가격·할인율(있으면)"},
+                    "cta": {"type": "string", "description": "행동유도 버튼 문구"},
+                    "deadline": {"type": "string", "description": "종료일/기간(있으면)"},
+                },
+            },
+        },
+    },
+}
+
+_PROMO_PROMPT = (
+    "이 페이지에서 지금 진행 중인 프로모션·혜택을 추출해줘. "
+    "각 프로모션의 종류(할인/무료체험/이벤트/증정/기타), 제목(headline), 상세(detail), "
+    "가격·할인율(price), 행동유도 문구(cta), 종료일/기간(deadline). "
+    "그리고 페이지 대표 헤드라인(headline)과, 이 페이지가 지금 밀고 있는 핵심 메시지를 한 줄로(summary). "
+    "프로모션이 없으면 promos는 빈 배열."
+)
+
+
+def scrape_promo(url, logs=None, timeout=45):
+    """프로모션/랜딩 페이지 스냅샷. 현재 혜택·가격·CTA·헤드라인. 실패/키없음 → None."""
+    logs = logs if logs is not None else []
+    if not _key() or not url:
+        return None
+    body = {
+        "url": url,
+        "formats": [{"type": "json", "schema": _PROMO_SCHEMA, "prompt": _PROMO_PROMPT}],
+        "onlyMainContent": True,
+        "waitFor": 3000,
+        "location": {"country": "KR", "languages": ["ko"]},
+    }
+    try:
+        r = requests.post(API, json=body, timeout=timeout,
+                          headers={"Authorization": "Bearer " + _key(),
+                                   "Content-Type": "application/json"})
+        if r.status_code != 200:
+            logs.append(f"[firecrawl] promo {url} status={r.status_code} {r.text[:100]}")
+            return None
+        data = (r.json() or {}).get("data") or {}
+        j = data.get("json") or {}
+    except Exception as e:
+        logs.append(f"[firecrawl] promo {url} 오류: {str(e)[:100]}")
+        return None
+    promos = []
+    for p in (j.get("promos") or []):
+        hd = str(p.get("headline", "")).strip()
+        dt = str(p.get("detail", "")).strip()
+        if not (hd or dt):
+            continue
+        promos.append({"kind": str(p.get("kind", "")).strip() or "기타",
+                       "headline": hd, "detail": dt,
+                       "price": str(p.get("price", "")).strip(),
+                       "cta": str(p.get("cta", "")).strip(),
+                       "deadline": str(p.get("deadline", "")).strip()})
+        if len(promos) >= 8:
+            break
+    out = {"headline": str(j.get("headline", "")).strip(),
+           "summary": str(j.get("summary", "")).strip(),
+           "promos": promos}
+    logs.append(f"[firecrawl] promo {url} · 프로모션 {len(promos)}건")
+    return out
