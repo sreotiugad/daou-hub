@@ -12,9 +12,46 @@
 """
 import os
 import time
+import base64
 import requests
 
 API = "https://api.firecrawl.dev/v2/scrape"
+
+
+def _embed_images(ads, logs):
+    """스크랩 직후(URL 가장 신선할 때) 각 광고 이미지를 서버에서 내려받아
+    base64 data URI 로 박아넣는다 → fbcdn 서명 URL 만료·핫링크 문제 제거.
+    다운로드 실패(403 등)한 소재는 image='' (프론트가 이미지 없는 카드로 처리)."""
+    from concurrent.futures import ThreadPoolExecutor
+    hdr = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                         "(KHTML, like Gecko) Chrome/120.0 Safari/537.36",
+           "Accept": "image/avif,image/webp,image/apng,image/*,*/*"}
+
+    def dl(a):
+        u = a.get("image", "")
+        if not u.startswith("http"):
+            a["image"] = ""
+            return
+        try:
+            r = requests.get(u, headers=hdr, timeout=9)
+            if r.status_code == 200 and len(r.content) > 500:
+                ct = (r.headers.get("Content-Type") or "image/jpeg").split(";")[0].strip()
+                if not ct.startswith("image/"):
+                    ct = "image/jpeg"
+                a["image"] = "data:" + ct + ";base64," + base64.b64encode(r.content).decode()
+            else:
+                a["image"] = ""
+        except Exception:
+            a["image"] = ""
+
+    try:
+        with ThreadPoolExecutor(max_workers=8) as ex:
+            list(ex.map(dl, ads))
+    except Exception:
+        pass
+    n = sum(1 for a in ads if a.get("image", "").startswith("data:"))
+    logs.append(f"[firecrawl] 이미지 임베드 {n}/{len(ads)}")
+    return n
 
 # '우리' 브랜드 판별용 힌트(서비스명 + 도메인 조각). 광고주/사이트가 우리면 us=True.
 _OUR_DOMAINS = ("sabangnet", "daou", "ddnews", "ppurio", "bizmailer",
@@ -311,13 +348,15 @@ def scrape_ads(url, logs=None, timeout=27):
                     "status": str(a.get("status", "")).strip()})
         if len(ads) >= 12:
             break
-    n_img = sum(1 for a in ads if a["image"])
-    logs.append(f"[firecrawl] ads {url[:50]} · 소재 {len(ads)}개(진짜이미지 {n_img}) · md {len(md)}자")
-    # 진짜 이미지가 0개면 = 렌더 실패/환각으로 간주 → 링크 폴백하도록 None
-    if n_img == 0:
+    n_url = sum(1 for a in ads if a["image"].startswith("http"))
+    logs.append(f"[firecrawl] ads {url[:50]} · 소재 {len(ads)}개(이미지URL {n_url}) · md {len(md)}자")
+    if n_url == 0:                       # 이미지 URL 0개 = 렌더실패/환각 → 링크 폴백
         return None
-    ads = [a for a in ads if a["image"]]   # 이미지 있는 소재만(갤러리용)
-    return {"ads": ads, "imgCount": n_img}
+    _embed_images(ads, logs)             # 스크랩 즉시 이미지 다운로드→base64(만료 방지)
+    ads = [a for a in ads if a["image"].startswith("data:")]   # 임베드 성공한 소재만
+    if not ads:                          # 전부 다운로드 실패(403) → 링크 폴백
+        return None
+    return {"ads": ads, "imgCount": len(ads)}
 
 
 def page_shot(url, logs=None, timeout=55, full=True):
