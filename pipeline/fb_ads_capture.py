@@ -43,16 +43,31 @@ def dl_urllib(url):
 
 def main():
     from playwright.sync_api import sync_playwright
-    res = {"kw": KW, "adEls": 0, "imgFound": 0, "downloaded": 0,
-           "method": "urllib(same-runner)", "failures": [], "samples": []}
+    headed = os.environ.get("CAPTURE_HEADED", "1") != "0"
+    res = {"kw": KW, "headed": headed, "adEls": 0, "imgFound": 0, "allImgs": 0,
+           "downloaded": 0, "method": "urllib(same-runner)",
+           "title": "", "finalUrl": "", "bodyText": "", "failures": [], "samples": []}
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True, args=[
-            "--no-sandbox", "--disable-blink-features=AutomationControlled"])
+        browser = p.chromium.launch(headless=not headed, args=[
+            "--no-sandbox", "--disable-blink-features=AutomationControlled",
+            "--disable-dev-shm-usage"])
         ctx = browser.new_context(locale="ko-KR", user_agent=UA,
                                   viewport={"width": 1440, "height": 1000})
+        ctx.add_init_script("Object.defineProperty(navigator,'webdriver',{get:()=>undefined})")
         page = ctx.new_page()
         page.goto(URL, wait_until="domcontentloaded", timeout=60000)
         page.wait_for_timeout(5000)
+        # 쿠키/동의 배너 있으면 닫기(베스트에포트)
+        for label in ["모든 쿠키 허용", "필수 쿠키만 허용", "쿠키 허용", "Allow all cookies",
+                      "Only allow essential cookies", "Accept all", "허용"]:
+            try:
+                b = page.get_by_role("button", name=label)
+                if b.count() > 0:
+                    b.first.click(timeout=2500)
+                    page.wait_for_timeout(1500)
+                    break
+            except Exception:
+                pass
         # 스크롤로 광고 로드
         last = 0
         for _ in range(8):
@@ -62,7 +77,14 @@ def main():
             if h == last:
                 break
             last = h
-        # 광고 컨테이너 대략 개수(유저 셀렉터 참고, 없으면 0)
+        # 진단
+        try:
+            res["title"] = (page.title() or "")[:80]
+            res["finalUrl"] = page.url[:120]
+            res["bodyText"] = (page.evaluate("document.body.innerText") or "")[:300].replace("\n", " ")
+            res["allImgs"] = page.eval_on_selector_all("img", "els => els.length")
+        except Exception as e:
+            res["diagErr"] = str(e)[:80]
         try:
             res["adEls"] = page.eval_on_selector_all("div._7jvw", "els => els.length")
         except Exception:
