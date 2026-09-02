@@ -2,13 +2,30 @@
  "kw": "브이티",
  "headed": true,
  "adEls": 0,
- "imgFound": 0,
+ "imgFound": 30,
  "allImgs": 16,
- "downloaded": 0,
+ "downloaded": 15,
  "method": "urllib(same-runner)",
  "title": "광고 라이브러리",
  "finalUrl": "https://www.facebook.com/ads/library/?active_status=all&ad_type=all&country=KR&is_targeted_country=false&media_type=all&",
- "bodyText": "Meta 광고 라이브러리 광고 라이브러리 광고 라이브러리 보고서 광고 라이브러리 API 브랜디드 콘텐츠 ​ 대한민국 ​ ​ ​ 모든 광고 ​ 키워드 또는 광고주로 검색 ​ ​ 로그인 광고 라이브러리 광고 라이브러리 보고서 광고 라이브러리 API 브랜디드 콘텐츠 시스템 상태 이메일 업데이트 구독 FAQ 광고 및 데이터 사용 정보 개인 정보 보호 이용 약관 쿠",
+ "bodyText": "Meta 광고 라이브러리 광고 라이브러리 광고 라이브러리 보고서 광고 라이브러리 API 브랜디드 콘텐츠 ​ 대한민국 ​ ​ ​ 모든 광고 ​ 키워드 또는 광고주로 검색 ​ ​ 로그인 광고 라이브러리 광고 라이브러리 보고서 광고 라이브러리 API 브랜디드 콘텐츠 시스템 상태 이메일 업데이트 구독 FAQ 광고 및 데이터 사용 정보 개인 정보 보호 이용 약관 쿠키 결과 ~150개 이 결과에는 키워",
  "failures": [],
- "samples": []
+ "samples": [
+  {
+   "host": "scontent-ord5-1.xx.fbcdn.net",
+   "bytes": 100341
+  },
+  {
+   "host": "scontent-ord5-1.xx.fbcdn.net",
+   "bytes": 115132
+  },
+  {
+   "host": "scontent-ord5-2.xx.fbcdn.net",
+   "bytes": 115703
+  }
+ ],
+ "videoEls": 30,
+ "scontentInHTML": 194,
+ "fbcdnInHTML": 2096,
+ "hasResults": true
 }
