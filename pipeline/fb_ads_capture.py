@@ -68,31 +68,36 @@ def main():
                     break
             except Exception:
                 pass
-        # 스크롤로 광고 로드
-        last = 0
-        for _ in range(8):
-            page.mouse.wheel(0, 24000)
-            page.wait_for_timeout(2000)
-            h = page.evaluate("document.body.scrollHeight")
-            if h == last:
-                break
-            last = h
+        # 가상화/lazy-load 대응: 조금씩 스크롤하며 그때그때 fbcdn 이미지 src 를 누적 수집.
+        # (한 번에 맨 아래로 내리면 이미지가 뷰포트를 안 거쳐 로드 안 됨)
+        COLLECT = ("els => els.map(e=>e.currentSrc||e.src)"
+                   ".filter(s=>s && s.includes('fbcdn') && s.includes('scontent'))")
+        found = {}
+        last_h = 0
+        stable = 0
+        for step in range(60):
+            for s in page.eval_on_selector_all("img", COLLECT):
+                found[s] = 1
+            page.mouse.wheel(0, 1000)
+            page.wait_for_timeout(650)
+            if step % 10 == 9:
+                h = page.evaluate("document.body.scrollHeight")
+                stable = stable + 1 if h == last_h else 0
+                last_h = h
+                if stable >= 2:
+                    break
+        # 마지막 한 번 더 수집
+        for s in page.eval_on_selector_all("img", COLLECT):
+            found[s] = 1
         # 진단
         try:
             res["title"] = (page.title() or "")[:80]
             res["finalUrl"] = page.url[:120]
-            res["bodyText"] = (page.evaluate("document.body.innerText") or "")[:300].replace("\n", " ")
+            res["bodyText"] = (page.evaluate("document.body.innerText") or "")[:200].replace("\n", " ")
             res["allImgs"] = page.eval_on_selector_all("img", "els => els.length")
         except Exception as e:
             res["diagErr"] = str(e)[:80]
-        try:
-            res["adEls"] = page.eval_on_selector_all("div._7jvw", "els => els.length")
-        except Exception:
-            pass
-        # 광고 크리에이티브 이미지 src 수집(클래스 대신 fbcdn 패턴으로 견고하게)
-        srcs = page.eval_on_selector_all(
-            "img", "els => els.map(e=>e.src).filter(s=>s && s.includes('fbcdn') && s.includes('scontent'))")
-        srcs = [s for s in dict.fromkeys(srcs) if not _is_profile(s)]
+        srcs = [s for s in found.keys() if not _is_profile(s)]
         res["imgFound"] = len(srcs)
         for s in srcs[:15]:
             try:
