@@ -328,6 +328,55 @@
   .bg-edit-row label{width:120px;flex:none;font-size:13px;color:var(--muted)}
   .bg-edit-row input{flex:1;border:1px solid var(--border);background:var(--bg);color:var(--fg);font-size:13px;padding:8px 10px;border-radius:8px;font-family:var(--mono);text-align:right}
   .bg-edit-row input:focus{outline:none;border-color:var(--primary)}
+  /* 경쟁사 */
+  .ctabs{display:flex;gap:0;margin-bottom:18px;border-bottom:1px solid var(--border-soft)}
+  .ctabs button{border:none;background:none;font-size:14px;font-weight:600;color:var(--muted);padding:9px 2px;margin-right:20px;cursor:pointer;border-bottom:2px solid transparent;font-family:inherit}
+  .ctabs button.on{color:var(--primary);border-bottom-color:var(--primary)}
+  .comp-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+  .comp-updated{font-size:11.5px;color:var(--muted);font-family:var(--mono);margin-left:auto}
+  .acc{display:inline-flex;align-items:center;gap:4px;font-family:var(--mono);font-size:10.5px;font-weight:600;border-radius:5px;padding:2px 7px;white-space:nowrap}
+  .acc::before{content:"";width:5px;height:5px;border-radius:50%}
+  .acc.ok{color:var(--success);background:color-mix(in srgb,var(--success) 13%,transparent)}.acc.ok::before{background:var(--success)}
+  .acc.obs{color:var(--primary);background:var(--primary-weak)}.acc.obs::before{background:var(--primary)}
+  .acc.est{color:var(--warning);background:color-mix(in srgb,var(--warning) 15%,transparent)}.acc.est::before{background:var(--warning)}
+  .acc.unk{color:var(--muted);background:var(--border-soft)}.acc.unk::before{background:var(--muted)}
+  .comp-empty{text-align:center;padding:44px 24px}
+  .comp-empty b{font-size:16px}.comp-empty p{color:var(--muted);font-size:13.5px;max-width:54ch;margin:8px auto 18px;line-height:1.65}
+  .comp-hero{display:flex;gap:22px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+  .comp-gauge{flex:none;width:118px;text-align:center}
+  .comp-gauge .num{font-size:36px;font-weight:800;font-family:var(--mono);line-height:1}
+  .comp-gauge .of{font-size:12px;color:var(--muted)}
+  .comp-gauge .bar{height:7px;border-radius:999px;background:var(--border-soft);overflow:hidden;margin-top:9px}
+  .comp-gauge .bar>i{display:block;height:100%;border-radius:999px;transition:width .5s}
+  .comp-hero .info{flex:1;min-width:210px}
+  .comp-hero .info h2{font-size:19px;margin:0 0 4px}
+  .comp-hero .basis{font-size:12.5px;color:var(--muted);margin-top:7px;line-height:1.55}
+  .comp-grid{display:grid;gap:14px}
+  @media(min-width:640px){.comp-grid{grid-template-columns:1fr 1fr}}
+  .comp-card .card-h .acc{margin-left:auto}
+  .comp-big{font-size:24px;font-weight:800;font-family:var(--mono)}
+  .comp-sub{font-size:12.5px;color:var(--muted);margin-top:2px}
+  .comp-topics{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:5px}
+  .comp-topics li{font-size:12.5px;color:var(--fg);padding-left:14px;position:relative}
+  .comp-topics li::before{content:"";position:absolute;left:0;top:8px;width:5px;height:5px;border-radius:50%;background:var(--naver,#03934A)}
+  .comp-promo-item{padding:9px 0;border-bottom:1px dashed var(--border-soft);font-size:13px}
+  .comp-promo-item:last-child{border-bottom:0}
+  .comp-chip{display:inline-block;font-size:10.5px;font-weight:700;color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent);border-radius:5px;padding:1px 7px;margin-right:6px}
+  .comp-ad-row{display:flex;gap:8px;align-items:baseline;padding:6px 0;font-size:12.5px;border-bottom:1px dashed var(--border-soft)}
+  .comp-ad-row:last-child{border-bottom:0}.comp-ad-row.us{background:var(--primary-weak);margin:0 -8px;padding:6px 8px;border-radius:6px}
+  .comp-ad-row .rk{flex:none;font-family:var(--mono);color:var(--muted);width:18px}
+  .comp-ai{margin-top:14px;border-left:3px solid var(--accent)}
+  .comp-ai .h{font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:9px}
+  .comp-ai .line{font-size:14px;line-height:1.75}
+  .comp-fld{display:grid;gap:11px 14px}
+  @media(min-width:600px){.comp-fld{grid-template-columns:1fr 1fr}}
+  .comp-fld .fw{grid-column:1/-1}
+  .comp-fld label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:500}
+  .comp-fld input{width:100%;border:1px solid var(--border);background:var(--bg);color:var(--fg);border-radius:8px;padding:8px 11px;font-size:13px;font-family:inherit}
+  .comp-fld input:focus{outline:none;border-color:var(--primary)}
+  .comp-form-act{display:flex;gap:8px;margin-top:14px}
+  .kw-btn.primary{background:var(--primary);color:var(--primary-fg);border-color:var(--primary)}
+  .kw-btn.danger{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 40%,var(--border))}
   /* AI 챗봇 */
   #duChatBtn{position:fixed;right:22px;bottom:22px;z-index:70;display:inline-flex;align-items:center;gap:9px;
     background:linear-gradient(135deg,var(--primary),color-mix(in srgb,var(--accent) 52%,var(--primary)));
@@ -385,7 +434,7 @@
       <button data-go="home" class="on">홈</button>
       <button data-go="report">리포트</button>
       <button data-go="custom">커스텀 리포트</button>
-      <button data-go="keyword">경쟁 분석</button>
+      <button data-go="keyword">경쟁사</button>
       <button data-go="budget">예산 관리</button>
     </nav>
     <div class="an-r">
@@ -456,6 +505,32 @@
 
 <!-- KEYWORD -->
 <main id="v-keyword" class="view" hidden>
+  <div class="ctabs" id="compTabs">
+    <button type="button" data-ct="overview" class="on">개요</button>
+    <button type="button" data-ct="keyword">키워드·콘텐츠</button>
+  </div>
+  <section id="compOverview" class="ctab-pane">
+    <div class="comp-bar">
+      <select id="compSel" class="cx-sel" aria-label="경쟁사 선택"></select>
+      <button type="button" id="compRefresh" class="kw-btn" hidden title="새로고침">↻</button>
+      <button type="button" id="compEdit" class="kw-btn" hidden>편집</button>
+      <button type="button" id="compAdd" class="kw-btn">＋ 경쟁사</button>
+      <span class="comp-updated" id="compUpdated"></span>
+    </div>
+    <div id="compForm" class="card" hidden style="margin-bottom:14px"></div>
+    <div id="compEmpty" class="card comp-empty">
+      <b>추적할 경쟁사를 등록하세요</b>
+      <p>경쟁사명·네이버 검색어·프로모션 URL만 있으면 광고 집행 강도·블로그 발행량·검색 추이·프로모션 스냅샷을 자동으로 뽑아요. 정보는 이 브라우저에만 저장됩니다.</p>
+      <button type="button" id="compEmptyAdd" class="kw-btn primary">＋ 첫 경쟁사 등록</button>
+    </div>
+    <div id="compLoading" hidden style="text-align:center;padding:44px;color:var(--muted);font-size:13.5px">경쟁사 분석 중… <span style="display:block;font-size:12px;margin-top:4px">네이버 · SERP 광고 · 프로모션 수집</span></div>
+    <div id="compSnap" hidden>
+      <div id="compHero" class="card comp-hero"></div>
+      <div class="comp-grid" id="compCards"></div>
+      <div id="compAi" class="card comp-ai"></div>
+    </div>
+  </section>
+  <section id="compKeyword" class="ctab-pane" hidden>
   <div class="searchbar">
     <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
     <input id="kwInput" placeholder="키워드 입력 (예: 그룹웨어)" value="그룹웨어">
@@ -499,6 +574,7 @@
   <div class="card" id="serpCard" style="margin-top:14px;display:none"><div class="card-h"><h3>자연검색 상위 경쟁사</h3><span class="hint">네이버 웹사이트 결과 · 실측</span></div><div class="card-b" style="overflow-x:auto"><div id="serpTable"></div></div></div>
   <div class="card" style="margin-top:14px"><div class="card-h"><h3>YouTube 콘텐츠 순위</h3><span class="hint">이 키워드 상위 영상</span></div><div class="card-b"><div id="ytList"></div></div></div>
   <div class="card" style="margin-top:14px"><div class="card-h"><h3>블로그·카페 글</h3><span class="hint">이 키워드 상위 문서 · 각 TOP 5</span></div><div class="card-b"><div id="postList"></div></div></div>
+  </section>
 </main>
 
 <!-- CUSTOM REPORT -->
@@ -967,16 +1043,128 @@ const DUBudget=(function(){
   return {render:render};
 })();
 
+/* ===================== 경쟁사 (개요) ===================== */
+const DUComp=(function(){
+  const LS='daouhub_competitors_v1', SNAP='daouhub_comp_snap_v1';
+  let list=[], curId=null, tab='overview';
+  const el=id=>document.getElementById(id);
+  const esc=s=>String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+  const comma=n=>Math.round(n||0).toLocaleString();
+  const ACC={'실측':'ok','관측':'obs','추정':'est','미확인':'unk','미설정':'unk'};
+  const accHTML=l=>'<span class="acc '+(ACC[l]||'unk')+'">'+esc(l)+'</span>';
+  const gcol=s=>s>=67?COL.danger:s>=34?COL.warning:COL.success;   // 강도 높음=위협
+  function load(){try{list=JSON.parse(localStorage.getItem(LS)||'[]')||[]}catch(_){list=[]}}
+  function save(){try{localStorage.setItem(LS,JSON.stringify(list))}catch(_){}}
+  function snaps(){try{return JSON.parse(localStorage.getItem(SNAP)||'{}')||{}}catch(_){return{}}}
+  function setSnap(id,d){try{var c=snaps();c[id]={t:Date.now(),d:d};localStorage.setItem(SNAP,JSON.stringify(c))}catch(_){}}
+  const uid=()=>'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+  const cur=()=>list.find(c=>c.id===curId)||null;
+
+  function setTab(t){tab=t;el('compOverview').hidden=(t!=='overview');el('compKeyword').hidden=(t!=='keyword');
+    document.querySelectorAll('#compTabs button').forEach(b=>b.classList.toggle('on',b.dataset.ct===t));
+    if(t==='keyword')DUKeyword.render();}
+  function renderSel(){const s=el('compSel');s.innerHTML=list.map(c=>'<option value="'+c.id+'">'+esc(c.name)+'</option>').join('');
+    const has=list.length>0;if(has){if(!curId||!cur())curId=list[0].id;s.value=curId}
+    s.style.display=has?'':'none';el('compEdit').hidden=!has;el('compRefresh').hidden=!has;el('compEmpty').hidden=has;
+    if(!has){el('compSnap').hidden=true;el('compUpdated').textContent=''}}
+
+  function fld(label,name,val,ph,full){return '<div'+(full?' class="fw"':'')+'><label>'+label+'</label>'
+    +'<input data-f="'+name+'" value="'+esc(val||'')+'" placeholder="'+esc(ph)+'"></div>';}
+  function formHTML(c){c=c||{};return '<div class="card-h" style="border:0;padding:0 0 8px"><h3>'+(c.id?'경쟁사 편집':'경쟁사 등록')+'</h3></div>'
+    +'<div class="comp-fld">'
+    +fld('경쟁사명 *','name',c.name,'예: 네이버웍스')
+    +fld('네이버 검색어 별칭 *','kw',c.kw,'SERP·블로그 추적 키 (예: 네이버웍스)')
+    +fld('공식 홈페이지','home',c.home,'https://',1)
+    +fld('추적 프로모션 URL','promo',c.promo,'https:// (현재 혜택·가격 감지)',1)
+    +fld('대표 상품명 (쉼표로 구분)','products',c.products,'예: 웍스, 그룹웨어',1)
+    +fld('Meta 광고 라이브러리 URL','meta',c.meta,'https://',1)
+    +fld('Google 광고 투명성센터 URL','google',c.google,'https://',1)
+    +'</div><div class="comp-form-act"><button type="button" class="kw-btn primary" id="compSave">저장</button>'
+    +'<button type="button" class="kw-btn" id="compCancel">취소</button>'
+    +(c.id?'<button type="button" class="kw-btn danger" id="compDel" style="margin-left:auto">삭제</button>':'')+'</div>';}
+  function openForm(c){const box=el('compForm');box.innerHTML=formHTML(c);box.hidden=false;
+    const g=n=>{const i=box.querySelector('[data-f="'+n+'"]');return i?i.value.trim():'';};
+    el('compSave').onclick=()=>{const name=g('name'),kw=g('kw')||name;if(!name){alert('경쟁사명을 입력하세요');return;}
+      const obj={name,kw,home:g('home'),promo:g('promo'),products:g('products'),meta:g('meta'),google:g('google')};
+      if(c&&c.id){Object.assign(cur(),obj);}
+      else{if(list.length>=5){alert('무료 플랜은 경쟁사 5개까지예요');return;}obj.id=uid();list.push(obj);curId=obj.id;}
+      save();box.hidden=true;renderSel();fetchSnap(true);};
+    el('compCancel').onclick=()=>{box.hidden=true;};
+    const d=el('compDel');if(d)d.onclick=()=>{if(!confirm('이 경쟁사를 삭제할까요?'))return;
+      list=list.filter(x=>x.id!==curId);curId=(list[0]&&list[0].id)||null;save();box.hidden=true;renderSel();
+      if(curId)fetchSnap(false);else el('compSnap').hidden=true;};}
+
+  function renderSnap(d){el('compEmpty').hidden=true;el('compLoading').hidden=true;el('compSnap').hidden=false;
+    const c=cur()||{},it=d.intensity||{},g=gcol(it.score||0);
+    el('compHero').innerHTML='<div class="comp-gauge"><div class="num" style="color:'+g+'">'+(it.score||0)+'</div><div class="of">/ 100 · 집행 강도</div>'
+      +'<div class="bar"><i style="width:'+(it.score||0)+'%;background:'+g+'"></i></div></div>'
+      +'<div class="info"><h2>'+esc(c.name||d.name||'')+'</h2>'
+      +'<div><b style="color:'+g+'">'+esc(it.band||'–')+'</b> '+accHTML(it.label||'추정')+' <span style="color:var(--muted);font-size:12px">신뢰도 '+esc(it.confidence||'낮음')+'</span></div>'
+      +'<div class="basis">근거 · '+esc(it.basis||'관측 데이터 부족')+'</div></div>';
+    const content=d.content||{},trend=d.trend||{},promo=d.promo,ads=d.ads||[],cards=[];
+    const tdir=trend.dir||'보합',tar=tdir==='상승'?'▲':tdir==='하락'?'▼':'—',tcol=tdir==='상승'?COL.danger:tdir==='하락'?COL.success:COL.muted;
+    cards.push('<div class="card comp-card"><div class="card-h"><h3>검색·콘텐츠</h3>'+accHTML(content.label||'미확인')+'</div><div class="card-b">'
+      +'<div class="comp-big">'+(content.volume!=null?comma(content.volume):'–')+'<span style="font-size:12px;color:var(--muted);font-weight:400"> 블로그·카페 문서</span></div>'
+      +'<div class="comp-sub">검색 추이 <b style="color:'+tcol+'">'+tar+' '+esc(tdir)+(trend.pct?(' '+(trend.pct>0?'+':'')+trend.pct+'%'):'')+'</b> '+accHTML(trend.label||'미확인')+'</div>'
+      +((content.topics&&content.topics.length)?'<ul class="comp-topics">'+content.topics.slice(0,4).map(t=>'<li>'+esc(t)+'</li>').join('')+'</ul>':'')
+      +'</div></div>');
+    let pb;
+    if(promo&&((promo.promos&&promo.promos.length)||promo.summary)){
+      pb=(promo.summary?'<div class="comp-sub" style="margin-bottom:9px">'+esc(promo.summary)+'</div>':'')
+        +(promo.promos||[]).slice(0,4).map(p=>'<div class="comp-promo-item"><span class="comp-chip">'+esc(p.kind||'기타')+'</span><b>'+esc(p.headline||'')+'</b>'
+          +(p.price?' · '+esc(p.price):'')+(p.deadline?' <span style="color:var(--danger);font-size:11px">'+esc(p.deadline)+'</span>':'')+'</div>').join('');
+    }else if(c.promo){pb='<div class="comp-sub">프로모션을 감지하지 못했어요. 페이지 구조에 따라 다를 수 있어요.</div>';}
+    else{pb='<div class="comp-sub">프로모션 URL을 등록하면 현재 혜택·가격·CTA를 추적해요.</div>';}
+    cards.push('<div class="card comp-card"><div class="card-h"><h3>프로모션</h3>'+accHTML(d.promoLabel||'미설정')+'</div><div class="card-b">'+pb+'</div></div>');
+    const ab=ads.length?ads.slice(0,5).map((a,i)=>'<div class="comp-ad-row'+(a.us?' us':'')+'"><span class="rk">'+(i+1)+'</span><div><b>'+esc(a.name)+'</b>'+(a.us?' <span class="comp-chip">경쟁사</span>':'')+(a.copy?'<div style="color:var(--muted)">'+esc(a.copy)+'</div>':'')+'</div></div>').join(''):'<div class="comp-sub">이 검색어의 파워링크 광고를 관측하지 못했어요.</div>';
+    cards.push('<div class="card comp-card"><div class="card-h"><h3>SERP 광고 관측</h3>'+accHTML(d.adsLabel||'미확인')+'</div><div class="card-b">'+ab+'</div></div>');
+    cards.push('<div class="card comp-card"><div class="card-h"><h3>이번 주 변화</h3>'+accHTML('미확인')+'</div><div class="card-b"><div class="comp-sub">지난주 대비 변화(신규 광고·카피·프로모션)는 다음 단계에서 주간 스냅샷을 쌓아 보여드려요.</div></div></div>');
+    el('compCards').innerHTML=cards.join('');
+    renderAi(d,c);
+    el('compUpdated').textContent='업데이트 '+new Date().toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});}
+
+  function renderAi(d,c){const box=el('compAi');box.innerHTML='<div class="h">AI 대응 제안</div><div class="line" style="color:var(--muted)">분석 중…</div>';
+    const it=d.intensity||{},content=d.content||{},trend=d.trend||{},promo=d.promo,ads=d.ads||[];
+    const ctx='[경쟁사 스냅샷] '+(c.name||d.name)
+      +'\n- 광고 집행 강도: '+(it.score||0)+'/100 ('+(it.band||'')+'), 근거: '+(it.basis||'')
+      +'\n- 블로그·카페 발행량: '+(content.volume!=null?content.volume:'미확인')+', 검색 추이: '+(trend.dir||'')+(trend.pct?(' '+trend.pct+'%'):'')
+      +'\n- 상위 콘텐츠 주제: '+((content.topics||[]).slice(0,4).join(' / ')||'없음')
+      +'\n- SERP 파워링크 광고주: '+(ads.slice(0,5).map(a=>a.name+(a.copy?('('+a.copy+')'):'')).join(', ')||'없음')
+      +'\n- 프로모션: '+(promo&&promo.promos&&promo.promos.length?((promo.summary||'')+' | '+promo.promos.map(p=>p.kind+':'+p.headline).join(', ')):'미확인')
+      +'\n[우리] 다우오피스(그룹웨어) 관점.';
+    const q='위 경쟁사 스냅샷을 딱 3줄로. 1) 이 경쟁사가 지금 무엇에 집중/변화하는지 2) 네이버 검색·콘텐츠에서 무엇이 관측되는지 3) 우리(다우오피스) 대응 후보 1가지. 각 줄 앞에 "· " 붙이고 한 문장씩, 군더더기 없이.';
+    fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'user',content:q}],context:ctx})})
+      .then(r=>r.json()).then(j=>{const t=(j&&j.reply)||'';box.innerHTML='<div class="h">AI 대응 제안</div><div class="line">'+(t?esc(t).replace(/\n/g,'<br>'):'요약을 받지 못했어요.')+'</div>';})
+      .catch(()=>{box.innerHTML='<div class="h">AI 대응 제안</div><div class="line" style="color:var(--muted)">AI 요약을 불러오지 못했어요.</div>';});}
+
+  function fetchSnap(force){const c=cur();if(!c){el('compSnap').hidden=true;return;}el('compEmpty').hidden=true;
+    const cc=snaps()[c.id];if(!force&&cc&&(Date.now()-cc.t<3600000)){renderSnap(cc.d);return;}
+    el('compSnap').hidden=true;el('compLoading').hidden=false;
+    const qs='name='+encodeURIComponent(c.name)+'&kw='+encodeURIComponent(c.kw||c.name)+(c.promo?'&promo='+encodeURIComponent(c.promo):'');
+    fetch('/api/competitor?'+qs).then(r=>r.json()).then(d=>{el('compLoading').hidden=true;
+      if(d&&!d.error){setSnap(c.id,d);renderSnap(d);}else{el('compSnap').hidden=false;el('compHero').innerHTML='<div class="comp-sub">'+esc((d&&d.error)||'분석 실패')+'</div>';el('compCards').innerHTML='';el('compAi').innerHTML='';}})
+      .catch(()=>{el('compLoading').hidden=true;el('compSnap').hidden=false;el('compHero').innerHTML='<div class="comp-sub">네트워크 오류로 분석을 못 받았어요.</div>';el('compCards').innerHTML='';el('compAi').innerHTML='';});}
+
+  function render(){load();renderSel();setTab(tab);if(list.length)fetchSnap(false);else el('compSnap').hidden=true;}
+  el('compAdd').onclick=()=>openForm(null);
+  el('compEmptyAdd').onclick=()=>openForm(null);
+  el('compEdit').onclick=()=>openForm(cur());
+  el('compRefresh').onclick=()=>fetchSnap(true);
+  el('compSel').onchange=e=>{curId=e.target.value;fetchSnap(false);};
+  el('compTabs').addEventListener('click',e=>{if(e.target.dataset&&e.target.dataset.ct)setTab(e.target.dataset.ct);});
+  return {render,setTab};
+})();
+
 /* ===================== SHELL ===================== */
 (function(){
   const views={home:document.getElementById('v-home'),report:document.getElementById('v-report'),custom:document.getElementById('v-custom'),keyword:document.getElementById('v-keyword'),budget:document.getElementById('v-budget')};
   let cur='home';
-  function show(v){cur=v;for(const k in views)views[k].hidden=(k!==v);document.querySelectorAll('.an-tabs button').forEach(b=>b.classList.toggle('on',b.dataset.go===v));if(v==='report')DUReport.render();if(v==='custom')DUCustom.render();if(v==='keyword')DUKeyword.render();if(v==='budget')DUBudget.render();window.scrollTo(0,0)}
+  function show(v){cur=v;for(const k in views)views[k].hidden=(k!==v);document.querySelectorAll('.an-tabs button').forEach(b=>b.classList.toggle('on',b.dataset.go===v));if(v==='report')DUReport.render();if(v==='custom')DUCustom.render();if(v==='keyword')DUComp.render();if(v==='budget')DUBudget.render();window.scrollTo(0,0)}
   // Load real data snapshot (built daily from the Google Sheet RAW → data.json). Falls back to demo data when absent.
   fetch('data.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{if(!d)return;window.DAOU_DATA=d;const e=document.getElementById('envPill');if(e)e.innerHTML='<b></b>'+(d.source==='live'?'실데이터 연동':'데모 데이터');if(cur==='report')DUReport.render();if(cur==='custom')DUCustom.render();if(cur==='keyword')DUKeyword.render();if(cur==='budget')DUBudget.render()}).catch(()=>{});
   document.querySelectorAll('[data-go]').forEach(el=>el.addEventListener('click',()=>show(el.dataset.go)));
   document.querySelectorAll('[data-brand]').forEach(el=>el.addEventListener('click',()=>{DUReport.setBrand(el.dataset.brand);show('report')}));
-  function hs(){const v=document.getElementById('homeSearch').value.trim();if(v){DUKeyword.setKw(v);show('keyword')}}
+  function hs(){const v=document.getElementById('homeSearch').value.trim();if(v){DUKeyword.setKw(v);show('keyword');DUComp.setTab('keyword');DUKeyword.render()}}
   document.getElementById('homeSearchBtn').addEventListener('click',hs);
   document.getElementById('homeSearch').addEventListener('keydown',e=>{if(e.key==='Enter')hs()});
 })();
