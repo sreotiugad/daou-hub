@@ -30,7 +30,6 @@ def _embed_images(ads, logs):
     def dl(a):
         u = a.get("image", "")
         if not u.startswith("http"):
-            a["image"] = ""
             return
         try:
             r = requests.get(u, headers=hdr, timeout=9)
@@ -39,10 +38,9 @@ def _embed_images(ads, logs):
                 if not ct.startswith("image/"):
                     ct = "image/jpeg"
                 a["image"] = "data:" + ct + ";base64," + base64.b64encode(r.content).decode()
-            else:
-                a["image"] = ""
+            # 실패해도 원본 URL 유지 → 브라우저가 클라이언트에서 직접 시도(브랜드별로 됨)
         except Exception:
-            a["image"] = ""
+            pass
 
     try:
         with ThreadPoolExecutor(max_workers=8) as ex:
@@ -352,11 +350,11 @@ def scrape_ads(url, logs=None, timeout=27):
     logs.append(f"[firecrawl] ads {url[:50]} · 소재 {len(ads)}개(이미지URL {n_url}) · md {len(md)}자")
     if n_url == 0:                       # 이미지 URL 0개 = 렌더실패/환각 → 링크 폴백
         return None
-    _embed_images(ads, logs)             # 스크랩 즉시 이미지 다운로드→base64(만료 방지)
-    ads = [a for a in ads if a["image"].startswith("data:")]   # 임베드 성공한 소재만
-    if not ads:                          # 전부 다운로드 실패(403) → 링크 폴백
+    emb = _embed_images(ads, logs)       # 스크랩 즉시 다운로드→base64(되면), 실패시 원본URL 유지
+    ads = [a for a in ads if a["image"].startswith(("data:", "http"))]
+    if not ads:
         return None
-    return {"ads": ads, "imgCount": len(ads)}
+    return {"ads": ads, "imgCount": len(ads), "embedded": emb}
 
 
 def page_shot(url, logs=None, timeout=55, full=True):

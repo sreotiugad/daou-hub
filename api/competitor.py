@@ -173,7 +173,9 @@ class handler(BaseHTTPRequestHandler):
                 return self._send(_diag(logs), 200, cache=False)
             got = res.pop("_any", False)
             res["src"] = only
-            return self._send(res, 200, cache=got)
+            # 스크린샷(GCS)만 캐시. meta/google 개별소재는 이미지 원본URL이 몇 분내 만료돼
+            # 캐시하면 다 깨지므로 매번 신선하게(no-store).
+            return self._send(res, 200, cache=(got and only == "shot"))
         if not name and not kw and not promo:
             return self._send({"error": "name·kw·promo 중 하나는 필요합니다"}, 400, cache=False)
         try:

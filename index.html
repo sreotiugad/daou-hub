@@ -1155,7 +1155,7 @@ const DUComp=(function(){
     const qp=url?('url='+encodeURIComponent(url)):('q='+encodeURIComponent(name||''));
     fetch('/api/competitor?only='+src+'&'+qp).then(r=>r.json()).then(d=>{const ads=(d&&d.ads)||[];
       if(ads.length){blk.innerHTML='<div class="da-grid">'+ads.map(a=>'<div class="da-item">'
-        +(a.image?'<img class="thumb" src="'+a.image+'" loading="lazy" alt="광고 소재">':'<div class="noimg">이미지 없음</div>')
+        +(a.image?'<img class="thumb" src="'+esc(a.image)+'" loading="lazy" referrerpolicy="no-referrer" alt="광고 소재" onerror="this.style.display=\'none\'">':'<div class="noimg">이미지 없음</div>')
         +'<div class="meta"><div class="hl">'+esc(a.headline||a.body||'광고')+'</div>'
         +(a.cta?'<span class="cta">'+esc(a.cta)+'</span>':'')
         +(a.platform?'<div class="plat">'+esc(a.platform)+'</div>':'')+'</div></div>').join('')+'</div>';}
