@@ -153,15 +153,20 @@ class handler(BaseHTTPRequestHandler):
         debug = (qs.get("debug", [""])[0] or "").strip() in ("1", "true", "yes")
         logs = []
         # 광고 라이브러리 소재 갤러리(분리 호출) — 느리거나 실패해도 개요와 무관
-        if only in ("meta", "google"):
+        if only in ("meta", "google", "shot"):
             url = _fix_kr((qs.get("url", [""])[0] or "").strip())
             qname = _fix_kr((qs.get("q", [""])[0] or "").strip())
+            src = (qs.get("src", ["meta"])[0] or "meta").strip()   # shot 의 대상 라이브러리
             if not url and qname:            # URL 없으면 이름으로 검색 URL 자동생성
-                url = ad_search_url(only, qname)
+                url = ad_search_url(src if only == "shot" else only, qname)
             if not url:
                 return self._send({"error": "url 또는 q(이름)가 필요합니다"}, 400, cache=False)
             try:
-                res = ad_gallery(url, logs)
+                if only == "shot":
+                    shot = FC.page_shot(url, logs)
+                    res = {"shot": (shot or {}).get("shot", ""), "_any": bool(shot)}
+                else:
+                    res = ad_gallery(url, logs)
             except Exception as e:
                 return self._send({"error": str(e)[:200]}, 500, cache=False)
             if debug:

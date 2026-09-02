@@ -318,3 +318,36 @@ def scrape_ads(url, logs=None, timeout=27):
         return None
     ads = [a for a in ads if a["image"]]   # 이미지 있는 소재만(갤러리용)
     return {"ads": ads, "imgCount": n_img}
+
+
+def page_shot(url, logs=None, timeout=27, full=True):
+    """광고 라이브러리 페이지를 통째로 스크린샷 → 광고 그리드 이미지 한 장.
+    fbcdn 개별 핫링크(만료·403) 대신, Firecrawl 이 렌더한 화면을 이미지로 박제한다.
+    반환 {'shot': <스크린샷 이미지 URL>} 또는 None."""
+    logs = logs if logs is not None else []
+    if not _key() or not url:
+        return None
+    body = {
+        "url": url,
+        "formats": [{"type": "screenshot", "fullPage": full}],
+        "onlyMainContent": False,
+        "waitFor": 4000,
+        "location": {"country": "KR", "languages": ["ko"]},
+    }
+    try:
+        r = requests.post(API, json=body, timeout=timeout,
+                          headers={"Authorization": "Bearer " + _key(),
+                                   "Content-Type": "application/json"})
+        if r.status_code != 200:
+            logs.append(f"[firecrawl] shot {url[:50]} status={r.status_code} {r.text[:100]}")
+            return None
+        data = (r.json() or {}).get("data") or {}
+        shot = data.get("screenshot") or ""
+    except Exception as e:
+        logs.append(f"[firecrawl] shot {url[:50]} 오류: {str(e)[:100]}")
+        return None
+    if not shot:
+        logs.append(f"[firecrawl] shot {url[:50]} 스크린샷 없음")
+        return None
+    logs.append(f"[firecrawl] shot {url[:50]} OK")
+    return {"shot": shot}
