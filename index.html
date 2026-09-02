@@ -380,9 +380,9 @@
   .comp-da .da-block{margin-bottom:18px}.comp-da .da-block:last-child{margin-bottom:0}
   .da-h{display:flex;align-items:center;gap:9px;margin-bottom:10px;font-size:13.5px;font-weight:600}
   .da-h a{font-size:11.5px;font-weight:500}
-  .da-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(138px,1fr));gap:12px}
-  .da-item{border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--surface);display:flex;flex-direction:column}
-  .da-item .thumb{width:100%;aspect-ratio:1/1;object-fit:cover;background:var(--bg);display:block}
+  .da-grid{column-width:152px;column-gap:12px}
+  .da-item{border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--surface);display:flex;flex-direction:column;break-inside:avoid;margin:0 0 12px;width:100%}
+  .da-item .thumb{width:100%;height:auto;display:block;background:var(--bg)}
   .da-item .noimg{width:100%;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:11px;background:var(--surface-2,var(--border-soft))}
   .da-item .meta{padding:8px 10px}
   .da-item .meta .hl{font-size:12px;font-weight:600;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
@@ -1171,8 +1171,9 @@ const DUComp=(function(){
     }else{
       html+='<div class="da-grid">'+shown.map(im=>{const u=(typeof im==='string')?im:im.u;
         const t=(im&&typeof im==='object'&&im.t)?im.t:'';const ty=daType(im);
+        const ar=(im&&im.w&&im.h)?' style="aspect-ratio:'+im.w+'/'+im.h+'"':'';
         return '<div class="da-item"><span class="da-badge'+(ty==='image'?' img':'')+'">'+(ty==='image'?'🖼 이미지':'🎬 영상')+'</span>'
-          +'<img class="thumb" src="'+esc(u)+'" loading="lazy" alt="광고 소재">'
+          +'<img class="thumb" src="'+esc(u)+'" loading="lazy"'+ar+' alt="광고 소재">'
           +(t?'<div class="da-ocr" title="'+esc(t)+'">'+esc(t)+'</div>':'')+'</div>';}).join('')+'</div>';
     }
     body.innerHTML=html;
