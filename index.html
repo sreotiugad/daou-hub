@@ -1090,8 +1090,8 @@ const DUComp=(function(){
     +fld('공식 홈페이지','home',c.home,'https://',1)
     +fld('추적 프로모션 URL','promo',c.promo,'https:// (현재 혜택·가격 감지)',1)
     +fld('대표 상품명 (쉼표로 구분)','products',c.products,'예: 웍스, 그룹웨어',1)
-    +fld('Meta 광고 라이브러리 URL','meta',c.meta,'https://',1)
-    +fld('Google 광고 투명성센터 URL','google',c.google,'https://',1)
+    +fld('Meta 광고 라이브러리 URL (선택)','meta',c.meta,'비우면 이름으로 자동 검색',1)
+    +fld('Google 투명성센터 URL (선택)','google',c.google,'비우면 이름으로 자동 검색',1)
     +'</div><div class="comp-form-act"><button type="button" class="kw-btn primary" id="compSave">저장</button>'
     +'<button type="button" class="kw-btn" id="compCancel">취소</button>'
     +(c.id?'<button type="button" class="kw-btn danger" id="compDel" style="margin-left:auto">삭제</button>':'')+'</div>';}
@@ -1137,24 +1137,28 @@ const DUComp=(function(){
     el('compUpdated').textContent='업데이트 '+new Date().toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});}
 
   const DASRC=[['meta','Meta 광고 라이브러리'],['google','Google 광고 투명성센터']];
-  function daFail(url){return '<div class="da-fallback">소재를 자동으로 가져오지 못했어요(봇차단·로딩 지연). <a href="'+esc(url)+'" target="_blank" rel="noopener">라이브러리에서 직접 보기 ↗</a></div>';}
+  function adSearchUrl(src,q){const e=encodeURIComponent(q||'');return src==='meta'
+    ?'https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=KR&q='+e+'&search_type=keyword_unordered&media_type=all'
+    :'https://adstransparency.google.com/?region=KR&query='+e;}
+  function daFail(url){return '<div class="da-fallback">게재 소재를 자동으로 가져오지 못했어요(봇차단·로딩 지연 또는 게재 광고 없음). <a href="'+esc(url)+'" target="_blank" rel="noopener">라이브러리에서 직접 보기 ↗</a></div>';}
   function renderDA(c){const box=el('compDA');if(!box)return;
-    const blocks=DASRC.map(([src,label])=>{const url=c[src];
+    const blocks=DASRC.map(([src,label])=>{const url=c[src]||(c.name?adSearchUrl(src,c.name):'');const can=!!(c[src]||c.name);
       return '<div class="da-block" data-src="'+src+'"><div class="da-h">'+label
         +(url?' · <a href="'+esc(url)+'" target="_blank" rel="noopener">라이브러리 열기 ↗</a>':'')+'</div>'
-        +'<div class="da-body">'+(url?'<div class="da-loading">소재 불러오는 중…</div>':'<div class="da-fallback">URL 미등록 — <b>편집</b>에서 '+label+' URL을 넣으면 게재 광고를 관측해요.</div>')+'</div></div>';});
-    box.innerHTML='<div class="card"><div class="card-h"><h3>운영 중인 DA 광고 소재</h3><span class="hint">광고 라이브러리 관측 · 공식 API 미제공</span></div><div class="card-b comp-da">'+blocks.join('')+'</div></div>';
-    DASRC.forEach(([src])=>{if(c[src])loadGallery(src,c[src],0);});}
-  function loadGallery(src,url,retry){const blk=el('compDA')&&el('compDA').querySelector('.da-block[data-src="'+src+'"] .da-body');if(!blk)return;
-    fetch('/api/competitor?only='+src+'&url='+encodeURIComponent(url)).then(r=>r.json()).then(d=>{const ads=(d&&d.ads)||[];
+        +'<div class="da-body">'+(can?'<div class="da-loading">소재 불러오는 중…</div>':'<div class="da-fallback">경쟁사명이 필요해요.</div>')+'</div></div>';});
+    box.innerHTML='<div class="card"><div class="card-h"><h3>운영 중인 DA 광고 소재</h3><span class="hint">이름으로 자동 검색 · 광고 라이브러리 관측</span></div><div class="card-b comp-da">'+blocks.join('')+'</div></div>';
+    DASRC.forEach(([src])=>{if(c[src]||c.name)loadGallery(src,c[src],c.name,0);});}
+  function loadGallery(src,url,name,retry){const blk=el('compDA')&&el('compDA').querySelector('.da-block[data-src="'+src+'"] .da-body');if(!blk)return;
+    const qp=url?('url='+encodeURIComponent(url)):('q='+encodeURIComponent(name||''));
+    fetch('/api/competitor?only='+src+'&'+qp).then(r=>r.json()).then(d=>{const ads=(d&&d.ads)||[];
       if(ads.length){blk.innerHTML='<div class="da-grid">'+ads.map(a=>'<div class="da-item">'
         +(a.image?'<img class="thumb" src="'+esc(a.image)+'" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">':'')
         +'<div class="meta"><div class="hl">'+esc(a.headline||a.body||'광고')+'</div>'
         +(a.cta?'<span class="cta">'+esc(a.cta)+'</span>':'')
         +(a.platform?'<div class="plat">'+esc(a.platform)+'</div>':'')+'</div></div>').join('')+'</div>';}
-      else if(!retry){blk.innerHTML='<div class="da-loading">소재 불러오는 중… (재시도)</div>';setTimeout(()=>loadGallery(src,url,1),1800);}
-      else{blk.innerHTML=daFail(url);}})
-    .catch(()=>{if(!retry){setTimeout(()=>loadGallery(src,url,1),1800);}else{blk.innerHTML=daFail(url);}});}
+      else if(!retry){blk.innerHTML='<div class="da-loading">소재 불러오는 중… (재시도)</div>';setTimeout(()=>loadGallery(src,url,name,1),1800);}
+      else{blk.innerHTML=daFail(url||adSearchUrl(src,name));}})
+    .catch(()=>{if(!retry){setTimeout(()=>loadGallery(src,url,name,1),1800);}else{blk.innerHTML=daFail(url||adSearchUrl(src,name));}});}
 
   function renderAi(d,c){const box=el('compAi');box.innerHTML='<div class="h">AI 대응 제안</div><div class="line" style="color:var(--muted)">분석 중…</div>';
     const it=d.intensity||{},content=d.content||{},trend=d.trend||{},promo=d.promo,ads=d.ads||[];

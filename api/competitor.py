@@ -112,6 +112,18 @@ def snapshot(name, kw, promo_url, logs):
     }
 
 
+def ad_search_url(src, q):
+    """경쟁사 이름만으로 광고 라이브러리 검색 URL 생성(URL 직접 입력 대체)."""
+    from urllib.parse import quote
+    qq = quote(q, safe="")
+    if src == "meta":
+        return ("https://www.facebook.com/ads/library/?active_status=active&ad_type=all"
+                "&country=KR&q=%s&search_type=keyword_unordered&media_type=all" % qq)
+    if src == "google":
+        return "https://adstransparency.google.com/?region=KR&query=%s" % qq
+    return ""
+
+
 def ad_gallery(url, logs):
     """Meta 라이브러리 / Google 투명성센터 한 곳의 광고 소재만 스크랩(분리 호출).
     느리거나 실패해도 본 스냅샷과 무관 → 프론트가 별도로 lazy 호출."""
@@ -143,8 +155,11 @@ class handler(BaseHTTPRequestHandler):
         # 광고 라이브러리 소재 갤러리(분리 호출) — 느리거나 실패해도 개요와 무관
         if only in ("meta", "google"):
             url = _fix_kr((qs.get("url", [""])[0] or "").strip())
+            qname = _fix_kr((qs.get("q", [""])[0] or "").strip())
+            if not url and qname:            # URL 없으면 이름으로 검색 URL 자동생성
+                url = ad_search_url(only, qname)
             if not url:
-                return self._send({"error": "url이 필요합니다"}, 400, cache=False)
+                return self._send({"error": "url 또는 q(이름)가 필요합니다"}, 400, cache=False)
             try:
                 res = ad_gallery(url, logs)
             except Exception as e:

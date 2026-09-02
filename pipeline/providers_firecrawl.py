@@ -245,9 +245,10 @@ _ADS_SCHEMA = {
 
 _ADS_PROMPT = (
     "이 페이지는 광고 투명성 센터 또는 광고 라이브러리야. 이 광고주가 지금 게재 중인 광고들을 추출해줘. "
-    "각 광고의 크리에이티브 대표 이미지 URL(image — <img> 태그의 실제 src, http로 시작하는 것만), "
-    "헤드라인(headline), 본문 텍스트(body), CTA 버튼 문구(cta), 게재 지면(platform), 시작일(started), 상태(status). "
-    "최대 12개. 페이지 UI 아이콘·로고·프로필사진은 제외하고 실제 광고 소재만."
+    "각 광고 카드에서 image 는 **실제 광고 크리에이티브(상품·캠페인 메인 이미지, 카드에서 가장 큰 이미지)의 <img> src**만 넣어. "
+    "카드 상단의 **광고주 프로필 사진·로고·아바타(작은 원형/정사각 썸네일)는 절대 image 로 쓰지 마.** "
+    "그 외 headline(헤드라인), body(본문 텍스트), cta(버튼 문구), platform(게재 지면), started(시작일), status(상태). "
+    "http 로 시작하는 실제 URL만. 최대 12개. 페이지 UI 아이콘은 제외."
 )
 
 
@@ -282,13 +283,18 @@ def scrape_ads(url, logs=None, timeout=50):
     # 뻔한 문구를 지어낸다. 가짜 이미지는 버리고, 진짜 이미지가 하나도 없으면 실패로 본다.
     _FAKE = ("example.com", "example.org", "example.net", "placeholder", "lorempix",
              "via.placeholder", "yourdomain", "dummyimage", "/ad1.", "/ad2.", "/ad3.")
+    # 프로필사진·로고·아바타 경로(광고 소재 아님) — Meta/IG CDN 패턴
+    _PROFILE = ("t51.2885-19", "t39.30808", "t1.6435-9", "/profile", "avatar", "logo",
+                "s60x60", "p60x60", "s100x100", "p100x100", "s120x120", "p148x148", "s148x148")
 
     def _real_img(u):
         u = str(u or "").strip()
         if not u.startswith("http"):
             return ""
         lo = u.lower()
-        return "" if any(f in lo for f in _FAKE) else u
+        if any(f in lo for f in _FAKE) or any(p in lo for p in _PROFILE):
+            return ""
+        return u
 
     ads = []
     for a in (j.get("ads") or []):
