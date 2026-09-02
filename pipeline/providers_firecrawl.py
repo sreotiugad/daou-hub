@@ -252,10 +252,11 @@ _ADS_PROMPT = (
 )
 
 
-def scrape_ads(url, logs=None, timeout=50):
+def scrape_ads(url, logs=None, timeout=27):
     """Meta 광고 라이브러리 / Google 광고 투명성센터 페이지 → 게재 광고 소재(이미지·카피).
     JS 무한스크롤·봇차단으로 실패할 수 있음 → 실패/키없음/URL없음 시 None.
-    markdown 도 함께 받아 이미지 URL 백업 파싱."""
+    timeout 은 Vercel 함수 상한(30s)보다 짧게 잡아 504 대신 깔끔한 None 이 되게 한다.
+    (콜드 스크랩이 잘려도 Firecrawl 이 서버측에 캐시 → 프론트 재시도 시 빠르게 성공)"""
     logs = logs if logs is not None else []
     if not _key() or not url:
         return None
@@ -263,7 +264,7 @@ def scrape_ads(url, logs=None, timeout=50):
         "url": url,
         "formats": ["markdown", {"type": "json", "schema": _ADS_SCHEMA, "prompt": _ADS_PROMPT}],
         "onlyMainContent": False,
-        "waitFor": 6000,               # 광고 라이브러리는 늦게 로드됨
+        "waitFor": 4000,               # 광고 라이브러리 로드 대기(30s 상한 고려해 단축)
         "location": {"country": "KR", "languages": ["ko"]},
     }
     try:
