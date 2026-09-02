@@ -42,6 +42,16 @@ def _dl(url):
     return r.getcode(), r.read()
 
 
+def _dims(path):
+    """저장한 소재의 (가로, 세로) 픽셀. 실패하면 (0, 0)."""
+    try:
+        from PIL import Image
+        with Image.open(path) as im:
+            return im.size
+    except Exception:
+        return (0, 0)
+
+
 def _ocr(path):
     """광고 소재 안의 텍스트(한/영) 추출. tesseract 없으면 조용히 ''. (나중에 카피 분석·검색용)"""
     try:
@@ -74,13 +84,13 @@ def capture_one(page, kw):
                ".filter(s=>s && s.includes('fbcdn') && s.includes('scontent'))")
     VCOLLECT = ("els=>els.map(e=>e.poster||e.currentSrc||e.src)"
                 ".filter(s=>s && s.includes('fbcdn') && s.includes('scontent'))")
-    found = {}
+    found = {}          # src → 최초 출처('img' = 이미지 소재 후보 / 'vid' = 동영상 poster)
     last_h, stable = 0, 0
     for step in range(70):
         for s in page.eval_on_selector_all("img", COLLECT):
-            found[s] = 1
+            found.setdefault(s, "img")
         for s in page.eval_on_selector_all("video", VCOLLECT):
-            found[s] = 1
+            found.setdefault(s, "vid")   # 이미 img 로 잡힌 건 덮어쓰지 않음
         page.mouse.wheel(0, 1000)
         page.wait_for_timeout(600)
         if step % 10 == 9:
@@ -89,7 +99,7 @@ def capture_one(page, kw):
             last_h = h
             if stable >= 2:
                 break
-    srcs = [s for s in found.keys() if not _is_profile(s)]
+    srcs = [(s, o) for s, o in found.items() if not _is_profile(s)]
 
     slug = slugify(kw)
     outdir = os.path.join(OUTBASE, slug)
@@ -103,7 +113,7 @@ def capture_one(page, kw):
                 pass
     seen_hash = set()
     images = []
-    for s in srcs:
+    for s, origin in srcs:
         if len(images) >= MAX_PER:
             break
         try:
@@ -122,7 +132,12 @@ def capture_one(page, kw):
         with open(fpath, "wb") as f:
             f.write(data)
         text = _ocr(fpath)                 # 소재 내 텍스트(OCR)
-        images.append({"u": "comp-ads/%s/%s" % (slug, fn), "t": text})
+        w, h2 = _dims(fpath)
+        # 소재 형식 판정: video poster 에서 왔거나 9:16 세로면 '영상'(릴스/스토리),
+        # 그 외(정사각·4:5·가로 등 img 출처)는 '이미지' 소재로 본다.
+        kind = "video" if (origin == "vid" or (h2 and w / h2 < 0.72)) else "image"
+        images.append({"u": "comp-ads/%s/%s" % (slug, fn),
+                       "t": text, "type": kind, "w": w, "h": h2})
         time.sleep(0.1)
     return {"kw": kw, "slug": slug, "count": len(images), "images": images,
             "at": time.strftime("%Y-%m-%d %H:%M")}

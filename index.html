@@ -392,6 +392,13 @@
   .da-loading{font-size:12.5px;color:var(--muted)}
   .da-note{font-size:11.5px;color:var(--muted);margin-bottom:11px;font-family:var(--mono)}
   .da-ocr{padding:7px 9px;font-size:11px;line-height:1.45;color:var(--muted);border-top:1px solid var(--border-soft);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+  .comp-da .da-item{position:relative}
+  .da-badge{position:absolute;top:6px;left:6px;z-index:3;font-size:10px;font-weight:600;padding:1px 7px;border-radius:20px;background:rgba(15,23,42,.62);color:#fff;letter-spacing:.02em;backdrop-filter:blur(3px)}
+  .da-badge.img{background:rgba(37,99,140,.9)}
+  .da-filter{display:flex;gap:7px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
+  .da-fchip{font-size:11.5px;font-weight:500;padding:4px 11px;border-radius:20px;border:1px solid var(--border);color:var(--muted);cursor:pointer;background:var(--surface)}
+  .da-fchip.on{background:var(--primary-weak);color:var(--primary);border-color:transparent;font-weight:600}
+  .da-empty{font-size:12px;color:var(--muted);padding:14px 2px}
   .da-shot-wrap{max-height:540px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;background:var(--bg)}
   .da-shot{width:100%;display:block}
   /* AI 챗봇 */
@@ -1146,25 +1153,42 @@ const DUComp=(function(){
     :'https://adstransparency.google.com/?region=KR&query='+e;}
   // DA 광고 소재: GitHub Actions 가 같은 세션에서 캡처해 comp-ads/ 에 저장한 정적 이미지를
   // manifest.json 으로 읽어 개별 카드로 렌더(만료·핫링크·서명 문제 없음).
-  var _daMf=null;
+  var _daMf=null,_daFilter='all';
+  function daType(im){return (im&&typeof im==='object'&&im.type)?im.type
+      :(im&&typeof im==='object'&&im.h&&im.w/im.h<0.72)?'video':'image';}
+  function paintDA(e){const body=el('daBody');if(!body)return;
+    const imgs=e.images||[];
+    const nImg=imgs.filter(im=>daType(im)==='image').length,nVid=imgs.length-nImg;
+    const shown=imgs.filter(im=>_daFilter==='all'||daType(im)===_daFilter);
+    const chip=(k,lab,n)=>'<span class="da-fchip'+(_daFilter===k?' on':'')+'" data-f="'+k+'">'+lab+' '+n+'</span>';
+    let html='<div class="da-note">'+imgs.length+'개 소재 · 수집 '+esc(e.at||'')+'</div>'
+      +'<div class="da-filter">'+chip('all','전체',imgs.length)
+        +chip('image','🖼 이미지',nImg)+chip('video','🎬 영상',nVid)+'</div>';
+    if(!shown.length){
+      html+='<div class="da-empty">'+(_daFilter==='image'
+        ? '이 경쟁사는 수집된 <b>정지 이미지 소재가 없어요</b> — 관측된 '+nVid+'개가 모두 릴스·동영상 광고예요.'
+        : '표시할 소재가 없어요.')+'</div>';
+    }else{
+      html+='<div class="da-grid">'+shown.map(im=>{const u=(typeof im==='string')?im:im.u;
+        const t=(im&&typeof im==='object'&&im.t)?im.t:'';const ty=daType(im);
+        return '<div class="da-item"><span class="da-badge'+(ty==='image'?' img':'')+'">'+(ty==='image'?'🖼 이미지':'🎬 영상')+'</span>'
+          +'<img class="thumb" src="'+esc(u)+'" loading="lazy" alt="광고 소재">'
+          +(t?'<div class="da-ocr" title="'+esc(t)+'">'+esc(t)+'</div>':'')+'</div>';}).join('')+'</div>';
+    }
+    body.innerHTML=html;
+    body.querySelectorAll('.da-fchip').forEach(b=>b.onclick=()=>{_daFilter=b.dataset.f;paintDA(e);});}
   function renderDA(c){const box=el('compDA');if(!box)return;
     const lib=adSearchUrl('meta',c.name||c.kw||'');
     box.innerHTML='<div class="card"><div class="card-h"><h3>운영 중인 DA 광고 소재</h3>'
       +'<span class="hint">Meta 광고 라이브러리 · <a href="'+esc(lib)+'" target="_blank" rel="noopener">열기 ↗</a></span></div>'
       +'<div class="card-b comp-da"><div id="daBody"><div class="da-loading">소재 불러오는 중…</div></div></div></div>';
-    const done=mf=>{_daMf=mf;const body=el('daBody');if(!body)return;
+    const done=mf=>{_daMf=mf;
       const key=(c.kw||c.name||'').trim(),nm=(c.name||'').trim();
       let e=null;for(const s in mf){const x=mf[s];if(x&&(x.kw===key||x.kw===nm)){e=x;break;}}
-      if(e&&e.images&&e.images.length){
-        body.innerHTML='<div class="da-note">'+e.count+'개 소재 · 수집 '+esc(e.at||'')+'</div>'
-          +'<div class="da-grid">'+e.images.map(im=>{const u=(typeof im==='string')?im:im.u;const t=(im&&typeof im==='object'&&im.t)?im.t:'';
-            return '<div class="da-item"><img class="thumb" src="'+esc(u)+'" loading="lazy" alt="광고 소재">'
-              +(t?'<div class="da-ocr" title="'+esc(t)+'">'+esc(t)+'</div>':'')+'</div>';}).join('')+'</div>';
-      } else {
-        body.innerHTML='<div class="da-fallback">아직 이 경쟁사 광고 소재가 수집되지 않았어요. '
+      if(e&&e.images&&e.images.length){_daFilter='all';paintDA(e);}
+      else{const body=el('daBody');if(body)body.innerHTML='<div class="da-fallback">아직 이 경쟁사 광고 소재가 수집되지 않았어요. '
           +'(GitHub Actions “FB Ads Capture” 를 이 경쟁사명으로 실행하면 수집됩니다.) · '
-          +'<a href="'+esc(lib)+'" target="_blank" rel="noopener">라이브러리에서 보기 ↗</a></div>';
-      }};
+          +'<a href="'+esc(lib)+'" target="_blank" rel="noopener">라이브러리에서 보기 ↗</a></div>';}};
     if(_daMf){done(_daMf);return;}
     fetch('comp-ads/manifest.json',{cache:'no-store'}).then(r=>r.ok?r.json():{}).then(done)
       .catch(()=>{const b=el('daBody');if(b)b.innerHTML='<div class="da-fallback">소재 목록을 불러오지 못했어요. · <a href="'+esc(lib)+'" target="_blank" rel="noopener">라이브러리 ↗</a></div>';});}
