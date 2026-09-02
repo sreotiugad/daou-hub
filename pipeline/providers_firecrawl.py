@@ -13,6 +13,7 @@
 import os
 import time
 import base64
+import html
 import requests
 
 API = "https://api.firecrawl.dev/v2/scrape"
@@ -27,20 +28,34 @@ def _embed_images(ads, logs):
                          "(KHTML, like Gecko) Chrome/120.0 Safari/537.36",
            "Accept": "image/avif,image/webp,image/apng,image/*,*/*"}
 
+    region = os.environ.get("VERCEL_REGION") or os.environ.get("AWS_REGION") or "?"
+    diag = []   # 실패 진단(앞 몇 개) — signed query 전체는 남기지 않음
+
     def dl(a):
-        u = a.get("image", "")
-        if not u.startswith("http"):
+        raw = a.get("image", "")
+        if not raw.startswith("http"):
             return
+        had_amp = "&amp;" in raw
+        u = html.unescape(raw)                       # &amp; 등 HTML 엔티티 복원
+        host = u.split("//")[-1].split("/")[0]
+        a["image"] = u                               # 실패해도 '복원된' URL 을 클라이언트에 넘김
         try:
-            r = requests.get(u, headers=hdr, timeout=9)
+            r = requests.get(u, headers=hdr, timeout=9, allow_redirects=True)
             if r.status_code == 200 and len(r.content) > 500:
                 ct = (r.headers.get("Content-Type") or "image/jpeg").split(";")[0].strip()
                 if not ct.startswith("image/"):
                     ct = "image/jpeg"
                 a["image"] = "data:" + ct + ";base64," + base64.b64encode(r.content).decode()
-            # 실패해도 원본 URL 유지 → 브라우저가 클라이언트에서 직접 시도(브랜드별로 됨)
-        except Exception:
-            pass
+            else:
+                body = ""
+                try:
+                    body = (r.text or "")[:80].replace("\n", " ")
+                except Exception:
+                    pass
+                diag.append(f"{r.status_code} {host[:22]} ct={(r.headers.get('Content-Type') or '')[:16]} "
+                            f"redir={len(r.history)} amp={had_amp} body={body}")
+        except Exception as e:
+            diag.append(f"ERR {host[:22]} amp={had_amp} {str(e)[:45]}")
 
     try:
         with ThreadPoolExecutor(max_workers=8) as ex:
@@ -48,7 +63,9 @@ def _embed_images(ads, logs):
     except Exception:
         pass
     n = sum(1 for a in ads if a.get("image", "").startswith("data:"))
-    logs.append(f"[firecrawl] 이미지 임베드 {n}/{len(ads)}")
+    logs.append(f"[img] region={region} embed={n}/{len(ads)}")
+    for d in diag[:5]:
+        logs.append("[img] " + d)
     return n
 
 # '우리' 브랜드 판별용 힌트(서비스명 + 도메인 조각). 광고주/사이트가 우리면 us=True.
@@ -319,9 +336,12 @@ def scrape_ads(url, logs=None, timeout=27):
     # 뻔한 문구를 지어낸다. 가짜 이미지는 버리고, 진짜 이미지가 하나도 없으면 실패로 본다.
     _FAKE = ("example.com", "example.org", "example.net", "placeholder", "lorempix",
              "via.placeholder", "yourdomain", "dummyimage", "/ad1.", "/ad2.", "/ad3.")
-    # 프로필사진·로고·아바타 경로(광고 소재 아님) — Meta/IG CDN 패턴
-    _PROFILE = ("t51.2885-19", "t39.30808", "t1.6435-9", "/profile", "avatar", "logo",
-                "s60x60", "p60x60", "s100x100", "p100x100", "s120x120", "p148x148", "s148x148")
+    # 프로필사진·로고·아바타 경로만 정밀 차단(광고 소재 아님).
+    # ⚠️ 주의: 'tXX.YYYYY' 대분류로 통으로 막으면 실제 광고 소재까지 날아간다.
+    #   예) t39.30808-1 = 프로필 썸네일(버림), t39.30808-6 = 실제 미디어(살림).
+    #   그래서 프로필 variant(-1)와 작은 정사각 썸네일 크기만 필터링한다.
+    _PROFILE = ("t51.2885-19", "t39.30808-1", "t1.6435-9", "/profile", "avatar", "logo",
+                "s60x60", "p60x60", "s100x100", "p100x100", "p148x148", "s148x148")
 
     def _real_img(u):
         u = str(u or "").strip()
