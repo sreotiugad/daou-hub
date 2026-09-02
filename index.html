@@ -391,6 +391,7 @@
   .da-fallback{font-size:12.5px;color:var(--muted);line-height:1.6}
   .da-loading{font-size:12.5px;color:var(--muted)}
   .da-note{font-size:11.5px;color:var(--muted);margin-bottom:11px;font-family:var(--mono)}
+  .da-ocr{padding:7px 9px;font-size:11px;line-height:1.45;color:var(--muted);border-top:1px solid var(--border-soft);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
   .da-shot-wrap{max-height:540px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;background:var(--bg)}
   .da-shot{width:100%;display:block}
   /* AI 챗봇 */
@@ -1156,7 +1157,9 @@ const DUComp=(function(){
       let e=null;for(const s in mf){const x=mf[s];if(x&&(x.kw===key||x.kw===nm)){e=x;break;}}
       if(e&&e.images&&e.images.length){
         body.innerHTML='<div class="da-note">'+e.count+'개 소재 · 수집 '+esc(e.at||'')+'</div>'
-          +'<div class="da-grid">'+e.images.map(u=>'<div class="da-item"><img class="thumb" src="'+esc(u)+'" loading="lazy" alt="광고 소재"></div>').join('')+'</div>';
+          +'<div class="da-grid">'+e.images.map(im=>{const u=(typeof im==='string')?im:im.u;const t=(im&&typeof im==='object'&&im.t)?im.t:'';
+            return '<div class="da-item"><img class="thumb" src="'+esc(u)+'" loading="lazy" alt="광고 소재">'
+              +(t?'<div class="da-ocr" title="'+esc(t)+'">'+esc(t)+'</div>':'')+'</div>';}).join('')+'</div>';
       } else {
         body.innerHTML='<div class="da-fallback">아직 이 경쟁사 광고 소재가 수집되지 않았어요. '
           +'(GitHub Actions “FB Ads Capture” 를 이 경쟁사명으로 실행하면 수집됩니다.) · '

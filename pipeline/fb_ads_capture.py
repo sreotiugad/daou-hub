@@ -42,6 +42,18 @@ def _dl(url):
     return r.getcode(), r.read()
 
 
+def _ocr(path):
+    """광고 소재 안의 텍스트(한/영) 추출. tesseract 없으면 조용히 ''. (나중에 카피 분석·검색용)"""
+    try:
+        import pytesseract
+        from PIL import Image
+        txt = pytesseract.image_to_string(Image.open(path), lang="kor+eng")
+        txt = " ".join(txt.split())        # 개행·중복공백 정리
+        return txt[:400]
+    except Exception:
+        return ""
+
+
 def capture_one(page, kw):
     url = ("https://www.facebook.com/ads/library/?active_status=all&ad_type=all&country=KR&q="
            + urllib.request.quote(kw)
@@ -106,10 +118,12 @@ def capture_one(page, kw):
         seen_hash.add(h)
         ext = "png" if data[:4] == b"\x89PNG" else "jpg"
         fn = "%02d.%s" % (len(images) + 1, ext)
-        with open(os.path.join(outdir, fn), "wb") as f:
+        fpath = os.path.join(outdir, fn)
+        with open(fpath, "wb") as f:
             f.write(data)
-        images.append("comp-ads/%s/%s" % (slug, fn))
-        time.sleep(0.15)
+        text = _ocr(fpath)                 # 소재 내 텍스트(OCR)
+        images.append({"u": "comp-ads/%s/%s" % (slug, fn), "t": text})
+        time.sleep(0.1)
     return {"kw": kw, "slug": slug, "count": len(images), "images": images,
             "at": time.strftime("%Y-%m-%d %H:%M")}
 
