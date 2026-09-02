@@ -69,12 +69,13 @@ def _intensity(ads, content, trend_dir):
             "basis": " · ".join(parts), "compRank": comp_rank, "adsTotal": ads_total}
 
 
-def snapshot(name, kw, promo_url, logs):
+def snapshot(name, kw, promo_url, meta_url, google_url, logs):
     from concurrent.futures import ThreadPoolExecutor
-    serp = promo = cc = dl = posts = None
-    with ThreadPoolExecutor(max_workers=5) as pool:
+    with ThreadPoolExecutor(max_workers=7) as pool:
         f_serp = pool.submit(FC.serp_competitors, kw, [name], logs) if kw else None
         f_promo = pool.submit(FC.scrape_promo, promo_url, logs) if promo_url else None
+        f_meta = pool.submit(FC.scrape_ads, meta_url, logs) if meta_url else None
+        f_google = pool.submit(FC.scrape_ads, google_url, logs) if google_url else None
         f_cc = pool.submit(NX.content_count, kw, logs) if kw else None
         f_dl = pool.submit(NX.datalab, kw, 1000, 0.7, logs) if kw else None
         f_posts = pool.submit(NX.fetch_posts, kw, 5, logs) if kw else None
@@ -85,7 +86,9 @@ def snapshot(name, kw, promo_url, logs):
             except Exception as e:
                 logs.append(f"[competitor] 소스 오류: {str(e)[:100]}")
                 return None
-        serp, promo, cc, dl, posts = g(f_serp), g(f_promo), g(f_cc), g(f_dl), g(f_posts)
+        serp, promo = g(f_serp), g(f_promo)
+        meta_ads, google_ads = g(f_meta), g(f_google)
+        cc, dl, posts = g(f_cc), g(f_dl), g(f_posts)
 
     ads = (serp or {}).get("ads", [])
     organic = (serp or {}).get("organic", [])
@@ -108,7 +111,11 @@ def snapshot(name, kw, promo_url, logs):
         "adsLabel": "관측" if serp else "미확인",
         "promo": promo,
         "promoLabel": "관측" if promo else ("미확인" if promo_url else "미설정"),
-        "_any": bool(serp or promo or cc is not None or dl or posts),
+        "metaAds": (meta_ads or {}).get("ads", []) if meta_ads else [],
+        "metaLabel": "관측" if meta_ads else ("미확인" if meta_url else "미설정"),
+        "googleAds": (google_ads or {}).get("ads", []) if google_ads else [],
+        "googleLabel": "관측" if google_ads else ("미확인" if google_url else "미설정"),
+        "_any": bool(serp or promo or meta_ads or google_ads or cc is not None or dl or posts),
     }
 
 
@@ -129,12 +136,14 @@ class handler(BaseHTTPRequestHandler):
         name = _fix_kr((qs.get("name", [""])[0] or "").strip())
         kw = _fix_kr((qs.get("kw", [""])[0] or "").strip()) or name
         promo = (qs.get("promo", [""])[0] or "").strip()
+        meta = (qs.get("meta", [""])[0] or "").strip()
+        google = (qs.get("google", [""])[0] or "").strip()
         debug = (qs.get("debug", [""])[0] or "").strip() in ("1", "true", "yes")
-        if not name and not kw and not promo:
-            return self._send({"error": "name·kw·promo 중 하나는 필요합니다"}, 400, cache=False)
+        if not name and not kw and not promo and not meta and not google:
+            return self._send({"error": "name·kw·promo·meta·google 중 하나는 필요합니다"}, 400, cache=False)
         logs = []
         try:
-            snap = snapshot(name, kw, promo, logs)
+            snap = snapshot(name, kw, promo, meta, google, logs)
         except Exception as e:
             return self._send({"error": str(e)[:200]}, 500, cache=False)
         if debug:

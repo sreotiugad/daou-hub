@@ -219,3 +219,83 @@ def scrape_promo(url, logs=None, timeout=45):
            "promos": promos}
     logs.append(f"[firecrawl] promo {url} · 프로모션 {len(promos)}건")
     return out
+
+
+_ADS_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "ads": {
+            "type": "array",
+            "description": "이 광고주가 현재 게재/노출 중인 광고들",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "image": {"type": "string", "description": "광고 크리에이티브 대표 이미지의 실제 src URL(http로 시작)"},
+                    "headline": {"type": "string", "description": "광고 제목/헤드라인"},
+                    "body": {"type": "string", "description": "광고 본문/기본 텍스트"},
+                    "cta": {"type": "string", "description": "행동유도 버튼 문구(예: 더 알아보기)"},
+                    "platform": {"type": "string", "description": "게재 지면(Facebook/Instagram/검색/디스플레이/YouTube 등)"},
+                    "started": {"type": "string", "description": "게재 시작일(있으면)"},
+                    "status": {"type": "string", "description": "활성/비활성"},
+                },
+            },
+        },
+    },
+}
+
+_ADS_PROMPT = (
+    "이 페이지는 광고 투명성 센터 또는 광고 라이브러리야. 이 광고주가 지금 게재 중인 광고들을 추출해줘. "
+    "각 광고의 크리에이티브 대표 이미지 URL(image — <img> 태그의 실제 src, http로 시작하는 것만), "
+    "헤드라인(headline), 본문 텍스트(body), CTA 버튼 문구(cta), 게재 지면(platform), 시작일(started), 상태(status). "
+    "최대 12개. 페이지 UI 아이콘·로고·프로필사진은 제외하고 실제 광고 소재만."
+)
+
+
+def scrape_ads(url, logs=None, timeout=50):
+    """Meta 광고 라이브러리 / Google 광고 투명성센터 페이지 → 게재 광고 소재(이미지·카피).
+    JS 무한스크롤·봇차단으로 실패할 수 있음 → 실패/키없음/URL없음 시 None.
+    markdown 도 함께 받아 이미지 URL 백업 파싱."""
+    logs = logs if logs is not None else []
+    if not _key() or not url:
+        return None
+    body = {
+        "url": url,
+        "formats": ["markdown", {"type": "json", "schema": _ADS_SCHEMA, "prompt": _ADS_PROMPT}],
+        "onlyMainContent": False,
+        "waitFor": 6000,               # 광고 라이브러리는 늦게 로드됨
+        "location": {"country": "KR", "languages": ["ko"]},
+    }
+    try:
+        r = requests.post(API, json=body, timeout=timeout,
+                          headers={"Authorization": "Bearer " + _key(),
+                                   "Content-Type": "application/json"})
+        if r.status_code != 200:
+            logs.append(f"[firecrawl] ads {url[:60]} status={r.status_code} {r.text[:100]}")
+            return None
+        data = (r.json() or {}).get("data") or {}
+        j = data.get("json") or {}
+        md = data.get("markdown") or ""
+    except Exception as e:
+        logs.append(f"[firecrawl] ads {url[:60]} 오류: {str(e)[:100]}")
+        return None
+    ads = []
+    for a in (j.get("ads") or []):
+        img = str(a.get("image", "")).strip()
+        if img and not img.startswith("http"):
+            img = ""
+        hd = str(a.get("headline", "")).strip()
+        bd = str(a.get("body", "")).strip()
+        if not (img or hd or bd):
+            continue
+        ads.append({"image": img, "headline": hd, "body": bd,
+                    "cta": str(a.get("cta", "")).strip(),
+                    "platform": str(a.get("platform", "")).strip(),
+                    "started": str(a.get("started", "")).strip(),
+                    "status": str(a.get("status", "")).strip()})
+        if len(ads) >= 12:
+            break
+    n_img = sum(1 for a in ads if a["image"])
+    logs.append(f"[firecrawl] ads {url[:50]} · 소재 {len(ads)}개(이미지 {n_img}) · md {len(md)}자")
+    if not ads:
+        return None
+    return {"ads": ads, "imgCount": n_img}
