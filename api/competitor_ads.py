@@ -113,6 +113,31 @@ def collect(kw, country="KR", max_ads=MAX_ADS, logs=None, page_url=None):
             "precise": bool(page_url)}
 
 
+def _raw_sample(kw, page_url):
+    """타입 판정 검증용 — 원본 아이템의 display_format·이미지/영상/카드 수·snapshot 키."""
+    token = os.environ.get("APIFY_TOKEN")
+    if not token:
+        return {"err": "no token"}
+    url = page_url or _ad_library_url(kw)
+    try:
+        r = requests.post("https://api.apify.com/v2/acts/%s/run-sync-get-dataset-items" % ACTOR,
+                          params={"token": token}, json={"urls": [{"url": url}], "count": 6}, timeout=55)
+        items = r.json()
+    except Exception as e:
+        return {"err": str(e)[:120]}
+    out = []
+    for it in items[:6]:
+        snap = it.get("snapshot") or {}
+        imgs, vids = (snap.get("images") or []), (snap.get("videos") or [])
+        out.append({
+            "display_format": snap.get("display_format"),
+            "n_images": len(imgs), "n_videos": len(vids), "n_cards": len(snap.get("cards") or []),
+            "video_has_url": bool(vids and (vids[0].get("video_hd_url") or vids[0].get("video_sd_url"))),
+            "snap_keys": sorted(snap.keys())[:22],
+        })
+    return out
+
+
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         qs = parse_qs(urlparse(self.path).query)
@@ -132,6 +157,9 @@ class handler(BaseHTTPRequestHandler):
         res["name"] = name
         if debug:
             res["logs"] = logs
+        # 원본 구조 진단(타입 판정 검증용): ?raw=1
+        if (qs.get("raw", [""])[0] or "").strip() in ("1", "true"):
+            res["_raw"] = _raw_sample(kw or name, page_url or None)
         self._send(res, 200)
 
     def _send(self, obj, code):
