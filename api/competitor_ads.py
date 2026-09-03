@@ -97,7 +97,12 @@ def collect(kw, country="KR", max_ads=MAX_ADS, logs=None, page_url=None):
         logs.append("❌ [apify] JSON 파싱 실패")
         return None
     images, seen = [], set()
+    fmt_dist = {}          # snapshot.display_format 분포(진짜 타입 확인용)
     for it in items:
+        snap = it.get("snapshot") or {}
+        df = (snap.get("display_format") or "?")
+        if snap:
+            fmt_dist[df] = fmt_dist.get(df, 0) + 1
         for im in _normalize(it):
             if im["u"] in seen:
                 continue
@@ -107,8 +112,8 @@ def collect(kw, country="KR", max_ads=MAX_ADS, logs=None, page_url=None):
                 break
         if len(images) >= max_ads:
             break
-    logs.append("[apify] 완료 kw=%s images=%d" % (kw, len(images)))
-    return {"kw": kw, "images": images, "count": len(images),
+    logs.append("[apify] 완료 kw=%s images=%d formats=%s" % (kw, len(images), fmt_dist))
+    return {"kw": kw, "images": images, "count": len(images), "formats": fmt_dist,
             "at": time.strftime("%Y-%m-%d %H:%M"), "source": "apify_live",
             "precise": bool(page_url)}
 
