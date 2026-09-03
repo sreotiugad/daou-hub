@@ -1102,7 +1102,7 @@ const DUComp=(function(){
     +fld('공식 홈페이지','home',c.home,'https://',1)
     +fld('추적 프로모션 URL','promo',c.promo,'https:// (현재 혜택·가격 감지)',1)
     +fld('대표 상품명 (쉼표로 구분)','products',c.products,'예: 웍스, 그룹웨어',1)
-    +fld('Meta 광고 라이브러리 URL (선택)','meta',c.meta,'비우면 이름으로 자동 검색',1)
+    +fld('Meta 광고 라이브러리 URL (권장)','meta',c.meta,'비우면 이름 키워드로 검색(무관 광고 섞일 수 있음) · 채우면 이 광고주 광고만 정확히 조회',1)
     +fld('Google 투명성센터 URL (선택)','google',c.google,'비우면 이름으로 자동 검색',1)
     +'</div><div class="comp-form-act"><button type="button" class="kw-btn primary" id="compSave">저장</button>'
     +'<button type="button" class="kw-btn" id="compCancel">취소</button>'
@@ -1161,7 +1161,8 @@ const DUComp=(function(){
     const nImg=imgs.filter(im=>daType(im)==='image').length,nVid=imgs.length-nImg;
     const shown=imgs.filter(im=>_daFilter==='all'||daType(im)===_daFilter);
     const chip=(k,lab,n)=>'<span class="da-fchip'+(_daFilter===k?' on':'')+'" data-f="'+k+'">'+lab+' '+n+'</span>';
-    let html='<div class="da-note">'+imgs.length+'개 소재 · 수집 '+esc(e.at||'')+'</div>'
+    const liveTag=e._live?(' '+accHTML('관측')+(e.precise?'':' <span style="color:var(--muted);font-size:11px">키워드 검색 · 무관 광고 섞일 수 있음</span>')):'';
+    let html='<div class="da-note">'+imgs.length+'개 소재 · 수집 '+esc(e.at||'')+liveTag+'</div>'
       +'<div class="da-filter">'+chip('all','전체',imgs.length)
         +chip('image','🖼 이미지',nImg)+chip('video','🎬 영상',nVid)+'</div>';
     if(!shown.length){
@@ -1183,16 +1184,30 @@ const DUComp=(function(){
     box.innerHTML='<div class="card"><div class="card-h"><h3>운영 중인 DA 광고 소재</h3>'
       +'<span class="hint">Meta 광고 라이브러리 · <a href="'+esc(lib)+'" target="_blank" rel="noopener">열기 ↗</a></span></div>'
       +'<div class="card-b comp-da"><div id="daBody"><div class="da-loading">소재 불러오는 중…</div></div></div></div>';
-    const done=mf=>{_daMf=mf;
-      const key=(c.kw||c.name||'').trim(),nm=(c.name||'').trim();
-      let e=null;for(const s in mf){const x=mf[s];if(x&&(x.kw===key||x.kw===nm)){e=x;break;}}
-      if(e&&e.images&&e.images.length){_daFilter='all';paintDA(e);}
-      else{const body=el('daBody');if(body)body.innerHTML='<div class="da-fallback">아직 이 경쟁사 광고 소재가 수집되지 않았어요. '
-          +'(GitHub Actions “FB Ads Capture” 를 이 경쟁사명으로 실행하면 수집됩니다.) · '
-          +'<a href="'+esc(lib)+'" target="_blank" rel="noopener">라이브러리에서 보기 ↗</a></div>';}};
-    if(_daMf){done(_daMf);return;}
-    fetch('comp-ads/manifest.json',{cache:'no-store'}).then(r=>r.ok?r.json():{}).then(done)
-      .catch(()=>{const b=el('daBody');if(b)b.innerHTML='<div class="da-fallback">소재 목록을 불러오지 못했어요. · <a href="'+esc(lib)+'" target="_blank" rel="noopener">라이브러리 ↗</a></div>';});}
+    const key=(c.kw||c.name||'').trim();
+    // 정적 캡처(comp-ads/manifest.json, GitHub Actions 수동 트리거) — 실시간 조회 실패 시 폴백
+    const fallbackStatic=()=>{
+      const done=mf=>{_daMf=mf;
+        const nm=(c.name||'').trim();
+        let e=null;for(const s in mf){const x=mf[s];if(x&&(x.kw===key||x.kw===nm)){e=x;break;}}
+        if(e&&e.images&&e.images.length){_daFilter='all';paintDA(e);}
+        else{const body=el('daBody');if(body)body.innerHTML='<div class="da-fallback">아직 이 경쟁사 광고 소재가 수집되지 않았어요. '
+            +'(GitHub Actions “FB Ads Capture” 를 이 경쟁사명으로 실행하면 수집됩니다.) · '
+            +'<a href="'+esc(lib)+'" target="_blank" rel="noopener">라이브러리에서 보기 ↗</a></div>';}};
+      if(_daMf){done(_daMf);return;}
+      fetch('comp-ads/manifest.json',{cache:'no-store'}).then(r=>r.ok?r.json():{}).then(done)
+        .catch(()=>{const b=el('daBody');if(b)b.innerHTML='<div class="da-fallback">소재 목록을 불러오지 못했어요. · <a href="'+esc(lib)+'" target="_blank" rel="noopener">라이브러리 ↗</a></div>';});};
+    const pageUrl=(c.meta||'').trim();
+    if(!key&&!pageUrl){fallbackStatic();return;}
+    // 온디맨드 실시간 조회(api/competitor_ads.py, Apify) 우선 시도.
+    // c.meta(경쟁사가 등록한 정확한 Meta 광고 라이브러리 URL)가 있으면 그 광고주 페이지만
+    // 정확히 조회하고, 없으면 키워드 텍스트 검색으로 폴백(무관 광고 섞일 수 있음).
+    const qp=pageUrl?('url='+encodeURIComponent(pageUrl)):('kw='+encodeURIComponent(key));
+    fetch('/api/competitor_ads?'+qp+'&name='+encodeURIComponent(c.name||''))
+      .then(r=>r.ok?r.json():Promise.reject())
+      .then(d=>{if(d&&d.images&&d.images.length){_daFilter='all';paintDA(Object.assign({},d,{_live:true}));}
+        else fallbackStatic();})
+      .catch(fallbackStatic);}
 
   function renderAi(d,c){const box=el('compAi');box.innerHTML='<div class="h">AI 대응 제안</div><div class="line" style="color:var(--muted)">분석 중…</div>';
     const it=d.intensity||{},content=d.content||{},trend=d.trend||{},promo=d.promo,ads=d.ads||[];

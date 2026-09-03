@@ -11,6 +11,9 @@
       "includeFiles": "pipeline/**",
       "maxDuration": 60
     },
+    "api/competitor_ads.py": {
+      "maxDuration": 60
+    },
     "api/chat.py": {
       "maxDuration": 30
     }
