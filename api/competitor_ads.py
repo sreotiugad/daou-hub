@@ -45,20 +45,29 @@ def _ad_library_url(kw, country="KR"):
 
 
 def _normalize(item):
-    """Apify 원본 아이템(snapshot.images/videos) → 프론트 da-item 카드가 기대하는
-    {u,t,type} 형태로 변환. w/h(원본 해상도)는 이 액터 응답에 없어 생략(프론트는
-    없으면 aspect-ratio 없이 렌더)."""
+    """Apify 원본 아이템 → 프론트 da-item 카드가 기대하는 {u,t,type} 리스트.
+    ⚠️ 이미지 광고(캐러셀·DPA·DCO)는 크리에이티브를 snapshot.cards[] 에 담는다.
+    images/videos 만 읽으면 그런 이미지 광고를 통째로 놓쳐 '전부 영상'으로 보인다.
+    videos·images·cards 를 모두 훑고, 각 크리에이티브를 영상/이미지로 판정한다."""
     snap = item.get("snapshot") or {}
     body = ((snap.get("body") or {}).get("text") or "")[:400]
     out = []
-    for im in (snap.get("images") or []):
-        url = im.get("original_image_url") or im.get("resized_image_url")
+
+    def add(url, ty):
         if url:
-            out.append({"u": url, "t": body, "type": "image"})
+            out.append({"u": url, "t": body, "type": ty})
+
     for v in (snap.get("videos") or []):
-        url = v.get("video_preview_image_url")
-        if url:
-            out.append({"u": url, "t": body, "type": "video"})
+        add(v.get("video_preview_image_url"), "video")
+    for im in (snap.get("images") or []):
+        add(im.get("original_image_url") or im.get("resized_image_url"), "image")
+    # 카드(캐러셀·DPA·DCO): 카드마다 영상이면 poster, 아니면 이미지
+    for c in (snap.get("cards") or []):
+        vu = c.get("video_preview_image_url")
+        if vu:
+            add(vu, "video")
+        else:
+            add(c.get("original_image_url") or c.get("resized_image_url"), "image")
     return out
 
 
@@ -118,31 +127,6 @@ def collect(kw, country="KR", max_ads=MAX_ADS, logs=None, page_url=None):
             "precise": bool(page_url)}
 
 
-def _raw_sample(kw, page_url):
-    """타입 판정 검증용 — 원본 아이템의 display_format·이미지/영상/카드 수·snapshot 키."""
-    token = os.environ.get("APIFY_TOKEN")
-    if not token:
-        return {"err": "no token"}
-    url = page_url or _ad_library_url(kw)
-    try:
-        r = requests.post("https://api.apify.com/v2/acts/%s/run-sync-get-dataset-items" % ACTOR,
-                          params={"token": token}, json={"urls": [{"url": url}], "count": 6}, timeout=55)
-        items = r.json()
-    except Exception as e:
-        return {"err": str(e)[:120]}
-    out = []
-    for it in items[:6]:
-        snap = it.get("snapshot") or {}
-        imgs, vids = (snap.get("images") or []), (snap.get("videos") or [])
-        out.append({
-            "display_format": snap.get("display_format"),
-            "n_images": len(imgs), "n_videos": len(vids), "n_cards": len(snap.get("cards") or []),
-            "video_has_url": bool(vids and (vids[0].get("video_hd_url") or vids[0].get("video_sd_url"))),
-            "snap_keys": sorted(snap.keys())[:22],
-        })
-    return out
-
-
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         qs = parse_qs(urlparse(self.path).query)
@@ -162,9 +146,6 @@ class handler(BaseHTTPRequestHandler):
         res["name"] = name
         if debug:
             res["logs"] = logs
-        # 원본 구조 진단(타입 판정 검증용): ?raw=1
-        if (qs.get("raw", [""])[0] or "").strip() in ("1", "true"):
-            res["_raw"] = _raw_sample(kw or name, page_url or None)
         self._send(res, 200)
 
     def _send(self, obj, code):
