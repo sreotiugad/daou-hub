@@ -11,7 +11,6 @@
 필요 환경변수: FIRECRAWL_API_KEY (firecrawl.dev · 무료 500크레딧/월, 1 scrape=1크레딧)
 """
 import os
-import re
 import time
 import base64
 import html
@@ -101,46 +100,17 @@ def _domain(url):
 
 
 # ── 파워링크: LLM이 아니라 DOM에서 직접 파싱 ────────────────────────────────
-# sa-collector-extension(별도 프로젝트, 크롬 확장으로 사람 속도 수집)의
-# extension/parse-powerlink.js 를 그대로 옮긴 것 — 그쪽은 실제 로그인 브라우저가 렌더한
-# 마크업으로 검증된 셀렉터/정규식이라, 여기서 LLM JSON 추출로 다시 뽑는 것보다 훨씬
-# 결정적이고 신뢰도가 높다(구글 투명성센터에서 LLM 추출이 흔들렸던 것과 같은 문제를
-# 애초에 피한다). 두 구현이 갈라지면 여기 로그와 그쪽 원본을 나란히 맞춰볼 것 —
-# 네이버가 마크업을 바꾸면 두 곳 다 고쳐야 한다.
-_PL_TRACKING_RE = re.compile(r'a=pwl_nop\.[a-z0-9]+&r=(\d+)&i=(nad-[A-Za-z0-9-]+)')
-_PL_LANDING_RE = re.compile(r'&d="\+urlencode\("([^"]+)"\)')
-
-
+# 원래 sa-collector-extension(별도 프로젝트, 크롬 확장으로 사람 속도 수집)의
+# extension/parse-powerlink.js 셀렉터를 그대로 옮겼는데, 실측(2026-09-05, "닥터자르트")
+# 해보니 그 파서가 전제한 onclick(`a=pwl_nop...`) 트래킹 자체가 지금 네이버 마크업엔
+# 없다 — 광고 링크가 이제 `href="https://ader.naver.com/v1/<불투명 토큰>?..."` 리다이렉트
+# 방식이라 그 확장의 rank/naverAdId 추출은 더 이상 안 된다. 대신 브랜드명·제목·설명·표시URL
+# 셀렉터(a.site, a.lnk_head span.lnk_tit, .desc_area a.link_desc, a.lnk_url)는 실측
+# 클래스맵에서 그대로 확인됐다 — 우리는 rank/adId가 필요 없으므로 그 필드만 쓴다.
+# `li.lst` 컨테이너 자체가 이미 "이건 파워링크 광고다"라는 신뢰할 수 있는 신호라
+# 트래킹 매칭을 광고 판별 조건으로 쓸 필요가 없다.
 def _pl_text(el):
     return el.get_text(strip=True) if el else ""
-
-
-def _pl_find_tracking(li, sample=None):
-    onclicks = li.select("a[onclick]")
-    for a in onclicks:
-        onclick = a.get("onclick") or ""
-        m = _PL_TRACKING_RE.search(onclick)
-        if not m:
-            continue
-        lm = _PL_LANDING_RE.search(onclick)
-        return {"rank": int(m.group(1)), "naverAdId": m.group(2),
-                "landing": lm.group(1) if lm else None}
-    # 매칭 실패 진단용 — onclick이 있긴 한데 정규식이 안 맞는지, 아예 onclick이 없는지 구분.
-    # onclick이 없으면(실측: 네이버가 pwl_nop onclick 트래킹을 버리고 ader.naver.com
-    # href 리다이렉트로 바꾼 것으로 확인됨) 태그.클래스 맵을 남겨 새 셀렉터를 알아낸다.
-    if sample is not None and len(sample) < 1:
-        if onclicks:
-            sample.append("onclick 있음, 형식 다름: " + (onclicks[0].get("onclick") or "")[:200])
-        else:
-            classmap = []
-            for el in li.find_all(True):
-                cls = el.get("class")
-                if cls:
-                    classmap.append(el.name + "." + ".".join(cls))
-                if len(classmap) >= 40:
-                    break
-            sample.append("onclick 없음, 클래스맵: " + " | ".join(classmap))
-    return None
 
 
 def parse_powerlink_html(raw_html, logs=None):
@@ -161,24 +131,24 @@ def parse_powerlink_html(raw_html, logs=None):
         return []
     items = pl.select("ul.lst_type > li.lst")
     ads, malformed = [], 0
-    sample = []
+    classmap_sample = None
     for li in items:
-        tracking = _pl_find_tracking(li, sample)
-        if not tracking:
-            malformed += 1
-            continue
         display_url = _pl_text(li.select_one("a.lnk_url")).rstrip("/")
         brand = _pl_text(li.select_one("a.site")) or display_url
         if not brand:
             malformed += 1
+            # 진단용 — brand/display_url 둘 다 못 뽑은 첫 케이스의 클래스맵을 남긴다.
+            # 다음에 네이버가 또 마크업을 바꾸면 여기서 바로 새 셀렉터를 읽을 수 있게.
+            if classmap_sample is None:
+                classmap_sample = [el.name + "." + ".".join(el.get("class"))
+                                    for el in li.find_all(True) if el.get("class")][:40]
             continue
         title = " / ".join(t for t in (_pl_text(el) for el in li.select("a.lnk_head span.lnk_tit")) if t)
         desc = _pl_text(li.select_one(".desc_area a.link_desc"))
-        ads.append({"brand": brand, "title": title, "desc": desc, "url": display_url,
-                    "rank": tracking["rank"], "naverAdId": tracking["naverAdId"]})
+        ads.append({"brand": brand, "title": title, "desc": desc, "url": display_url})
     logs.append(f"[powerlink] DOM 파싱 광고 {len(ads)}건" + (f" · 버려짐 {malformed}건(마크업 일부 변경?)" if malformed else ""))
-    if sample:
-        logs.append("[powerlink] 진단: " + sample[0])
+    if classmap_sample:
+        logs.append("[powerlink] 진단 클래스맵: " + " | ".join(classmap_sample))
     return ads
 
 
