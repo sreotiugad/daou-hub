@@ -365,10 +365,12 @@
   .comp-ad-row{display:flex;gap:8px;align-items:baseline;padding:6px 0;font-size:12.5px;border-bottom:1px dashed var(--border-soft)}
   .comp-ad-row:last-child{border-bottom:0}.comp-ad-row.us{background:var(--primary-weak);margin:0 -8px;padding:6px 8px;border-radius:6px}
   .comp-ad-row .rk{flex:none;font-family:var(--mono);color:var(--muted);width:18px}
-  .comp-ai{margin-top:14px;border-left:3px solid var(--accent);padding:13px 16px 15px 13px}
-  .comp-ai .h{font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:9px}
-  .comp-ai .line{font-size:14px;line-height:1.6}
-  .comp-ai .line+.line{margin-top:7px}
+  /* 다른 카드와 동일하게 .card-h/.card-b 구조·크기를 그대로 쓴다(글꼴 크기·헤더 스타일이
+     제각각이면 통일성이 깨진다) — 왼쪽 강조선만 이 카드의 정체성으로 남긴다. */
+  .comp-ai{margin-top:14px;border-left:3px solid var(--accent)}
+  .comp-ai h3{color:var(--accent)}
+  .comp-ai .line{font-size:12.5px;line-height:1.6;color:var(--fg)}
+  .comp-ai .line+.line{margin-top:6px}
   .comp-fld{display:grid;gap:11px 14px}
   @media(min-width:600px){.comp-fld{grid-template-columns:1fr 1fr}}
   .comp-fld .fw{grid-column:1/-1}
@@ -1274,7 +1276,9 @@ const DUComp=(function(){
         else empty('이 경쟁사의 구글 광고를 관측하지 못했어요'+(autoHome?' <span style="color:var(--muted);font-size:11px">(자동 감지 도메인: '+esc(autoHome)+' · 다르면 편집에서 직접 지정)</span>':''));})
       .catch(()=>empty('구글 광고를 불러오지 못했어요'));}
 
-  function renderAi(d,c){const box=el('compAi');box.innerHTML='<div class="h">AI 대응 제안</div><div class="line" style="color:var(--muted)">분석 중…</div>';
+  function renderAi(d,c){const box=el('compAi');
+    box.innerHTML='<div class="card-h"><h3>AI 대응 제안</h3></div>'
+      +'<div class="card-b"><div class="line" style="color:var(--muted)">분석 중…</div></div>';
     const it=d.intensity||{},content=d.content||{},trend=d.trend||{},promo=d.promo,ads=d.ads||[];
     const ctx='[경쟁사 스냅샷] '+(c.name||d.name)
       +'\n- 광고 집행 강도: '+(it.score||0)+'/100 ('+(it.band||'')+'), 근거: '+(it.basis||'')
@@ -1289,10 +1293,10 @@ const DUComp=(function(){
         // 3줄 불릿을 한 덩어리로 <br>만 넣지 않고, 줄마다 별도 .line으로 나눠 사이 간격을 준다
         // (붙어보이는 문제 수정).
         const lines=t.split(/\n+/).map(s=>s.trim()).filter(Boolean);
-        box.innerHTML='<div class="h">AI 대응 제안</div>'+(lines.length
+        box.innerHTML='<div class="card-h"><h3>AI 대응 제안</h3></div><div class="card-b">'+(lines.length
           ? lines.map(s=>'<div class="line">'+esc(s)+'</div>').join('')
-          : '<div class="line">요약을 받지 못했어요.</div>');})
-      .catch(()=>{box.innerHTML='<div class="h">AI 대응 제안</div><div class="line" style="color:var(--muted)">AI 요약을 불러오지 못했어요.</div>';});}
+          : '<div class="line">요약을 받지 못했어요.</div>')+'</div>';})
+      .catch(()=>{box.innerHTML='<div class="card-h"><h3>AI 대응 제안</h3></div><div class="card-b"><div class="line" style="color:var(--muted)">AI 요약을 불러오지 못했어요.</div></div>';});}
 
   function fetchSnap(force){const c=cur();if(!c){el('compSnap').hidden=true;return;}el('compEmpty').hidden=true;
     const cc=snaps()[c.id];if(!force&&cc&&(Date.now()-cc.t<3600000)){renderSnap(cc.d);return;}
