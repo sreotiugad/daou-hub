@@ -18,7 +18,7 @@ APIFY_TOKEN 미설정이거나 실패하면 기존 comp-ads/manifest.json 정적
 """
 import os
 import json
-import time
+from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs, quote
 
@@ -26,6 +26,8 @@ import requests
 
 ACTOR = "curious_coder~facebook-ads-library-scraper"
 MAX_ADS = 24
+KST = timezone(timedelta(hours=9))
+_now_kst = lambda: datetime.now(KST).strftime("%Y-%m-%d %H:%M")   # Vercel 서버는 UTC라 KST로 보정
 
 
 def _fix_kr(s):
@@ -128,7 +130,7 @@ def collect(kw, country="KR", max_ads=MAX_ADS, logs=None, page_url=None):
             break
     logs.append("[apify] 완료 kw=%s images=%d formats=%s" % (kw, len(images), fmt_dist))
     return {"kw": kw, "images": images, "count": len(images), "formats": fmt_dist,
-            "at": time.strftime("%Y-%m-%d %H:%M"), "source": "apify_live",
+            "at": _now_kst(), "source": "apify_live",
             "precise": bool(page_url)}
 
 

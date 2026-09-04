@@ -18,9 +18,12 @@ import json
 import time
 import hashlib
 import urllib.request
+from datetime import datetime, timedelta, timezone
 
 UA = ("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) "
       "Chrome/120.0.0.0 Safari/537.36")
+KST = timezone(timedelta(hours=9))
+_now_kst = lambda: datetime.now(KST).strftime("%Y-%m-%d %H:%M")   # GitHub Actions 러너는 UTC라 KST로 보정
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUTBASE = os.path.join(ROOT, "comp-ads")
 MAX_PER = 24          # 경쟁사당 최대 저장 소재 수(repo 용량 관리)
@@ -140,7 +143,7 @@ def capture_one(page, kw):
                        "t": text, "type": kind, "w": w, "h": h2})
         time.sleep(0.1)
     return {"kw": kw, "slug": slug, "count": len(images), "images": images,
-            "at": time.strftime("%Y-%m-%d %H:%M")}
+            "at": _now_kst()}
 
 
 def main():
@@ -170,7 +173,7 @@ def main():
                 entry = capture_one(page, kw)
             except Exception as e:
                 entry = {"kw": kw, "slug": slugify(kw), "count": 0, "images": [],
-                         "at": time.strftime("%Y-%m-%d %H:%M"), "err": str(e)[:80]}
+                         "at": _now_kst(), "err": str(e)[:80]}
             manifest[entry["slug"]] = entry
             print(json.dumps({k: entry[k] for k in ("kw", "count", "at")}, ensure_ascii=False))
         browser.close()
