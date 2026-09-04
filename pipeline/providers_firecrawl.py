@@ -115,8 +115,9 @@ def _pl_text(el):
     return el.get_text(strip=True) if el else ""
 
 
-def _pl_find_tracking(li):
-    for a in li.select("a[onclick]"):
+def _pl_find_tracking(li, sample=None):
+    onclicks = li.select("a[onclick]")
+    for a in onclicks:
         onclick = a.get("onclick") or ""
         m = _PL_TRACKING_RE.search(onclick)
         if not m:
@@ -124,6 +125,13 @@ def _pl_find_tracking(li):
         lm = _PL_LANDING_RE.search(onclick)
         return {"rank": int(m.group(1)), "naverAdId": m.group(2),
                 "landing": lm.group(1) if lm else None}
+    # 매칭 실패 진단용 — onclick이 있긴 한데 정규식이 안 맞는지, 아예 onclick이 없는지 구분.
+    if sample is not None and len(sample) < 1:
+        if onclicks:
+            sample.append("onclick 있음, 형식 다름: " + (onclicks[0].get("onclick") or "")[:200])
+        else:
+            attrs = [k for k in (li.find("a").attrs.keys() if li.find("a") else [])]
+            sample.append("onclick 자체가 없음, 첫 a 태그 속성: " + str(attrs))
     return None
 
 
@@ -145,8 +153,9 @@ def parse_powerlink_html(raw_html, logs=None):
         return []
     items = pl.select("ul.lst_type > li.lst")
     ads, malformed = [], 0
+    sample = []
     for li in items:
-        tracking = _pl_find_tracking(li)
+        tracking = _pl_find_tracking(li, sample)
         if not tracking:
             malformed += 1
             continue
@@ -160,6 +169,8 @@ def parse_powerlink_html(raw_html, logs=None):
         ads.append({"brand": brand, "title": title, "desc": desc, "url": display_url,
                     "rank": tracking["rank"], "naverAdId": tracking["naverAdId"]})
     logs.append(f"[powerlink] DOM 파싱 광고 {len(ads)}건" + (f" · 버려짐 {malformed}건(마크업 일부 변경?)" if malformed else ""))
+    if sample:
+        logs.append("[powerlink] 진단: " + sample[0])
     return ads
 
 
