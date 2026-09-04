@@ -126,13 +126,20 @@ def _pl_find_tracking(li, sample=None):
         return {"rank": int(m.group(1)), "naverAdId": m.group(2),
                 "landing": lm.group(1) if lm else None}
     # 매칭 실패 진단용 — onclick이 있긴 한데 정규식이 안 맞는지, 아예 onclick이 없는지 구분.
-    # onclick이 없으면(실측: 네이버가 href 기반으로 바뀐 것으로 보임) li 전체 마크업을
-    # 남겨 한 번에 새 구조를 파악한다(추가 왕복 없이).
+    # onclick이 없으면(실측: 네이버가 pwl_nop onclick 트래킹을 버리고 ader.naver.com
+    # href 리다이렉트로 바꾼 것으로 확인됨) 태그.클래스 맵을 남겨 새 셀렉터를 알아낸다.
     if sample is not None and len(sample) < 1:
         if onclicks:
             sample.append("onclick 있음, 형식 다름: " + (onclicks[0].get("onclick") or "")[:200])
         else:
-            sample.append("onclick 없음, li 마크업: " + str(li)[:1200])
+            classmap = []
+            for el in li.find_all(True):
+                cls = el.get("class")
+                if cls:
+                    classmap.append(el.name + "." + ".".join(cls))
+                if len(classmap) >= 40:
+                    break
+            sample.append("onclick 없음, 클래스맵: " + " | ".join(classmap))
     return None
 
 
