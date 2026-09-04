@@ -399,6 +399,12 @@
   .da-fchip{font-size:11.5px;font-weight:500;padding:4px 11px;border-radius:20px;border:1px solid var(--border);color:var(--muted);cursor:pointer;background:var(--surface)}
   .da-fchip.on{background:var(--primary-weak);color:var(--primary);border-color:transparent;font-weight:600}
   .da-empty{font-size:12px;color:var(--muted);padding:14px 2px}
+  .da-item video.thumb{width:100%;height:auto;display:block;background:#000;cursor:pointer}
+  .da-item.has-vid .da-play{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2;width:36px;height:36px;border-radius:50%;background:rgba(15,23,42,.55);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;padding-left:2px;pointer-events:none;backdrop-filter:blur(2px);transition:opacity .16s}
+  .da-item.has-vid.playing .da-play{opacity:0}
+  .da-tabs{display:flex;gap:7px;margin-bottom:13px}
+  .da-tab{font-size:12px;font-weight:600;padding:5px 13px;border-radius:8px;border:1px solid var(--border);color:var(--muted);cursor:pointer;background:var(--surface)}
+  .da-tab.on{background:var(--primary-weak);color:var(--primary);border-color:transparent}
   .da-shot-wrap{max-height:540px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;background:var(--bg)}
   .da-shot{width:100%;display:block}
   /* AI 챗봇 */
@@ -1153,7 +1159,7 @@ const DUComp=(function(){
     :'https://adstransparency.google.com/?region=KR&query='+e;}
   // DA 광고 소재: GitHub Actions 가 같은 세션에서 캡처해 comp-ads/ 에 저장한 정적 이미지를
   // manifest.json 으로 읽어 개별 카드로 렌더(만료·핫링크·서명 문제 없음).
-  var _daMf=null,_daFilter='all';
+  var _daMf=null,_daFilter='all',_daCtx=null;
   function daType(im){return (im&&typeof im==='object'&&im.type)?im.type
       :(im&&typeof im==='object'&&im.h&&im.w/im.h<0.72)?'video':'image';}
   function paintDA(e){const body=el('daBody');if(!body)return;
@@ -1172,42 +1178,79 @@ const DUComp=(function(){
     }else{
       html+='<div class="da-grid">'+shown.map(im=>{const u=(typeof im==='string')?im:im.u;
         const t=(im&&typeof im==='object'&&im.t)?im.t:'';const ty=daType(im);
+        const vurl=(im&&typeof im==='object'&&im.v)?im.v:'';
         const ar=(im&&im.w&&im.h)?' style="aspect-ratio:'+im.w+'/'+im.h+'"':'';
-        return '<div class="da-item"><span class="da-badge'+(ty==='image'?' img':'')+'">'+(ty==='image'?'🖼 이미지':'🎬 영상')+'</span>'
-          +'<img class="thumb" src="'+esc(u)+'" loading="lazy"'+ar+' alt="광고 소재">'
+        // 영상 소재이고 재생 URL(im.v)이 있으면 <video>로 호버 재생, 없으면 포스터/이미지만
+        const media=(ty==='video'&&vurl)
+          ? '<video class="thumb" src="'+esc(vurl)+'" poster="'+esc(u)+'" muted loop playsinline preload="none"'+ar+'></video><span class="da-play">▶</span>'
+          : '<img class="thumb" src="'+esc(u)+'" loading="lazy"'+ar+' alt="광고 소재">';
+        return '<div class="da-item'+(ty==='video'&&vurl?' has-vid':'')+'"><span class="da-badge'+(ty==='image'?' img':'')+'">'+(ty==='image'?'🖼 이미지':'🎬 영상')+'</span>'
+          +media
           +(t?'<div class="da-ocr" title="'+esc(t)+'">'+esc(t)+'</div>':'')+'</div>';}).join('')+'</div>';
     }
     body.innerHTML=html;
-    body.querySelectorAll('.da-fchip').forEach(b=>b.onclick=()=>{_daFilter=b.dataset.f;paintDA(e);});}
+    body.querySelectorAll('.da-fchip').forEach(b=>b.onclick=()=>{_daFilter=b.dataset.f;paintDA(e);});
+    // 영상 카드: 마우스 올리면 재생, 벗어나면 정지(포스터로 복귀)
+    body.querySelectorAll('.da-item.has-vid').forEach(card=>{const v=card.querySelector('video.thumb');if(!v)return;
+      card.onmouseenter=()=>{card.classList.add('playing');const p=v.play();if(p&&p.catch)p.catch(()=>{});};
+      card.onmouseleave=()=>{card.classList.remove('playing');v.pause();try{v.currentTime=0;}catch(_){} };});}
+
+  // DA 소재: Meta(광고 라이브러리) / Google(투명성센터) 를 탭으로 전환.
+  // Meta는 기본 로드, Google은 탭을 처음 눌렀을 때만 조회(불필요한 유료 실행 방지).
   function renderDA(c){const box=el('compDA');if(!box)return;
-    const lib=adSearchUrl('meta',c.name||c.kw||'');
+    const metaLib=adSearchUrl('meta',c.name||c.kw||'');
+    const gLink=(c.google||'').trim()||adSearchUrl('google',c.name||c.kw||'');
     box.innerHTML='<div class="card"><div class="card-h"><h3>운영 중인 DA 광고 소재</h3>'
-      +'<span class="hint">Meta 광고 라이브러리 · <a href="'+esc(lib)+'" target="_blank" rel="noopener">열기 ↗</a></span></div>'
-      +'<div class="card-b comp-da"><div id="daBody"><div class="da-loading">소재 불러오는 중…</div></div></div></div>';
+      +'<span class="hint" id="daOpen"></span></div>'
+      +'<div class="card-b comp-da">'
+      +'<div class="da-tabs"><span class="da-tab on" data-p="meta">Meta 광고 라이브러리</span>'
+      +'<span class="da-tab" data-p="google">Google 투명성센터</span></div>'
+      +'<div id="daBody"><div class="da-loading">소재 불러오는 중…</div></div></div></div>';
+    _daCtx={c:c,plat:'meta',meta:null,google:null,metaLib:metaLib,gLink:gLink};
+    box.querySelectorAll('.da-tab').forEach(t=>t.onclick=()=>showPlat(t.dataset.p));
+    showPlat('meta');}
+  function _daOpenLink(){const x=_daCtx;if(!x)return;const o=el('daOpen');if(!o)return;
+    const url=x.plat==='google'?x.gLink:x.metaLib,lab=x.plat==='google'?'Google 투명성센터':'Meta 광고 라이브러리';
+    o.innerHTML=esc(lab)+' · <a href="'+esc(url)+'" target="_blank" rel="noopener">열기 ↗</a>';}
+  function showPlat(p){const x=_daCtx;if(!x)return;x.plat=p;_daFilter='all';
+    const box=el('compDA');box.querySelectorAll('.da-tab').forEach(t=>t.classList.toggle('on',t.dataset.p===p));
+    _daOpenLink();
+    if(x[p]){paintDA(x[p]);return;}
+    const body=el('daBody');if(body)body.innerHTML='<div class="da-loading">소재 불러오는 중…</div>';
+    (p==='google'?loadGoogle:loadMeta)();}
+  function loadMeta(){const x=_daCtx,c=x.c,lib=x.metaLib;
     const key=(c.kw||c.name||'').trim();
+    const paint=e=>{e._plat='meta';x.meta=e;if(x.plat==='meta')paintDA(e);};
     // 정적 캡처(comp-ads/manifest.json, GitHub Actions 수동 트리거) — 실시간 조회 실패 시 폴백
     const fallbackStatic=()=>{
-      const done=mf=>{_daMf=mf;
-        const nm=(c.name||'').trim();
-        let e=null;for(const s in mf){const x=mf[s];if(x&&(x.kw===key||x.kw===nm)){e=x;break;}}
-        if(e&&e.images&&e.images.length){_daFilter='all';paintDA(e);}
-        else{const body=el('daBody');if(body)body.innerHTML='<div class="da-fallback">아직 이 경쟁사 광고 소재가 수집되지 않았어요. '
-            +'(GitHub Actions “FB Ads Capture” 를 이 경쟁사명으로 실행하면 수집됩니다.) · '
-            +'<a href="'+esc(lib)+'" target="_blank" rel="noopener">라이브러리에서 보기 ↗</a></div>';}};
+      const done=mf=>{_daMf=mf;const nm=(c.name||'').trim();
+        let e=null;for(const s in mf){const y=mf[s];if(y&&(y.kw===key||y.kw===nm)){e=y;break;}}
+        if(e&&e.images&&e.images.length){paint(e);}
+        else{x.meta={images:[],_plat:'meta'};if(x.plat==='meta'){const body=el('daBody');if(body)body.innerHTML='<div class="da-fallback">아직 이 경쟁사 Meta 광고 소재가 수집되지 않았어요. · '
+            +'<a href="'+esc(lib)+'" target="_blank" rel="noopener">라이브러리에서 보기 ↗</a></div>';}}};
       if(_daMf){done(_daMf);return;}
       fetch('comp-ads/manifest.json',{cache:'no-store'}).then(r=>r.ok?r.json():{}).then(done)
-        .catch(()=>{const b=el('daBody');if(b)b.innerHTML='<div class="da-fallback">소재 목록을 불러오지 못했어요. · <a href="'+esc(lib)+'" target="_blank" rel="noopener">라이브러리 ↗</a></div>';});};
+        .catch(()=>{if(x.plat==='meta'){const b=el('daBody');if(b)b.innerHTML='<div class="da-fallback">소재 목록을 불러오지 못했어요. · <a href="'+esc(lib)+'" target="_blank" rel="noopener">라이브러리 ↗</a></div>';}});};
     const pageUrl=(c.meta||'').trim();
     if(!key&&!pageUrl){fallbackStatic();return;}
-    // 온디맨드 실시간 조회(api/competitor_ads.py, Apify) 우선 시도.
-    // c.meta(경쟁사가 등록한 정확한 Meta 광고 라이브러리 URL)가 있으면 그 광고주 페이지만
-    // 정확히 조회하고, 없으면 키워드 텍스트 검색으로 폴백(무관 광고 섞일 수 있음).
+    // 온디맨드 실시간 조회(api/competitor_ads.py, Apify) 우선. c.meta(정확한 광고주 URL)가 있으면
+    // 그 광고주 광고만, 없으면 키워드 검색(무관 광고 섞일 수 있음).
     const qp=pageUrl?('url='+encodeURIComponent(pageUrl)):('kw='+encodeURIComponent(key));
     fetch('/api/competitor_ads?'+qp+'&name='+encodeURIComponent(c.name||''))
       .then(r=>r.ok?r.json():Promise.reject())
-      .then(d=>{if(d&&d.images&&d.images.length){_daFilter='all';paintDA(Object.assign({},d,{_live:true}));}
-        else fallbackStatic();})
+      .then(d=>{if(d&&d.images&&d.images.length){d._live=true;paint(d);}else fallbackStatic();})
       .catch(fallbackStatic);}
+  function loadGoogle(){const x=_daCtx,c=x.c,gl=x.gLink;
+    const home=(c.home||'').trim(),gu=(c.google||'').trim();
+    const paint=e=>{e._plat='google';x.google=e;if(x.plat==='google')paintDA(e);};
+    const empty=msg=>{x.google={images:[],_plat:'google'};if(x.plat==='google'){const b=el('daBody');if(b)b.innerHTML='<div class="da-fallback">'+msg+' · <a href="'+esc(gl)+'" target="_blank" rel="noopener">투명성센터에서 보기 ↗</a></div>';}};
+    // Google 투명성센터는 도메인/advertiser 기준 조회 → 홈페이지나 투명성센터 URL 필요
+    if(!home&&!gu){empty('구글 광고를 조회하려면 경쟁사 <b>공식 홈페이지</b> 또는 <b>투명성센터 URL</b>을 등록하세요 (구글은 도메인 기준 조회)');return;}
+    const qs='home='+encodeURIComponent(home)+'&url='+encodeURIComponent(gu)+'&name='+encodeURIComponent(c.name||'');
+    fetch('/api/competitor_google_ads?'+qs)
+      .then(r=>r.ok?r.json():Promise.reject())
+      .then(d=>{if(d&&d.images&&d.images.length){d._live=true;d.precise=true;paint(d);}else empty('이 경쟁사의 구글 광고를 관측하지 못했어요');})
+      .catch(()=>empty('구글 광고를 불러오지 못했어요'));}
 
   function renderAi(d,c){const box=el('compAi');box.innerHTML='<div class="h">AI 대응 제안</div><div class="line" style="color:var(--muted)">분석 중…</div>';
     const it=d.intensity||{},content=d.content||{},trend=d.trend||{},promo=d.promo,ads=d.ads||[];

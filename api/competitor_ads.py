@@ -53,19 +53,24 @@ def _normalize(item):
     body = ((snap.get("body") or {}).get("text") or "")[:400]
     out = []
 
-    def add(url, ty):
+    def add(url, ty, vurl=None):
+        # url = 카드에 표시할 정지 이미지(영상이면 포스터). vurl = 실제 재생용 영상 파일 URL.
         if url:
-            out.append({"u": url, "t": body, "type": ty})
+            d = {"u": url, "t": body, "type": ty}
+            if vurl:
+                d["v"] = vurl          # 프론트에서 <video>로 호버 재생
+            out.append(d)
 
     for v in (snap.get("videos") or []):
-        add(v.get("video_preview_image_url"), "video")
+        add(v.get("video_preview_image_url"), "video",
+            v.get("video_hd_url") or v.get("video_sd_url"))
     for im in (snap.get("images") or []):
         add(im.get("original_image_url") or im.get("resized_image_url"), "image")
-    # 카드(캐러셀·DPA·DCO): 카드마다 영상이면 poster, 아니면 이미지
+    # 카드(캐러셀·DPA·DCO): 카드마다 영상이면 poster+영상URL, 아니면 이미지
     for c in (snap.get("cards") or []):
         vu = c.get("video_preview_image_url")
         if vu:
-            add(vu, "video")
+            add(vu, "video", c.get("video_hd_url") or c.get("video_sd_url"))
         else:
             add(c.get("original_image_url") or c.get("resized_image_url"), "image")
     return out
