@@ -1247,10 +1247,20 @@ const DUComp=(function(){
     let autoHome='';
     // 홈페이지를 안 넣었으면 이미 받아온 SERP 자연검색 결과(organic)에서 도메인을 재활용한다.
     // 새로 조회하지도, AI를 호출하지도 않고 — 브랜드명 검색 시 이미 잡힌 그 브랜드
-    // 사이트(us:true)의 도메인을 그대로 쓴다. 못 찾으면 최상단 결과로 폴백.
+    // 사이트(us:true, 즉 경쟁사명과 일치가 확인된 결과)의 도메인만 신뢰해서 쓴다.
+    // ⚠️ "최상단 결과로 폴백"은 일부러 안 한다 — 실측해보니 브랜드명 검색이 애매하면
+    // 최상단이 네이버쇼핑 브릿지 링크 같은 엉뚱한 도메인일 수 있고, 그걸로 조회하면
+    // "광고 없음"과 구분 안 되는 또 다른 오탐이 생긴다. 확실한 매치가 없으면 수동 입력을
+    // 요청하는 게 조용히 틀린 도메인을 쓰는 것보다 낫다.
     if(!home&&!gu){
       const organic=(x.snap&&x.snap.organic)||[];
-      const hit=organic.find(o=>o&&o.us&&o.domain)||organic.find(o=>o&&o.domain);
+      // us:true 만으로는 부족 — 리셀러/마켓플레이스 상품 페이지도 제목에 브랜드명이
+      // 있으면 us:true로 잡힌다(실측: 쿠팡). 공식 홈페이지가 아닐 게 뻔한 도메인은
+      // 후보에서 아예 제외하고, 그래도 남는 첫 매치만 신뢰한다.
+      const DENY=['naver.com','coupang.com','gmarket.co.kr','auction.co.kr','11st.co.kr',
+        'wemakeprice.com','tmon.co.kr','ssg.com','lotteon.com','amazon.co.kr','aliexpress.com',
+        'oliveyoung.co.kr','ielirare.com'];
+      const hit=organic.find(o=>o&&o.us&&o.domain&&!DENY.some(d=>o.domain===d||o.domain.endsWith('.'+d)));
       if(hit){home=hit.domain;autoHome=hit.domain;}
     }
     const paint=e=>{e._plat='google';x.google=e;if(x.plat==='google')paintDA(e);};
