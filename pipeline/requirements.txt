@@ -8,3 +8,5 @@ google-ads>=24.0
 google-cloud-bigquery>=3.0
 # GA4 전환 수집(선택, 다우오피스 가입). ga4 계정 없으면 없어도 됨.
 google-analytics-data>=0.18
+# 네이버 파워링크 DOM 파싱(providers_firecrawl.parse_powerlink_html) — LLM 추출 대신 결정적 파싱
+beautifulsoup4

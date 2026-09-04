@@ -11,10 +11,16 @@
 필요 환경변수: FIRECRAWL_API_KEY (firecrawl.dev · 무료 500크레딧/월, 1 scrape=1크레딧)
 """
 import os
+import re
 import time
 import base64
 import html
 import requests
+
+try:
+    from bs4 import BeautifulSoup
+except Exception:                            # 미설치 시 파워링크 DOM 파싱만 조용히 스킵
+    BeautifulSoup = None
 
 API = "https://api.firecrawl.dev/v2/scrape"
 
@@ -94,22 +100,72 @@ def _domain(url):
     return s[4:] if s.startswith("www.") else s
 
 
-_SCHEMA = {
+# ── 파워링크: LLM이 아니라 DOM에서 직접 파싱 ────────────────────────────────
+# sa-collector-extension(별도 프로젝트, 크롬 확장으로 사람 속도 수집)의
+# extension/parse-powerlink.js 를 그대로 옮긴 것 — 그쪽은 실제 로그인 브라우저가 렌더한
+# 마크업으로 검증된 셀렉터/정규식이라, 여기서 LLM JSON 추출로 다시 뽑는 것보다 훨씬
+# 결정적이고 신뢰도가 높다(구글 투명성센터에서 LLM 추출이 흔들렸던 것과 같은 문제를
+# 애초에 피한다). 두 구현이 갈라지면 여기 로그와 그쪽 원본을 나란히 맞춰볼 것 —
+# 네이버가 마크업을 바꾸면 두 곳 다 고쳐야 한다.
+_PL_TRACKING_RE = re.compile(r'a=pwl_nop\.[a-z0-9]+&r=(\d+)&i=(nad-[A-Za-z0-9-]+)')
+_PL_LANDING_RE = re.compile(r'&d="\+urlencode\("([^"]+)"\)')
+
+
+def _pl_text(el):
+    return el.get_text(strip=True) if el else ""
+
+
+def _pl_find_tracking(li):
+    for a in li.select("a[onclick]"):
+        onclick = a.get("onclick") or ""
+        m = _PL_TRACKING_RE.search(onclick)
+        if not m:
+            continue
+        lm = _PL_LANDING_RE.search(onclick)
+        return {"rank": int(m.group(1)), "naverAdId": m.group(2),
+                "landing": lm.group(1) if lm else None}
+    return None
+
+
+def parse_powerlink_html(raw_html, logs=None):
+    """네이버 SERP 원본 HTML → 파워링크 광고 목록. DOM 마크업이 없거나 BeautifulSoup
+    미설치면 빈 목록(호출부는 organic 만으로도 계속 진행). 실패를 조용히 삼키지 않고
+    로그에 원인(마크업 없음/파싱 0건)을 남긴다."""
+    logs = logs if logs is not None else []
+    if BeautifulSoup is None:
+        logs.append("[powerlink] beautifulsoup4 미설치 — DOM 파싱 스킵")
+        return []
+    if not raw_html:
+        logs.append("[powerlink] HTML 없음(firecrawl rawHtml/html 미반환)")
+        return []
+    soup = BeautifulSoup(raw_html, "html.parser")
+    pl = soup.select_one("#power_link_body")
+    if not pl:
+        logs.append("[powerlink] #power_link_body 없음 — 파워링크 미노출 또는 마크업 변경")
+        return []
+    items = pl.select("ul.lst_type > li.lst")
+    ads, malformed = [], 0
+    for li in items:
+        tracking = _pl_find_tracking(li)
+        if not tracking:
+            malformed += 1
+            continue
+        display_url = _pl_text(li.select_one("a.lnk_url")).rstrip("/")
+        brand = _pl_text(li.select_one("a.site")) or display_url
+        if not brand:
+            malformed += 1
+            continue
+        title = " / ".join(t for t in (_pl_text(el) for el in li.select("a.lnk_head span.lnk_tit")) if t)
+        desc = _pl_text(li.select_one(".desc_area a.link_desc"))
+        ads.append({"brand": brand, "title": title, "desc": desc, "url": display_url,
+                    "rank": tracking["rank"], "naverAdId": tracking["naverAdId"]})
+    logs.append(f"[powerlink] DOM 파싱 광고 {len(ads)}건" + (f" · 버려짐 {malformed}건(마크업 일부 변경?)" if malformed else ""))
+    return ads
+
+
+_ORGANIC_SCHEMA = {
     "type": "object",
     "properties": {
-        "ads": {
-            "type": "array",
-            "description": "'파워링크' 광고 영역의 광고들, 노출된 순서대로",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "brand": {"type": "string", "description": "광고주/업체명"},
-                    "headline": {"type": "string", "description": "광고 제목"},
-                    "description": {"type": "string", "description": "광고 설명문구"},
-                    "url": {"type": "string", "description": "표시 URL"},
-                },
-            },
-        },
         "organic": {
             "type": "array",
             "description": "자연검색(비광고) 상위 웹사이트 결과, 순서대로",
@@ -124,17 +180,16 @@ _SCHEMA = {
     },
 }
 
-_PROMPT = (
-    "이 네이버 검색결과 페이지에서 두 가지를 추출해줘. "
-    "(1) ads: 상단·하단 '파워링크' 광고 영역에 실제 노출된 광고를 노출 순서대로 "
-    "— 광고주/업체명(brand), 광고 제목(headline), 설명문구(description), 표시 URL(url). 최대 10개. "
-    "(2) organic: 광고가 아닌 일반 웹사이트/사이트 검색 결과의 title·url을 상위 순서대로 최대 8개. "
-    "블로그·카페·지식iN·뉴스 섹션은 organic 에서 제외하고 사이트/웹 결과만. 없으면 빈 배열."
+_ORGANIC_PROMPT = (
+    "이 네이버 검색결과 페이지에서 광고가 아닌 일반 웹사이트/사이트 검색 결과의 title·url을 "
+    "상위 순서대로 최대 8개 추출해줘. 블로그·카페·지식iN·뉴스 섹션은 제외하고 사이트/웹 결과만. "
+    "없으면 빈 배열."
 )
 
 
 def serp_competitors(kw, our_names=None, logs=None, timeout=45):
-    """키워드 하나의 네이버 SERP 경쟁사. 실패/키없음 → None."""
+    """키워드 하나의 네이버 SERP 경쟁사. 실패/키없음 → None.
+    파워링크(ads)는 DOM 파싱, 자연검색(organic)은 LLM 추출 — 둘을 한 번의 스크랩으로."""
     logs = logs if logs is not None else []
     if not _key():
         return None
@@ -142,7 +197,7 @@ def serp_competitors(kw, our_names=None, logs=None, timeout=45):
     url = "https://search.naver.com/search.naver?query=" + requests.utils.quote(kw)
     body = {
         "url": url,
-        "formats": [{"type": "json", "schema": _SCHEMA, "prompt": _PROMPT}],
+        "formats": ["rawHtml", {"type": "json", "schema": _ORGANIC_SCHEMA, "prompt": _ORGANIC_PROMPT}],
         "onlyMainContent": False,          # 파워링크는 본문 밖 영역이라 포함시켜야 함
         "waitFor": 3500,                    # JS 렌더 대기
         "location": {"country": "KR", "languages": ["ko"]},
@@ -156,12 +211,13 @@ def serp_competitors(kw, our_names=None, logs=None, timeout=45):
             logs.append(f"[firecrawl] {kw} status={r.status_code} {r.text[:120]}")
             return None
         data = (r.json() or {}).get("data") or {}
+        raw_html = data.get("rawHtml") or data.get("html") or ""
         j = data.get("json") or {}
     except Exception as e:
         logs.append(f"[firecrawl] {kw} 오류: {str(e)[:100]}")
         return None
 
-    ads_raw = j.get("ads") or []
+    ads_raw = parse_powerlink_html(raw_html, logs)
     org_raw = j.get("organic") or []
     ads, organic = [], []
     seen = set()
@@ -173,7 +229,7 @@ def serp_competitors(kw, our_names=None, logs=None, timeout=45):
         if key in seen:
             continue
         seen.add(key)
-        copy = str(a.get("headline", "")).strip() or str(a.get("description", "")).strip()
+        copy = str(a.get("title", "")).strip() or str(a.get("desc", "")).strip()
         u = str(a.get("url", "")).strip()
         ads.append({"name": name, "copy": copy, "url": u,
                     "us": _is_us(name + " " + u + " " + copy, our_names)})
