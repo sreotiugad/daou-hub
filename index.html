@@ -342,7 +342,7 @@
   .acc.unk{color:var(--muted);background:var(--border-soft)}.acc.unk::before{background:var(--muted)}
   .comp-empty{text-align:center;padding:44px 24px}
   .comp-empty b{font-size:16px}.comp-empty p{color:var(--muted);font-size:13.5px;max-width:54ch;margin:8px auto 18px;line-height:1.65}
-  .comp-hero{display:flex;gap:22px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+  .comp-hero{display:flex;gap:22px;align-items:center;flex-wrap:wrap;margin-bottom:14px;padding:16px}
   .comp-gauge{flex:none;width:118px;text-align:center}
   .comp-gauge .num{font-size:36px;font-weight:800;font-family:var(--mono);line-height:1}
   .comp-gauge .of{font-size:12px;color:var(--muted)}
@@ -395,6 +395,10 @@
   .da-loading{font-size:12.5px;color:var(--muted)}
   .da-note{font-size:11.5px;color:var(--muted);margin-bottom:11px;font-family:var(--mono)}
   .da-ocr{padding:7px 9px;font-size:11px;line-height:1.45;color:var(--muted);border-top:1px solid var(--border-soft);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+  .da-ocr.clickable{cursor:pointer}
+  .da-ocr.clickable::after{content:"더 보기";display:block;margin-top:2px;font-size:10px;font-weight:600;color:var(--primary)}
+  .da-ocr.expanded{-webkit-line-clamp:unset;overflow:visible}
+  .da-ocr.expanded::after{content:"접기"}
   .comp-da .da-item{position:relative}
   .da-badge{position:absolute;top:6px;left:6px;z-index:3;font-size:10px;font-weight:600;padding:1px 7px;border-radius:20px;background:rgba(15,23,42,.62);color:#fff;letter-spacing:.02em;backdrop-filter:blur(3px)}
   .da-badge.img{background:rgba(37,99,140,.9)}
@@ -403,8 +407,9 @@
   .da-fchip.on{background:var(--primary-weak);color:var(--primary);border-color:transparent;font-weight:600}
   .da-empty{font-size:12px;color:var(--muted);padding:14px 2px}
   .da-item video.thumb{width:100%;height:auto;display:block;background:#000;cursor:pointer}
-  .da-item.has-vid .da-play{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2;width:36px;height:36px;border-radius:50%;background:rgba(15,23,42,.55);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;padding-left:2px;pointer-events:none;backdrop-filter:blur(2px);transition:opacity .16s}
-  .da-item.has-vid.playing .da-play{opacity:0}
+  .da-item.has-vid .da-play{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2;width:36px;height:36px;border-radius:50%;background:rgba(15,23,42,.55);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;pointer-events:none;backdrop-filter:blur(2px);transition:opacity .16s}
+  /* 재생 중엔 완전히 숨기지 않고 옅게 — 클릭하면 멈춘다는 걸 계속 알 수 있게 */
+  .da-item.has-vid.playing .da-play{opacity:.55}
   .da-tabs{display:flex;gap:7px;margin-bottom:13px}
   .da-tab{font-size:12px;font-weight:600;padding:5px 13px;border-radius:8px;border:1px solid var(--border);color:var(--muted);cursor:pointer;background:var(--surface)}
   .da-tab.on{background:var(--primary-weak);color:var(--primary);border-color:transparent}
@@ -1185,7 +1190,7 @@ const DUComp=(function(){
         const t=(im&&typeof im==='object'&&im.t)?im.t:'';const ty=daType(im);
         const vurl=(im&&typeof im==='object'&&im.v)?im.v:'';
         const ar=(im&&im.w&&im.h)?' style="aspect-ratio:'+im.w+'/'+im.h+'"':'';
-        // 영상 소재이고 재생 URL(im.v)이 있으면 <video>로 호버 재생, 없으면 포스터/이미지만
+        // 영상 소재이고 재생 URL(im.v)이 있으면 <video>로 클릭 재생/일시정지, 없으면 포스터/이미지만
         const media=(ty==='video'&&vurl)
           ? '<video class="thumb" src="'+esc(vurl)+'" poster="'+esc(u)+'" muted loop playsinline preload="none"'+ar+'></video><span class="da-play">▶</span>'
           : '<img class="thumb" src="'+esc(u)+'" loading="lazy"'+ar+' alt="광고 소재">';
@@ -1195,10 +1200,23 @@ const DUComp=(function(){
     }
     body.innerHTML=html;
     body.querySelectorAll('.da-fchip').forEach(b=>b.onclick=()=>{_daFilter=b.dataset.f;paintDA(e);});
-    // 영상 카드: 마우스 올리면 재생, 벗어나면 정지(포스터로 복귀)
-    body.querySelectorAll('.da-item.has-vid').forEach(card=>{const v=card.querySelector('video.thumb');if(!v)return;
-      card.onmouseenter=()=>{card.classList.add('playing');const p=v.play();if(p&&p.catch)p.catch(()=>{});};
-      card.onmouseleave=()=>{card.classList.remove('playing');v.pause();try{v.currentTime=0;}catch(_){} };});}
+    // 영상 카드: 호버가 아니라 클릭으로 재생/일시정지(터치 기기에서도 동작). 아이콘이
+    // 재생 중엔 ⏸로 바뀌어 클릭하면 멈춘다는 걸 알 수 있게 한다.
+    body.querySelectorAll('.da-item.has-vid').forEach(card=>{
+      const v=card.querySelector('video.thumb'),btn=card.querySelector('.da-play');
+      if(!v)return;
+      const sync=()=>{card.classList.toggle('playing',!v.paused);if(btn)btn.textContent=v.paused?'▶':'⏸';};
+      card.addEventListener('click',()=>{if(v.paused){const p=v.play();if(p&&p.catch)p.catch(()=>{});}else{v.pause();}});
+      v.addEventListener('play',sync);v.addEventListener('pause',sync);v.addEventListener('ended',sync);
+      sync();});
+    // 카피(da-ocr)가 3줄로 잘리면 클릭해서 펼치고 접을 수 있게 한다.
+    // scrollHeight vs clientHeight 비교는 line-clamp가 걸려 있는 상태에서만 유효하다
+    // (clamp 전에 미리 빼면 항상 같아져서 판정이 안 됨).
+    body.querySelectorAll('.da-ocr').forEach(el=>{
+      if(el.scrollHeight<=el.clientHeight+2)return;   // 안 잘렸으면 클릭 의미 없음
+      el.classList.add('clickable');
+      el.addEventListener('click',()=>el.classList.toggle('expanded'));
+    });}
 
   // DA 소재: Meta(광고 라이브러리) / Google(투명성센터) 를 탭으로 전환.
   // Meta는 기본 로드, Google은 탭을 처음 눌렀을 때만 조회(불필요한 유료 실행 방지).
