@@ -126,12 +126,13 @@ def _pl_find_tracking(li, sample=None):
         return {"rank": int(m.group(1)), "naverAdId": m.group(2),
                 "landing": lm.group(1) if lm else None}
     # 매칭 실패 진단용 — onclick이 있긴 한데 정규식이 안 맞는지, 아예 onclick이 없는지 구분.
+    # onclick이 없으면(실측: 네이버가 href 기반으로 바뀐 것으로 보임) li 전체 마크업을
+    # 남겨 한 번에 새 구조를 파악한다(추가 왕복 없이).
     if sample is not None and len(sample) < 1:
         if onclicks:
             sample.append("onclick 있음, 형식 다름: " + (onclicks[0].get("onclick") or "")[:200])
         else:
-            attrs = [k for k in (li.find("a").attrs.keys() if li.find("a") else [])]
-            sample.append("onclick 자체가 없음, 첫 a 태그 속성: " + str(attrs))
+            sample.append("onclick 없음, li 마크업: " + str(li)[:1200])
     return None
 
 
