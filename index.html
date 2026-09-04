@@ -394,11 +394,11 @@
   .da-fallback{font-size:12.5px;color:var(--muted);line-height:1.6}
   .da-loading{font-size:12.5px;color:var(--muted)}
   .da-note{font-size:11.5px;color:var(--muted);margin-bottom:11px;font-family:var(--mono)}
-  .da-ocr{padding:7px 9px;font-size:11px;line-height:1.45;color:var(--muted);border-top:1px solid var(--border-soft);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
-  .da-ocr.clickable{cursor:pointer}
-  .da-ocr.clickable::after{content:"더 보기";display:block;margin-top:2px;font-size:10px;font-weight:600;color:var(--primary)}
+  .da-ocr{padding:7px 9px 3px;font-size:11px;line-height:1.45;color:var(--muted);border-top:1px solid var(--border-soft);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
   .da-ocr.expanded{-webkit-line-clamp:unset;overflow:visible}
-  .da-ocr.expanded::after{content:"접기"}
+  /* "더 보기"는 da-ocr 안(::after)이 아니라 별도 형제 엘리먼트 — line-clamp 박스
+     안에 넣으면 클램프 대상에 같이 잘려서 안 보이거나 자리를 못 잡는다. */
+  .da-more{display:block;padding:0 9px 8px;font-size:11px;font-weight:700;color:var(--primary);cursor:pointer;text-decoration:underline;text-underline-offset:2px}
   .comp-da .da-item{position:relative}
   .da-badge{position:absolute;top:6px;left:6px;z-index:3;font-size:10px;font-weight:600;padding:1px 7px;border-radius:20px;background:rgba(15,23,42,.62);color:#fff;letter-spacing:.02em;backdrop-filter:blur(3px)}
   .da-badge.img{background:rgba(37,99,140,.9)}
@@ -1196,7 +1196,7 @@ const DUComp=(function(){
           : '<img class="thumb" src="'+esc(u)+'" loading="lazy"'+ar+' alt="광고 소재">';
         return '<div class="da-item'+(ty==='video'&&vurl?' has-vid':'')+'"><span class="da-badge'+(ty==='image'?' img':'')+'">'+(ty==='image'?'🖼 이미지':'🎬 영상')+'</span>'
           +media
-          +(t?'<div class="da-ocr" title="'+esc(t)+'">'+esc(t)+'</div>':'')+'</div>';}).join('')+'</div>';
+          +(t?'<div class="da-ocr" title="'+esc(t)+'">'+esc(t)+'</div><span class="da-more" hidden>더 보기</span>':'')+'</div>';}).join('')+'</div>';
     }
     body.innerHTML=html;
     body.querySelectorAll('.da-fchip').forEach(b=>b.onclick=()=>{_daFilter=b.dataset.f;paintDA(e);});
@@ -1209,13 +1209,27 @@ const DUComp=(function(){
       card.addEventListener('click',()=>{if(v.paused){const p=v.play();if(p&&p.catch)p.catch(()=>{});}else{v.pause();}});
       v.addEventListener('play',sync);v.addEventListener('pause',sync);v.addEventListener('ended',sync);
       sync();});
-    // 카피(da-ocr)가 3줄로 잘리면 클릭해서 펼치고 접을 수 있게 한다.
-    // scrollHeight vs clientHeight 비교는 line-clamp가 걸려 있는 상태에서만 유효하다
-    // (clamp 전에 미리 빼면 항상 같아져서 판정이 안 됨).
-    body.querySelectorAll('.da-ocr').forEach(el=>{
-      if(el.scrollHeight<=el.clientHeight+2)return;   // 안 잘렸으면 클릭 의미 없음
-      el.classList.add('clickable');
-      el.addEventListener('click',()=>el.classList.toggle('expanded'));
+    // 카피(da-ocr)가 3줄로 잘리면 "더 보기"로 펼치고 접을 수 있게 한다.
+    // -webkit-line-clamp가 걸린 상태에서는 scrollHeight가 clientHeight와 똑같이 나와서
+    // (진짜 넘치는 만큼을 안 알려줌) 그 비교로는 잘렸는지 판정이 안 된다 — 그래서 클램프를
+    // 잠깐 풀어 실제 높이(scrollHeight)를 재고 다시 걸어 클램프된 높이(clientHeight)와
+    // 비교한다. "더 보기"는 da-ocr 안(::after)이 아니라 별도 형제 엘리먼트로 둬서
+    // line-clamp 박스 안에서 잘려나가는 문제를 피한다.
+    body.querySelectorAll('.da-item').forEach(item=>{
+      const ocr=item.querySelector('.da-ocr'), more=item.querySelector('.da-more');
+      if(!ocr||!more)return;
+      const clampedH=ocr.clientHeight;
+      ocr.style.setProperty('-webkit-line-clamp','unset');
+      ocr.style.overflow='visible';
+      const fullH=ocr.scrollHeight;
+      ocr.style.removeProperty('-webkit-line-clamp');
+      ocr.style.removeProperty('overflow');
+      if(fullH<=clampedH+2)return;   // 안 잘렸으면 "더 보기" 자체를 안 보여준다
+      more.hidden=false;
+      more.addEventListener('click',()=>{
+        const exp=ocr.classList.toggle('expanded');
+        more.textContent=exp?'접기':'더 보기';
+      });
     });}
 
   // DA 소재: Meta(광고 라이브러리) / Google(투명성센터) 를 탭으로 전환.
