@@ -1105,7 +1105,7 @@ const DUComp=(function(){
     +'<div class="comp-fld">'
     +fld('경쟁사명 *','name',c.name,'예: 네이버웍스')
     +fld('네이버 검색어 별칭 *','kw',c.kw,'SERP·블로그 추적 키 (예: 네이버웍스)')
-    +fld('공식 홈페이지','home',c.home,'https://',1)
+    +fld('공식 홈페이지 (선택)','home',c.home,'비우면 네이버 검색결과에서 자동 감지 · 안 맞으면 여기에 직접',1)
     +fld('추적 프로모션 URL','promo',c.promo,'https:// (현재 혜택·가격 감지)',1)
     +fld('대표 상품명 (쉼표로 구분)','products',c.products,'예: 웍스, 그룹웨어',1)
     +fld('Meta 광고 라이브러리 URL (권장)','meta',c.meta,'비우면 이름 키워드로 검색(무관 광고 섞일 수 있음) · 채우면 이 광고주 광고만 정확히 조회',1)
@@ -1151,7 +1151,7 @@ const DUComp=(function(){
     cards.push('<div class="card comp-card"><div class="card-h"><h3>SERP 광고 관측</h3>'+accHTML(d.adsLabel||'미확인')+'</div><div class="card-b">'+ab+'</div></div>');
     cards.push('<div class="card comp-card"><div class="card-h"><h3>이번 주 변화</h3>'+accHTML('미확인')+'</div><div class="card-b"><div class="comp-sub">지난주 대비 변화(신규 광고·카피·프로모션)는 다음 단계에서 주간 스냅샷을 쌓아 보여드려요.</div></div></div>');
     el('compCards').innerHTML=cards.join('');
-    renderAi(d,c);renderDA(c);
+    renderAi(d,c);renderDA(c,d);
     el('compUpdated').textContent='업데이트 '+new Date().toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});}
 
   function adSearchUrl(src,q){const e=encodeURIComponent(q||'');return src==='meta'
@@ -1167,7 +1167,9 @@ const DUComp=(function(){
     const nImg=imgs.filter(im=>daType(im)==='image').length,nVid=imgs.length-nImg;
     const shown=imgs.filter(im=>_daFilter==='all'||daType(im)===_daFilter);
     const chip=(k,lab,n)=>'<span class="da-fchip'+(_daFilter===k?' on':'')+'" data-f="'+k+'">'+lab+' '+n+'</span>';
-    const liveTag=e._live?(' '+accHTML('관측')+(e.precise?'':' <span style="color:var(--muted);font-size:11px">키워드 검색 · 무관 광고 섞일 수 있음</span>')):'';
+    const liveTag=e._live?(' '+accHTML('관측')+(e._plat==='google'
+        ? (e._autoHome?' <span style="color:var(--muted);font-size:11px">자동 감지 도메인: '+esc(e._autoHome)+'</span>':'')
+        : (e.precise?'':' <span style="color:var(--muted);font-size:11px">키워드 검색 · 무관 광고 섞일 수 있음</span>'))):'';
     let html='<div class="da-note">'+imgs.length+'개 소재 · 수집 '+esc(e.at||'')+liveTag+'</div>'
       +'<div class="da-filter">'+chip('all','전체',imgs.length)
         +chip('image','🖼 이미지',nImg)+chip('video','🎬 영상',nVid)+'</div>';
@@ -1197,7 +1199,7 @@ const DUComp=(function(){
 
   // DA 소재: Meta(광고 라이브러리) / Google(투명성센터) 를 탭으로 전환.
   // Meta는 기본 로드, Google은 탭을 처음 눌렀을 때만 조회(불필요한 유료 실행 방지).
-  function renderDA(c){const box=el('compDA');if(!box)return;
+  function renderDA(c,snap){const box=el('compDA');if(!box)return;
     const metaLib=adSearchUrl('meta',c.name||c.kw||'');
     const gLink=(c.google||'').trim()||adSearchUrl('google',c.name||c.kw||'');
     box.innerHTML='<div class="card"><div class="card-h"><h3>운영 중인 DA 광고 소재</h3>'
@@ -1206,7 +1208,7 @@ const DUComp=(function(){
       +'<div class="da-tabs"><span class="da-tab on" data-p="meta">Meta 광고 라이브러리</span>'
       +'<span class="da-tab" data-p="google">Google 투명성센터</span></div>'
       +'<div id="daBody"><div class="da-loading">소재 불러오는 중…</div></div></div></div>';
-    _daCtx={c:c,plat:'meta',meta:null,google:null,metaLib:metaLib,gLink:gLink};
+    _daCtx={c:c,snap:snap,plat:'meta',meta:null,google:null,metaLib:metaLib,gLink:gLink};
     box.querySelectorAll('.da-tab').forEach(t=>t.onclick=()=>showPlat(t.dataset.p));
     showPlat('meta');}
   function _daOpenLink(){const x=_daCtx;if(!x)return;const o=el('daOpen');if(!o)return;
@@ -1241,15 +1243,24 @@ const DUComp=(function(){
       .then(d=>{if(d&&d.images&&d.images.length){d._live=true;paint(d);}else fallbackStatic();})
       .catch(fallbackStatic);}
   function loadGoogle(){const x=_daCtx,c=x.c,gl=x.gLink;
-    const home=(c.home||'').trim(),gu=(c.google||'').trim();
+    let home=(c.home||'').trim();const gu=(c.google||'').trim();
+    let autoHome='';
+    // 홈페이지를 안 넣었으면 이미 받아온 SERP 자연검색 결과(organic)에서 도메인을 재활용한다.
+    // 새로 조회하지도, AI를 호출하지도 않고 — 브랜드명 검색 시 이미 잡힌 그 브랜드
+    // 사이트(us:true)의 도메인을 그대로 쓴다. 못 찾으면 최상단 결과로 폴백.
+    if(!home&&!gu){
+      const organic=(x.snap&&x.snap.organic)||[];
+      const hit=organic.find(o=>o&&o.us&&o.domain)||organic.find(o=>o&&o.domain);
+      if(hit){home=hit.domain;autoHome=hit.domain;}
+    }
     const paint=e=>{e._plat='google';x.google=e;if(x.plat==='google')paintDA(e);};
     const empty=msg=>{x.google={images:[],_plat:'google'};if(x.plat==='google'){const b=el('daBody');if(b)b.innerHTML='<div class="da-fallback">'+msg+' · <a href="'+esc(gl)+'" target="_blank" rel="noopener">투명성센터에서 보기 ↗</a></div>';}};
-    // Google 투명성센터는 도메인/advertiser 기준 조회 → 홈페이지나 투명성센터 URL 필요
-    if(!home&&!gu){empty('구글 광고를 조회하려면 경쟁사 <b>공식 홈페이지</b> 또는 <b>투명성센터 URL</b>을 등록하세요 (구글은 도메인 기준 조회)');return;}
+    if(!home&&!gu){empty('이 경쟁사의 공식 도메인을 자동으로 못 찾았어요 — 등록 편집에서 <b>공식 홈페이지</b>를 채워주세요(구글은 도메인 기준 조회)');return;}
     const qs='home='+encodeURIComponent(home)+'&url='+encodeURIComponent(gu)+'&name='+encodeURIComponent(c.name||'');
     fetch('/api/competitor_google_ads?'+qs)
       .then(r=>r.ok?r.json():Promise.reject())
-      .then(d=>{if(d&&d.images&&d.images.length){d._live=true;d.precise=true;paint(d);}else empty('이 경쟁사의 구글 광고를 관측하지 못했어요');})
+      .then(d=>{if(d&&d.images&&d.images.length){d._live=true;d.precise=!autoHome;if(autoHome)d._autoHome=autoHome;paint(d);}
+        else empty('이 경쟁사의 구글 광고를 관측하지 못했어요'+(autoHome?' <span style="color:var(--muted);font-size:11px">(자동 감지 도메인: '+esc(autoHome)+' · 다르면 편집에서 직접 지정)</span>':''));})
       .catch(()=>empty('구글 광고를 불러오지 못했어요'));}
 
   function renderAi(d,c){const box=el('compAi');box.innerHTML='<div class="h">AI 대응 제안</div><div class="line" style="color:var(--muted)">분석 중…</div>';
