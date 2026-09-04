@@ -365,9 +365,10 @@
   .comp-ad-row{display:flex;gap:8px;align-items:baseline;padding:6px 0;font-size:12.5px;border-bottom:1px dashed var(--border-soft)}
   .comp-ad-row:last-child{border-bottom:0}.comp-ad-row.us{background:var(--primary-weak);margin:0 -8px;padding:6px 8px;border-radius:6px}
   .comp-ad-row .rk{flex:none;font-family:var(--mono);color:var(--muted);width:18px}
-  .comp-ai{margin-top:14px;border-left:3px solid var(--accent)}
+  .comp-ai{margin-top:14px;border-left:3px solid var(--accent);padding:13px 16px 15px 13px}
   .comp-ai .h{font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:9px}
-  .comp-ai .line{font-size:14px;line-height:1.75}
+  .comp-ai .line{font-size:14px;line-height:1.6}
+  .comp-ai .line+.line{margin-top:7px}
   .comp-fld{display:grid;gap:11px 14px}
   @media(min-width:600px){.comp-fld{grid-template-columns:1fr 1fr}}
   .comp-fld .fw{grid-column:1/-1}
@@ -1284,7 +1285,13 @@ const DUComp=(function(){
       +'\n[우리] 다우오피스(그룹웨어) 관점.';
     const q='위 경쟁사 스냅샷을 딱 3줄로. 1) 이 경쟁사가 지금 무엇에 집중/변화하는지 2) 네이버 검색·콘텐츠에서 무엇이 관측되는지 3) 우리(다우오피스) 대응 후보 1가지. 각 줄 앞에 "· " 붙이고 한 문장씩, 군더더기 없이.';
     fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'user',content:q}],context:ctx})})
-      .then(r=>r.json()).then(j=>{const t=(j&&j.reply)||'';box.innerHTML='<div class="h">AI 대응 제안</div><div class="line">'+(t?esc(t).replace(/\n/g,'<br>'):'요약을 받지 못했어요.')+'</div>';})
+      .then(r=>r.json()).then(j=>{const t=(j&&j.reply)||'';
+        // 3줄 불릿을 한 덩어리로 <br>만 넣지 않고, 줄마다 별도 .line으로 나눠 사이 간격을 준다
+        // (붙어보이는 문제 수정).
+        const lines=t.split(/\n+/).map(s=>s.trim()).filter(Boolean);
+        box.innerHTML='<div class="h">AI 대응 제안</div>'+(lines.length
+          ? lines.map(s=>'<div class="line">'+esc(s)+'</div>').join('')
+          : '<div class="line">요약을 받지 못했어요.</div>');})
       .catch(()=>{box.innerHTML='<div class="h">AI 대응 제안</div><div class="line" style="color:var(--muted)">AI 요약을 불러오지 못했어요.</div>';});}
 
   function fetchSnap(force){const c=cur();if(!c){el('compSnap').hidden=true;return;}el('compEmpty').hidden=true;
