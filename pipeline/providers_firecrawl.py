@@ -220,8 +220,12 @@ def serp_competitors(kw, our_names=None, logs=None, timeout=45):
         seen.add(key)
         copy = str(a.get("title", "")).strip() or str(a.get("desc", "")).strip()
         u = str(a.get("url", "")).strip()
+        # us 판정은 광고주명·표시URL만 본다 — 광고 카피(copy)는 절대 포함하지 않는다.
+        # 실측(아이소이 추적 중 G마켓): 리셀러가 "G마켓 아이소이 특가" 식으로 카피에
+        # 추적 대상 이름을 넣는 건 흔하다 — 카피까지 훑으면 그 리셀러가 추적 대상
+        # 본인인 것처럼 오판정된다. 광고주명이나 URL 자체가 일치할 때만 본인으로 본다.
         ads.append({"name": name, "copy": copy, "url": u,
-                    "us": _is_us(name + " " + u + " " + copy, our_names)})
+                    "us": _is_us(name + " " + u, our_names)})
         if len(ads) >= 10:
             break
     dseen = set()
@@ -231,6 +235,10 @@ def serp_competitors(kw, our_names=None, logs=None, timeout=45):
         if not dom or dom in dseen:
             continue
         dseen.add(dom)
+        # organic은 title 그대로 유지한다 — 한글 브랜드명은 도메인(영문)과 절대 겹치지
+        # 않아서 domain만 보면 매칭 자체가 항상 실패한다(구글 자동 도메인 감지 기능이
+        # 바로 이 title 매칭에 의존함). 리뷰·리셀러 제목도 오탐 소지는 있지만 그건
+        # ads와 달리 아직 신고된 적 없어 건드리지 않는다(별개로 확인 필요).
         organic.append({"title": str(o.get("title", "")).strip(), "url": u, "domain": dom,
                         "us": _is_us(u + " " + str(o.get("title", "")), our_names)})
         if len(organic) >= 8:
