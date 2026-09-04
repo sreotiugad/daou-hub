@@ -60,8 +60,12 @@ def _intensity(ads, content, trend_dir):
     score += 15 if trend_dir == "상승" else 7 if trend_dir == "보합" else 0
     score = max(0, min(100, score))
     band = "높음" if score >= 67 else "보통" if score >= 34 else "낮음"
+    # comp_rank = 이 검색어에서 '추적 대상 이름'이 몇 번째 광고로 노출되는지(us:true 첫 위치).
+    # 문구는 "경쟁사"가 아니라 "노출순위"로 — 이 도구는 남의 경쟁사를 감시할 때도 쓰지만
+    # 자기 브랜드(예: 뷰티 브랜드 본인)를 등록해 검색 노출 순위를 보는 데도 쓴다. 후자일 때
+    # "경쟁사 광고 1위"라고 하면 정반대로 읽힌다.
     parts = [f"관측 광고주 {ads_total}개"]
-    parts.append(f"경쟁사 광고 {comp_rank}위" if comp_rank else "경쟁사 광고 미관측")
+    parts.append(f"노출순위 {comp_rank}위" if comp_rank else "노출순위 미확인")
     if content:
         parts.append(f"블로그 {int(content):,}건")
     conf = "보통" if (comp_rank and content) else "낮음"
