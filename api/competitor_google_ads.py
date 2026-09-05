@@ -233,9 +233,10 @@ class handler(BaseHTTPRequestHandler):
         body = json.dumps(obj, ensure_ascii=False).encode("utf-8")
         self.send_response(code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
-        # 소재가 담긴 성공만 CDN 캐시(6h) → 반복 조회 유료 실행 방지. 실패·0건은 캐시 금지.
+        # 소재가 담긴 성공만 CDN 캐시(24h) → 반복 조회 유료 실행 방지. 실패·0건은 캐시 금지.
+        # 구글은 $5/1000로 비싸 + 프론트에서 수동 버튼으로만 실행 → 캐시를 24h로 길게.
         if code == 200 and (obj.get("count") or 0) > 0:
-            self.send_header("Cache-Control", "public, s-maxage=21600, stale-while-revalidate=86400")
+            self.send_header("Cache-Control", "public, s-maxage=86400, stale-while-revalidate=172800")
         else:
             self.send_header("Cache-Control", "no-store, max-age=0")
         self.send_header("Access-Control-Allow-Origin", "*")

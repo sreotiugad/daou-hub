@@ -417,6 +417,9 @@
   .da-tabs{display:flex;gap:7px;margin-bottom:13px}
   .da-tab{font-size:12px;font-weight:600;padding:5px 13px;border-radius:8px;border:1px solid var(--border);color:var(--muted);cursor:pointer;background:var(--surface)}
   .da-tab.on{background:var(--primary-weak);color:var(--primary);border-color:transparent}
+  .da-manual{padding:20px 4px;text-align:center}
+  .da-manual .kw-btn{font-size:13px;padding:9px 18px}
+  .da-manual-note{font-size:11.5px;color:var(--muted);margin-top:10px;line-height:1.5}
   .da-shot-wrap{max-height:540px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;background:var(--bg)}
   .da-shot{width:100%;display:block}
   /* AI 챗봇 */
@@ -1274,8 +1277,17 @@ const DUComp=(function(){
     const box=el('compDA');box.querySelectorAll('.da-tab').forEach(t=>t.classList.toggle('on',t.dataset.p===p));
     _daOpenLink();
     if(x[p]){paintDA(x[p]);return;}
-    const body=el('daBody');if(body)body.innerHTML='<div class="da-loading">소재 불러오는 중…</div>';
-    (p==='google'?loadGoogle:loadMeta)();}
+    const body=el('daBody');if(!body)return;
+    // 구글은 유료 조회($5/1000)라 탭 열자마자 자동 실행하지 않고 버튼으로만(비용 절약).
+    // Meta는 저렴해서 기존대로 자동 로드.
+    if(p==='google'){
+      body.innerHTML='<div class="da-manual"><button type="button" class="kw-btn primary" id="daGoLoad">🔵 구글 광고 불러오기</button>'
+        +'<div class="da-manual-note">구글 광고 조회는 유료라 <b>누를 때만</b> 실행돼요. 한 번 불러오면 24시간 저장됩니다.</div></div>';
+      const b=el('daGoLoad');if(b)b.onclick=()=>{if(x.plat!=='google')return;body.innerHTML='<div class="da-loading">구글 광고 불러오는 중…</div>';loadGoogle();};
+      return;
+    }
+    body.innerHTML='<div class="da-loading">소재 불러오는 중…</div>';
+    loadMeta();}
   function loadMeta(){const x=_daCtx,c=x.c,lib=x.metaLib;
     const key=(c.kw||c.name||'').trim();
     const paint=e=>{e._plat='meta';x.meta=e;if(x.plat==='meta')paintDA(e);};
