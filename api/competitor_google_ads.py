@@ -233,7 +233,11 @@ class handler(BaseHTTPRequestHandler):
         body = json.dumps(obj, ensure_ascii=False).encode("utf-8")
         self.send_response(code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Cache-Control", "no-store, max-age=0")
+        # 소재가 담긴 성공만 CDN 캐시(6h) → 반복 조회 유료 실행 방지. 실패·0건은 캐시 금지.
+        if code == 200 and (obj.get("count") or 0) > 0:
+            self.send_header("Cache-Control", "public, s-maxage=21600, stale-while-revalidate=86400")
+        else:
+            self.send_header("Cache-Control", "no-store, max-age=0")
         self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
         self.wfile.write(body)

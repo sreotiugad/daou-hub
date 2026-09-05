@@ -241,8 +241,14 @@ class handler(BaseHTTPRequestHandler):
         body = json.dumps(obj, ensure_ascii=False).encode("utf-8")
         self.send_response(code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
-        # 실시간 소재라 캐시하지 않음(다음 요청에서 최신 상태 반영 우선)
-        self.send_header("Cache-Control", "no-store, max-age=0")
+        # 소재가 실제로 담긴 성공 응답만 Vercel CDN에 캐시 → 같은 경쟁사(kw/url) 반복 조회 시
+        # 6시간에 딱 1번만 실제 Apify 실행(유료), 그 사이는 CDN이 응답(비용 0). 실패·0건은
+        # 캐시 금지(간헐적 0건이 6h 굳는 것 방지·다음 조회 재시도 가능).
+        # (이전 no-store는 매 조회마다 유료 실행 → 월 한도 초과 사고의 원인)
+        if code == 200 and (obj.get("count") or 0) > 0:
+            self.send_header("Cache-Control", "public, s-maxage=21600, stale-while-revalidate=86400")
+        else:
+            self.send_header("Cache-Control", "no-store, max-age=0")
         self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
         self.wfile.write(body)
