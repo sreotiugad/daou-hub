@@ -184,7 +184,10 @@ def collect(target, country="KR", max_ads=MAX_ADS, logs=None, probe=False):
         logs.append("❌ [google] JSON 파싱 실패")
         return None
     images, seen = [], set()
+    fmt_dist = {}   # 원본 format_type 분포(디버그·투명성)
     for it in items:
+        ft = it.get("format_type") or "?"
+        fmt_dist[ft] = fmt_dist.get(ft, 0) + 1
         for im in _normalize(it):
             if im["u"] in seen:
                 continue
@@ -203,8 +206,8 @@ def collect(target, country="KR", max_ads=MAX_ADS, logs=None, probe=False):
     if probe and items:
         logs.append("PROBE:" + json.dumps(_raw_probe(items[0]), ensure_ascii=False))
     return {"target": "%s:%s" % (stype, key), "images": images,
-            "count": len(images), "perf": perf_sum, "at": _now_kst(),
-            "source": "apify_google_live", "precise": True}
+            "count": len(images), "perf": perf_sum, "fmts": fmt_dist,
+            "at": _now_kst(), "source": "apify_google_live", "precise": True}
 
 
 class handler(BaseHTTPRequestHandler):
