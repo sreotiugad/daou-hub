@@ -1211,7 +1211,7 @@ const DUComp=(function(){
         // 영상 소재이고 재생 URL(im.v)이 있으면 <video>로 클릭 재생/일시정지, 없으면 포스터/이미지만
         const media=(ty==='video'&&vurl)
           ? '<video class="thumb" src="'+esc(vurl)+'" poster="'+esc(u)+'" muted loop playsinline preload="none"'+ar+'></video><span class="da-play">▶</span>'
-          : '<img class="thumb" src="'+esc(u)+'"'+ar+' alt="광고 소재">';
+          : '<img class="thumb" data-src="'+esc(u)+'"'+ar+' alt="광고 소재">';
         // 성과 배지: 집행 일수(활성이면 '째'). 30일+ = 검증 승자(🏆), 그 외 활성은 🔥
         const days=(im&&typeof im.days==='number')?im.days:null;
         const win=days!=null&&days>=30, act=im&&im.act;
@@ -1224,6 +1224,23 @@ const DUComp=(function(){
     }
     body.innerHTML=html;
     body.querySelectorAll('.da-fchip').forEach(b=>b.onclick=()=>{_daFilter=b.dataset.f;paintDA(e);});
+    // 이미지 로딩: 한꺼번에 요청하면 구글 CDN(tpc.googlesyndication)이 동시요청 throttle로
+    // 일부를 500 처리 → "500 error" 깨진 카드가 됨. 그래서 동시 3개로 제한해 순차 로드하고,
+    // 실패하면 1회 재시도(캐시버스터), 그래도 안 되면 그 카드를 아예 제거(깨진 카드 노출 방지).
+    (function(){
+      const q=[...body.querySelectorAll('.da-item img.thumb[data-src]')];
+      let active=0, idx=0;
+      const pump=()=>{ while(active<3 && idx<q.length){ loadOne(q[idx++]); } };
+      const loadOne=img=>{ active++; let tried=0;
+        img.onload=()=>{ active--; pump(); };
+        img.onerror=()=>{
+          if(tried++<1){ setTimeout(()=>{ img.src=img.dataset.src+(img.dataset.src.indexOf('?')<0?'?':'&')+'r='+Date.now(); }, 700); }
+          else { const c=img.closest('.da-item'); if(c)c.remove(); active--; pump(); }
+        };
+        img.src=img.dataset.src;
+      };
+      pump();
+    })();
     // 영상 카드: 호버가 아니라 클릭으로 재생/일시정지(터치 기기에서도 동작). 아이콘이
     // 재생 중엔 ⏸로 바뀌어 클릭하면 멈춘다는 걸 알 수 있게 한다.
     body.querySelectorAll('.da-item.has-vid').forEach(card=>{
