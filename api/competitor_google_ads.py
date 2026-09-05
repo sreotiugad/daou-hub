@@ -87,11 +87,43 @@ def _resolve_target(domain, google_url, home):
     return (None, None)
 
 
+def _parse_ts(s):
+    """'2024-03-15' / ISO / 'Mar 15, 2024' / unix → epoch초 (실패 시 None)."""
+    if isinstance(s, (int, float)) and s > 0:
+        return float(s)
+    if not (isinstance(s, str) and s.strip()):
+        return None
+    t = s.strip().replace("T", " ").split(".")[0]      # ISO 소수점·T 제거
+    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d", "%Y/%m/%d", "%b %d, %Y"):
+        try:
+            return datetime.strptime(t, fmt).replace(tzinfo=timezone.utc).timestamp()
+        except ValueError:
+            continue
+    return None
+
+
+def _perf(item):
+    """성과 프록시(Meta와 동일 개념): 얼마나 오래·최근까지 집행했는가.
+    Google Transparency는 is_active가 없어 last_seen 이 최근(≤10일)이면 활성으로 본다."""
+    sd = _parse_ts(item.get("start") or item.get("first_shown"))
+    ls = _parse_ts(item.get("last_seen") or item.get("last_shown"))
+    days, act, since = None, False, None
+    now = datetime.now(timezone.utc).timestamp()
+    if sd:
+        end = ls if (ls and ls > sd) else now
+        days = int((end - sd) // 86400)
+        since = datetime.fromtimestamp(sd, timezone.utc).strftime("%Y-%m-%d")
+        if ls and (now - ls) <= 10 * 86400:
+            act = True
+    return {"days": days, "act": act, "since": since}
+
+
 def _normalize(item):
-    """experthasan 출력 item → 프론트 da-item 카드 {u,t,type} 리스트.
+    """experthasan 출력 item → 프론트 da-item 카드 {u,t,type,성과} 리스트.
     variants[] 안에 크리에이티브별 image(정지 이미지)와 format 이 들어있다."""
     name = item.get("advertiser_name") or ""
     ftype = (item.get("format_type") or "").lower()
+    perf = _perf(item)
     out = []
     for v in (item.get("variants") or []):
         img = v.get("image")
@@ -99,11 +131,25 @@ def _normalize(item):
             continue
         f = (v.get("format") or ftype or "").lower()
         ty = "video" if "video" in f else "image"
-        out.append({"u": img, "t": name, "type": ty})
+        out.append({"u": img, "t": name, "type": ty,
+                    "days": perf["days"], "act": perf["act"], "since": perf["since"]})
     return out
 
 
-def collect(target, country="KR", max_ads=MAX_ADS, logs=None):
+def _raw_probe(item):
+    """(임시) 실데이터에서 날짜/상태 필드 키·값 확인용 요약."""
+    o = {}
+    for k, v in item.items():
+        if isinstance(v, (str, int, float, bool)) or v is None:
+            o[k] = v
+        elif isinstance(v, list):
+            o[k] = ("[list %d] first=%s" % (len(v), json.dumps(v[0], ensure_ascii=False)[:200])) if v else "[list 0]"
+        elif isinstance(v, dict):
+            o[k] = "{keys: %s}" % ",".join(list(v.keys())[:14])
+    return o
+
+
+def collect(target, country="KR", max_ads=MAX_ADS, logs=None, probe=False):
     logs = logs if logs is not None else []
     stype, key = target
     if not key:
@@ -146,9 +192,16 @@ def collect(target, country="KR", max_ads=MAX_ADS, logs=None):
                 break
         if len(images) >= max_ads:
             break
-    logs.append("[google] 완료 %s=%s images=%d" % (stype, key, len(images)))
+    images.sort(key=lambda im: (1 if im.get("act") else 0, im.get("days") or -1), reverse=True)
+    dl = [im["days"] for im in images if isinstance(im.get("days"), int)]
+    perf_sum = {"maxDays": max(dl) if dl else None,
+                "active": sum(1 for im in images if im.get("act")),
+                "winners": sum(1 for d in dl if d >= 30)}
+    logs.append("[google] 완료 %s=%s images=%d perf=%s" % (stype, key, len(images), perf_sum))
+    if probe and items:
+        logs.append("PROBE:" + json.dumps(_raw_probe(items[0]), ensure_ascii=False))
     return {"target": "%s:%s" % (stype, key), "images": images,
-            "count": len(images), "at": _now_kst(),
+            "count": len(images), "perf": perf_sum, "at": _now_kst(),
             "source": "apify_google_live", "precise": True}
 
 
@@ -159,19 +212,20 @@ class handler(BaseHTTPRequestHandler):
         name = gv("name")
         target = _resolve_target(gv("domain"), gv("url"), gv("home"))
         debug = gv("debug") in ("1", "true", "yes")
+        probe = gv("probe") in ("1", "true", "yes")
         if not target[1]:
             return self._send({"error": "도메인 또는 홈페이지 URL이 필요합니다",
                                "images": []}, 400)
         logs = []
         try:
-            res = collect(target, logs=logs)
+            res = collect(target, logs=logs, probe=probe)
         except Exception as e:
             return self._send({"error": str(e)[:200], "logs": logs}, 500)
         if res is None:
             return self._send({"error": "미설정 또는 수집 실패", "images": [],
                                "logs": logs}, 503)
         res["name"] = name
-        if debug:
+        if debug or probe:
             res["logs"] = logs
         self._send(res, 200)
 

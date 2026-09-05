@@ -402,6 +402,10 @@
   .comp-da .da-item{position:relative}
   .da-badge{position:absolute;top:6px;left:6px;z-index:3;font-size:10px;font-weight:600;padding:1px 7px;border-radius:20px;background:rgba(15,23,42,.62);color:#fff;letter-spacing:.02em;backdrop-filter:blur(3px)}
   .da-badge.img{background:rgba(37,99,140,.9)}
+  .da-perf{position:absolute;top:6px;right:6px;z-index:3;font-size:10px;font-weight:700;padding:1px 7px;border-radius:20px;background:rgba(15,23,42,.62);color:#fff;letter-spacing:.02em;backdrop-filter:blur(3px)}
+  .da-perf.win{background:linear-gradient(135deg,#d97706,#b45309)}
+  .da-legend{font-size:11px;color:var(--muted);margin:-4px 0 12px;line-height:1.5}
+  .da-legend b{color:#b45309}
   .da-filter{display:flex;gap:7px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
   .da-fchip{font-size:11.5px;font-weight:500;padding:4px 11px;border-radius:20px;border:1px solid var(--border);color:var(--muted);cursor:pointer;background:var(--surface)}
   .da-fchip.on{background:var(--primary-weak);color:var(--primary);border-color:transparent;font-weight:600}
@@ -1186,7 +1190,10 @@ const DUComp=(function(){
     const liveTag=e._live?(' '+accHTML('관측')+(e._plat==='google'
         ? (e._autoHome?' <span style="color:var(--muted);font-size:11px">자동 감지 도메인: '+esc(e._autoHome)+'</span>':'')
         : (e.precise?'':' <span style="color:var(--muted);font-size:11px">키워드 검색 · 무관 광고 섞일 수 있음</span>'))):'';
-    let html='<div class="da-note">'+imgs.length+'개 소재 · 수집 '+esc(e.at||'')+liveTag+'</div>'
+    const pf=e.perf||{};
+    const pfNote=(pf.maxDays!=null)?(' · 최장 <b>'+pf.maxDays+'일</b> 집행 · 활성 '+(pf.active||0)+'개 · 🏆검증 '+(pf.winners||0)+'개'):'';
+    let html='<div class="da-note">'+imgs.length+'개 소재 · 수집 '+esc(e.at||'')+liveTag+pfNote+'</div>'
+      +((pf.maxDays!=null)?'<div class="da-legend">🏆·🔥 배지 = 그 광고를 며칠째 집행 중인지. 광고주는 성과 안 나는 소재를 바로 끄니까, <b>오래·계속 돌리는 소재 = 검증된 승자</b>예요. 오래 돌린 순으로 정렬했어요.</div>':'')
       +'<div class="da-filter">'+chip('all','전체',imgs.length)
         +chip('image','🖼 이미지',nImg)+chip('video','🎬 영상',nVid)+'</div>';
     if(!shown.length){
@@ -1202,7 +1209,13 @@ const DUComp=(function(){
         const media=(ty==='video'&&vurl)
           ? '<video class="thumb" src="'+esc(vurl)+'" poster="'+esc(u)+'" muted loop playsinline preload="none"'+ar+'></video><span class="da-play">▶</span>'
           : '<img class="thumb" src="'+esc(u)+'" loading="lazy"'+ar+' alt="광고 소재">';
-        return '<div class="da-item'+(ty==='video'&&vurl?' has-vid':'')+'"><span class="da-badge'+(ty==='image'?' img':'')+'">'+(ty==='image'?'🖼 이미지':'🎬 영상')+'</span>'
+        // 성과 배지: 집행 일수(활성이면 '째'). 30일+ = 검증 승자(🏆), 그 외 활성은 🔥
+        const days=(im&&typeof im.days==='number')?im.days:null;
+        const win=days!=null&&days>=30, act=im&&im.act;
+        const perfBadge=(days!=null)
+          ? '<span class="da-perf'+(win?' win':'')+'" title="'+esc((im.since||'')+' 집행 시작'+(act?' · 현재 집행 중':' · 종료'))+'">'+(win?'🏆 ':(act?'🔥 ':''))+days+'일'+(act?'째':'')+'</span>'
+          : '';
+        return '<div class="da-item'+(ty==='video'&&vurl?' has-vid':'')+'"><span class="da-badge'+(ty==='image'?' img':'')+'">'+(ty==='image'?'🖼 이미지':'🎬 영상')+'</span>'+perfBadge
           +media
           +(t?'<div class="da-ocr" title="'+esc(t)+'">'+esc(t)+'</div><span class="da-more" hidden>더 보기</span>':'')+'</div>';}).join('')+'</div>';
     }

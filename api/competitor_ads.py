@@ -46,19 +46,43 @@ def _ad_library_url(kw, country="KR"):
             "&country=%s&q=%s&search_type=keyword_unordered&media_type=all" % (country, quote(kw)))
 
 
+def _perf(item):
+    """성과 프록시: 광고를 얼마나 오래·계속 집행 중인지.
+    광고주는 안 먹히는 소재를 바로 끄므로, 오래·활성 집행 = 그 브랜드에게 검증된 승자.
+    Meta는 경쟁사 실성과(CTR·전환)를 공개하지 않으니 이것이 유일하게 정직한 신호.
+      days = 집행 일수(활성이면 오늘까지, 종료면 종료일까지)
+      act  = 현재 집행 중 여부
+      since= 집행 시작일(YYYY-MM-DD)"""
+    sd = item.get("start_date")
+    ed = item.get("end_date")
+    act = bool(item.get("is_active"))
+    days = None
+    if isinstance(sd, (int, float)) and sd > 0:
+        now = datetime.now(timezone.utc).timestamp()
+        end = ed if (isinstance(ed, (int, float)) and ed > sd) else now
+        if act:                       # 활성 광고는 지금 이 순간까지 계속 집행 중
+            end = max(end, now)
+        days = int((end - sd) // 86400)
+    since = (item.get("start_date_formatted") or "")[:10] or None
+    return {"days": days, "act": act, "since": since}
+
+
 def _normalize(item):
-    """Apify 원본 아이템 → 프론트 da-item 카드가 기대하는 {u,t,type} 리스트.
+    """Apify 원본 아이템 → 프론트 da-item 카드가 기대하는 {u,t,type,...} 리스트.
     ⚠️ 이미지 광고(캐러셀·DPA·DCO)는 크리에이티브를 snapshot.cards[] 에 담는다.
     images/videos 만 읽으면 그런 이미지 광고를 통째로 놓쳐 '전부 영상'으로 보인다.
-    videos·images·cards 를 모두 훑고, 각 크리에이티브를 영상/이미지로 판정한다."""
+    videos·images·cards 를 모두 훑고, 각 크리에이티브를 영상/이미지로 판정한다.
+    각 카드에 광고 단위 성과 프록시(집행기간·활성)를 함께 붙인다."""
     snap = item.get("snapshot") or {}
     body = ((snap.get("body") or {}).get("text") or "")[:400]
+    perf = _perf(item)
     out = []
 
     def add(url, ty, vurl=None):
         # url = 카드에 표시할 정지 이미지(영상이면 포스터). vurl = 실제 재생용 영상 파일 URL.
         if url:
-            d = {"u": url, "t": body, "type": ty}
+            d = {"u": url, "t": body, "type": ty,
+                 "days": perf["days"], "act": perf["act"], "since": perf["since"]}
             if vurl:
                 d["v"] = vurl          # 프론트에서 <video>로 호버 재생
             out.append(d)
@@ -144,11 +168,17 @@ def collect(kw, country="KR", max_ads=MAX_ADS, logs=None, page_url=None, probe=F
                 break
         if len(images) >= max_ads:
             break
-    logs.append("[apify] 완료 kw=%s images=%d formats=%s" % (kw, len(images), fmt_dist))
+    # 승자(오래·활성 집행) 소재를 앞으로: 활성 우선 → 집행일수 내림차순
+    images.sort(key=lambda im: (1 if im.get("act") else 0, im.get("days") or -1), reverse=True)
+    dl = [im["days"] for im in images if isinstance(im.get("days"), int)]
+    perf_sum = {"maxDays": max(dl) if dl else None,
+                "active": sum(1 for im in images if im.get("act")),
+                "winners": sum(1 for d in dl if d >= 30)}   # 30일+ 집행 = 검증 소재
+    logs.append("[apify] 완료 kw=%s images=%d formats=%s perf=%s" % (kw, len(images), fmt_dist, perf_sum))
     if probe and items:
         logs.append("PROBE:" + json.dumps(_raw_probe(items[0]), ensure_ascii=False))
     return {"kw": kw, "images": images, "count": len(images), "formats": fmt_dist,
-            "at": _now_kst(), "source": "apify_live",
+            "perf": perf_sum, "at": _now_kst(), "source": "apify_live",
             "precise": bool(page_url)}
 
 
