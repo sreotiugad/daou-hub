@@ -1162,7 +1162,7 @@ const DUComp=(function(){
     const myIdx=ads.findIndex(a=>a.us);
     const rankLine=myIdx>=0
       ? '<div class="comp-sub" style="margin-bottom:9px"><b style="color:var(--fg)">'+esc(ads[myIdx].name)+'</b>, 이 검색어 광고 노출 <b style="color:var(--primary)">'+(myIdx+1)+'위</b>'+(ads.length>1?' (전체 '+ads.length+'개 중)':'')+'</div>'
-      : (ads.length?'<div class="comp-sub" style="margin-bottom:9px">이 검색어 광고에서 등록한 이름은 노출되지 않았어요.</div>':'');
+      : (ads.length?'<div class="comp-sub" style="margin-bottom:9px">다른 광고주 '+ads.length+'곳이 이 검색어에 광고 중이지만, <b style="color:var(--fg)">'+esc(c.name||d.name||'')+'</b>은(는) 지금 파워링크 광고를 하지 않고 있어요.</div>':'');
     const ab=ads.length?ads.slice(0,5).map((a,i)=>'<div class="comp-ad-row'+(a.us?' us':'')+'"><span class="rk">'+(i+1)+'</span><div><b>'+esc(a.name)+'</b>'+(a.us?' <span class="comp-chip">추적 브랜드</span>':'')+(a.copy?'<div style="color:var(--muted)">'+esc(a.copy)+'</div>':'')+'</div></div>').join(''):'<div class="comp-sub">이 검색어의 파워링크 광고를 관측하지 못했어요.</div>';
     cards.push('<div class="card comp-card"><div class="card-h"><h3>SERP 광고 관측</h3>'+accHTML(d.adsLabel||'미확인')+'</div><div class="card-b">'+rankLine+ab+'</div></div>');
     cards.push('<div class="card comp-card"><div class="card-h"><h3>이번 주 변화</h3>'+accHTML('미확인')+'</div><div class="card-b"><div class="comp-sub">지난주 대비 변화(신규 광고·카피·프로모션)는 다음 단계에서 주간 스냅샷을 쌓아 보여드려요.</div></div></div>');
