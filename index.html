@@ -377,6 +377,11 @@
   .comp-fld label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:500}
   .comp-fld input{width:100%;border:1px solid var(--border);background:var(--bg);color:var(--fg);border-radius:8px;padding:8px 11px;font-size:13px;font-family:inherit}
   .comp-fld input:focus{outline:none;border-color:var(--primary)}
+  .comp-adv{margin-top:12px;border-top:1px solid var(--border-soft,var(--border));padding-top:10px}
+  .comp-adv summary{cursor:pointer;font-size:12.5px;font-weight:600;color:var(--primary);list-style:none;user-select:none;display:inline-flex;align-items:center;gap:5px}
+  .comp-adv summary::-webkit-details-marker{display:none}
+  .comp-adv summary::before{content:'▸';font-size:10px;transition:transform .15s}
+  .comp-adv[open] summary::before{transform:rotate(90deg)}
   .comp-form-act{display:flex;gap:8px;margin-top:14px}
   .kw-btn.primary{background:var(--primary);color:var(--primary-fg);border-color:var(--primary)}
   .kw-btn.danger{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 40%,var(--border))}
@@ -1117,22 +1122,27 @@ const DUComp=(function(){
 
   function fld(label,name,val,ph,full){return '<div'+(full?' class="fw"':'')+'><label>'+label+'</label>'
     +'<input data-f="'+name+'" value="'+esc(val||'')+'" placeholder="'+esc(ph)+'"></div>';}
-  function formHTML(c){c=c||{};return '<div class="card-h" style="border:0;padding:0 0 8px"><h3>'+(c.id?'경쟁사 편집':'경쟁사 등록')+'</h3></div>'
+  function formHTML(c){c=c||{};
+    // 고급에 값이 하나라도 있으면(편집 시) 펼쳐서 보여준다.
+    const advOpen=((c.kw&&c.kw!==c.name)||c.meta||c.promo||c.products)?' open':'';
+    return '<div class="card-h" style="border:0;padding:0 0 8px"><h3>'+(c.id?'경쟁사 편집':'경쟁사 등록')+'</h3></div>'
     +'<div class="comp-fld">'
-    +fld('경쟁사명 *','name',c.name,'예: 네이버웍스')
-    +fld('네이버 검색어 별칭 *','kw',c.kw,'SERP·블로그 추적 키 (예: 네이버웍스)')
-    +fld('공식 홈페이지 (선택)','home',c.home,'비우면 네이버 검색결과에서 자동 감지 · 안 맞으면 여기에 직접',1)
+    +fld('경쟁사명 *','name',c.name,'예: 올리브영')
+    +fld('공식 홈페이지 (권장)','home',c.home,'예: oliveyoung.co.kr · 구글 광고가 이 도메인으로 조회돼요',1)
+    +'</div>'
+    +'<details class="comp-adv"'+advOpen+'><summary>고급 설정 (선택)</summary><div class="comp-fld" style="margin-top:10px">'
+    +fld('네이버 검색어 별칭','kw',c.kw,'이름과 검색어가 다를 때만 · 비우면 경쟁사명으로 검색',1)
+    +fld('Meta 광고 라이브러리 URL','meta',c.meta,'비우면 경쟁사명으로 검색 · 채우면 이 광고주만 정확히',1)
     +fld('추적 프로모션 URL','promo',c.promo,'https:// (현재 혜택·가격 감지)',1)
     +fld('대표 상품명 (쉼표로 구분)','products',c.products,'예: 웍스, 그룹웨어',1)
-    +fld('Meta 광고 라이브러리 URL (권장)','meta',c.meta,'비우면 이름 키워드로 검색(무관 광고 섞일 수 있음) · 채우면 이 광고주 광고만 정확히 조회',1)
-    +fld('Google 투명성센터 URL (선택)','google',c.google,'비우면 이름으로 자동 검색',1)
-    +'</div><div class="comp-form-act"><button type="button" class="kw-btn primary" id="compSave">저장</button>'
+    +'</div></details>'
+    +'<div class="comp-form-act"><button type="button" class="kw-btn primary" id="compSave">저장</button>'
     +'<button type="button" class="kw-btn" id="compCancel">취소</button>'
     +(c.id?'<button type="button" class="kw-btn danger" id="compDel" style="margin-left:auto">삭제</button>':'')+'</div>';}
   function openForm(c){const box=el('compForm');box.innerHTML=formHTML(c);box.hidden=false;
     const g=n=>{const i=box.querySelector('[data-f="'+n+'"]');return i?i.value.trim():'';};
     el('compSave').onclick=()=>{const name=g('name'),kw=g('kw')||name;if(!name){alert('경쟁사명을 입력하세요');return;}
-      const obj={name,kw,home:g('home'),promo:g('promo'),products:g('products'),meta:g('meta'),google:g('google')};
+      const obj={name,kw,home:g('home'),promo:g('promo'),products:g('products'),meta:g('meta'),google:(c&&c.google)||''};
       if(c&&c.id){Object.assign(cur(),obj);}
       else{if(list.length>=5){alert('무료 플랜은 경쟁사 5개까지예요');return;}obj.id=uid();list.push(obj);curId=obj.id;}
       save();box.hidden=true;renderSel();fetchSnap(true);};
