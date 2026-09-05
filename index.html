@@ -402,6 +402,7 @@
   .comp-da .da-item{position:relative}
   .da-badge{position:absolute;top:6px;left:6px;z-index:3;font-size:10px;font-weight:600;padding:1px 7px;border-radius:20px;background:rgba(15,23,42,.62);color:#fff;letter-spacing:.02em;backdrop-filter:blur(3px)}
   .da-badge.img{background:rgba(37,99,140,.9)}
+  .da-badge.txt{background:rgba(100,116,139,.92)}
   .da-perf{position:absolute;top:6px;right:6px;z-index:3;font-size:10px;font-weight:700;padding:1px 7px;border-radius:20px;background:rgba(15,23,42,.62);color:#fff;letter-spacing:.02em;backdrop-filter:blur(3px)}
   .da-perf.win{background:linear-gradient(135deg,#d97706,#b45309)}
   .da-legend{font-size:11px;color:var(--muted);margin:-4px 0 12px;line-height:1.5}
@@ -1185,9 +1186,13 @@ const DUComp=(function(){
   var _daMf=null,_daFilter='all',_daCtx=null;
   function daType(im){return (im&&typeof im==='object'&&im.type)?im.type
       :(im&&typeof im==='object'&&im.h&&im.w/im.h<0.72)?'video':'image';}
+  // 구글은 배너(image)와 텍스트/반응형(text)이 섞임 → 배너·텍스트 둘 다 있으면 배너부터 보여줌(깔끔).
+  function _defFilter(e){const a=e.images||[];const hi=a.some(im=>daType(im)==='image'),ht=a.some(im=>daType(im)==='text');
+    return (hi&&ht)?'image':'all';}
   function paintDA(e){const body=el('daBody');if(!body)return;
     const imgs=e.images||[];
-    const nImg=imgs.filter(im=>daType(im)==='image').length,nVid=imgs.length-nImg;
+    const cnt=t=>imgs.filter(im=>daType(im)===t).length;
+    const nImg=cnt('image'),nVid=cnt('video'),nTxt=cnt('text');
     const shown=imgs.filter(im=>_daFilter==='all'||daType(im)===_daFilter);
     const chip=(k,lab,n)=>'<span class="da-fchip'+(_daFilter===k?' on':'')+'" data-f="'+k+'">'+lab+' '+n+'</span>';
     const liveTag=e._live?(' '+accHTML('관측')+(e._plat==='google'
@@ -1198,7 +1203,9 @@ const DUComp=(function(){
     let html='<div class="da-note">'+imgs.length+'개 소재 · 수집 '+esc(e.at||'')+liveTag+pfNote+'</div>'
       +((pf.maxDays!=null)?'<div class="da-legend">🏆·🔥 배지 = 그 광고를 며칠째 집행 중인지. 광고주는 성과 안 나는 소재를 바로 끄니까, <b>오래·계속 돌리는 소재 = 검증된 승자</b>예요. 오래 돌린 순으로 정렬했어요.</div>':'')
       +'<div class="da-filter">'+chip('all','전체',imgs.length)
-        +chip('image','🖼 이미지',nImg)+chip('video','🎬 영상',nVid)+'</div>';
+        +(nImg?chip('image','🖼 이미지',nImg):'')
+        +(nVid?chip('video','🎬 영상',nVid):'')
+        +(nTxt?chip('text','📝 텍스트',nTxt):'')+'</div>';
     if(!shown.length){
       html+='<div class="da-empty">'+(_daFilter==='image'
         ? '이 경쟁사는 수집된 <b>정지 이미지 소재가 없어요</b> — 관측된 '+nVid+'개가 모두 릴스·동영상 광고예요.'
@@ -1218,7 +1225,9 @@ const DUComp=(function(){
         const perfBadge=(days!=null)
           ? '<span class="da-perf'+(win?' win':'')+'" title="'+esc((im.since||'')+' 집행 시작'+(act?' · 현재 집행 중':' · 종료'))+'">'+(win?'🏆 ':(act?'🔥 ':''))+days+'일'+(act?'째':'')+'</span>'
           : '';
-        return '<div class="da-item'+(ty==='video'&&vurl?' has-vid':'')+'"><span class="da-badge'+(ty==='image'?' img':'')+'">'+(ty==='image'?'🖼 이미지':'🎬 영상')+'</span>'+perfBadge
+        const badgeCls=ty==='image'?' img':ty==='text'?' txt':'';
+        const badgeLab=ty==='image'?'🖼 이미지':ty==='text'?'📝 텍스트':'🎬 영상';
+        return '<div class="da-item'+(ty==='video'&&vurl?' has-vid':'')+'"><span class="da-badge'+badgeCls+'">'+badgeLab+'</span>'+perfBadge
           +media
           +(t?'<div class="da-ocr" title="'+esc(t)+'">'+esc(t)+'</div><span class="da-more" hidden>더 보기</span>':'')+'</div>';}).join('')+'</div>';
     }
@@ -1293,7 +1302,7 @@ const DUComp=(function(){
   function showPlat(p){const x=_daCtx;if(!x)return;x.plat=p;_daFilter='all';
     const box=el('compDA');box.querySelectorAll('.da-tab').forEach(t=>t.classList.toggle('on',t.dataset.p===p));
     _daOpenLink();
-    if(x[p]){paintDA(x[p]);return;}
+    if(x[p]){_daFilter=_defFilter(x[p]);paintDA(x[p]);return;}
     const body=el('daBody');if(!body)return;
     // 구글은 유료 조회($5/1000)라 탭 열자마자 자동 실행하지 않고 버튼으로만(비용 절약).
     // Meta는 저렴해서 기존대로 자동 로드.
@@ -1307,7 +1316,7 @@ const DUComp=(function(){
     loadMeta();}
   function loadMeta(){const x=_daCtx,c=x.c,lib=x.metaLib;
     const key=(c.kw||c.name||'').trim();
-    const paint=e=>{e._plat='meta';x.meta=e;if(x.plat==='meta')paintDA(e);};
+    const paint=e=>{e._plat='meta';x.meta=e;if(x.plat==='meta'){_daFilter=_defFilter(e);paintDA(e);}};
     // 정적 캡처(comp-ads/manifest.json, GitHub Actions 수동 트리거) — 실시간 조회 실패 시 폴백
     const fallbackStatic=()=>{
       const done=mf=>{_daMf=mf;const nm=(c.name||'').trim();
@@ -1355,7 +1364,7 @@ const DUComp=(function(){
         if(hit){home=hit.domain;autoHome=hit.domain;}
       }
     }
-    const paint=e=>{e._plat='google';x.google=e;if(x.plat==='google')paintDA(e);};
+    const paint=e=>{e._plat='google';x.google=e;if(x.plat==='google'){_daFilter=_defFilter(e);paintDA(e);}};
     const empty=msg=>{x.google={images:[],_plat:'google'};if(x.plat==='google'){const b=el('daBody');if(b)b.innerHTML='<div class="da-fallback">'+msg+' · <a href="'+esc(gl)+'" target="_blank" rel="noopener">투명성센터에서 보기 ↗</a></div>';}};
     if(!home&&!gu){empty('이 경쟁사의 공식 도메인을 자동으로 못 찾았어요 — 등록 편집에서 <b>공식 홈페이지</b>를 채워주세요(구글은 도메인 기준 조회)');return;}
     const qs='home='+encodeURIComponent(home)+'&url='+encodeURIComponent(gu)+'&name='+encodeURIComponent(c.name||'');

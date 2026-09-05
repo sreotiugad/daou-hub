@@ -129,8 +129,10 @@ def _normalize(item):
         img = v.get("image")
         if not img:
             continue
+        # format: Image=디스플레이 배너(진짜 이미지 소재), Text/Other=검색·반응형 텍스트 광고
+        # (원본 헤드라인·설명은 API가 안 주고 렌더된 미리보기 PNG만 줌 → 분리·필터용으로 타입만 구분)
         f = (v.get("format") or ftype or "").lower()
-        ty = "video" if "video" in f else "image"
+        ty = "video" if "video" in f else ("text" if "text" in f else "image")
         out.append({"u": img, "t": name, "type": ty,
                     "days": perf["days"], "act": perf["act"], "since": perf["since"]})
     return out
@@ -199,15 +201,7 @@ def collect(target, country="KR", max_ads=MAX_ADS, logs=None, probe=False):
                 "winners": sum(1 for d in dl if d >= 30)}
     logs.append("[google] 완료 %s=%s images=%d perf=%s" % (stype, key, len(images), perf_sum))
     if probe and items:
-        dump = []
-        for it in items[:20]:
-            vs = []
-            for v in (it.get("variants") or []):
-                c = v.get("content") or ""
-                vs.append({"fmt": v.get("format"), "hasImg": ("<img" in c),
-                           "content": c[:180], "image": (v.get("image") or "")[:60]})
-            dump.append({"ft": it.get("format_type"), "variants": vs})
-        logs.append("PROBE:" + json.dumps(dump, ensure_ascii=False))
+        logs.append("PROBE:" + json.dumps(_raw_probe(items[0]), ensure_ascii=False))
     return {"target": "%s:%s" % (stype, key), "images": images,
             "count": len(images), "perf": perf_sum, "at": _now_kst(),
             "source": "apify_google_live", "precise": True}
