@@ -1309,15 +1309,22 @@ const DUComp=(function(){
     // "광고 없음"과 구분 안 되는 또 다른 오탐이 생긴다. 확실한 매치가 없으면 수동 입력을
     // 요청하는 게 조용히 틀린 도메인을 쓰는 것보다 낫다.
     if(!home&&!gu){
-      const organic=(x.snap&&x.snap.organic)||[];
-      // us:true 만으로는 부족 — 리셀러/마켓플레이스 상품 페이지도 제목에 브랜드명이
-      // 있으면 us:true로 잡힌다(실측: 쿠팡). 공식 홈페이지가 아닐 게 뻔한 도메인은
-      // 후보에서 아예 제외하고, 그래도 남는 첫 매치만 신뢰한다.
-      const DENY=['naver.com','coupang.com','gmarket.co.kr','auction.co.kr','11st.co.kr',
-        'wemakeprice.com','tmon.co.kr','ssg.com','lotteon.com','amazon.co.kr','aliexpress.com',
-        'oliveyoung.co.kr','ielirare.com'];
-      const hit=organic.find(o=>o&&o.us&&o.domain&&!DENY.some(d=>o.domain===d||o.domain.endsWith('.'+d)));
-      if(hit){home=hit.domain;autoHome=hit.domain;}
+      // 1순위: Meta 광고에서 뽑은 광고주 본인 도메인. Meta 탭이 먼저 로드되며 그 브랜드가
+      // 자기 광고에 직접 건 랜딩(caption/link_url) → 가장 신뢰도 높은 자동 도메인.
+      const md=(x.meta&&x.meta.adDomain)||'';
+      if(md){home=md;autoHome=md;}
+      else{
+        // 2순위: 이미 받아온 SERP 자연검색(organic)에서 그 브랜드 사이트(us:true) 도메인 재활용.
+        // ⚠️ "최상단 결과로 폴백"은 일부러 안 한다 — 브랜드명 검색이 애매하면 최상단이
+        // 네이버쇼핑 브릿지 같은 엉뚱한 도메인일 수 있어 "광고 없음"과 구분 안 되는 오탐이 생긴다.
+        const organic=(x.snap&&x.snap.organic)||[];
+        // us:true 만으론 부족(리셀러/마켓플레이스도 제목에 브랜드명 있으면 잡힘) → 뻔한 도메인 제외.
+        const DENY=['naver.com','coupang.com','gmarket.co.kr','auction.co.kr','11st.co.kr',
+          'wemakeprice.com','tmon.co.kr','ssg.com','lotteon.com','amazon.co.kr','aliexpress.com',
+          'oliveyoung.co.kr','ielirare.com'];
+        const hit=organic.find(o=>o&&o.us&&o.domain&&!DENY.some(d=>o.domain===d||o.domain.endsWith('.'+d)));
+        if(hit){home=hit.domain;autoHome=hit.domain;}
+      }
     }
     const paint=e=>{e._plat='google';x.google=e;if(x.plat==='google')paintDA(e);};
     const empty=msg=>{x.google={images:[],_plat:'google'};if(x.plat==='google'){const b=el('daBody');if(b)b.innerHTML='<div class="da-fallback">'+msg+' · <a href="'+esc(gl)+'" target="_blank" rel="noopener">투명성센터에서 보기 ↗</a></div>';}};

@@ -46,6 +46,34 @@ def _ad_library_url(kw, country="KR"):
             "&country=%s&q=%s&search_type=keyword_unordered&media_type=all" % (country, quote(kw)))
 
 
+_BAD_DOM = ("facebook.com", "instagram.com", "fb.com", "l.facebook.com",
+            "fb.me", "wa.me", "youtube.com", "linktr.ee")
+
+
+def _ad_domain(snap):
+    """광고주 본인 도메인 추출: Meta 광고의 caption('themedicube.co.kr')이나 link_url.
+    이건 광고주가 자기 광고에 직접 건 랜딩이라 그 브랜드의 실제 도메인 = Google
+    투명성센터 조회(도메인 기준)에 그대로 쓸 수 있다."""
+    cap = (snap.get("caption") or "").strip().lower()
+    host = None
+    if cap and "." in cap and " " not in cap:
+        host = cap.split("/")[0]
+    if not host:
+        lu = snap.get("link_url") or ""
+        try:
+            host = urlparse(lu if "://" in lu else "http://" + lu).netloc.lower()
+        except Exception:
+            host = None
+    if not host:
+        return None
+    host = host.split(":")[0]
+    if host.startswith("www."):
+        host = host[4:]
+    if not host or "." not in host or any(host == b or host.endswith("." + b) for b in _BAD_DOM):
+        return None
+    return host
+
+
 def _perf(item):
     """성과 프록시: 광고를 얼마나 오래·계속 집행 중인지.
     광고주는 안 먹히는 소재를 바로 끄므로, 오래·활성 집행 = 그 브랜드에게 검증된 승자.
@@ -154,11 +182,15 @@ def collect(kw, country="KR", max_ads=MAX_ADS, logs=None, page_url=None, probe=F
         return None
     images, seen = [], set()
     fmt_dist = {}          # snapshot.display_format 분포(진짜 타입 확인용)
+    dom_dist = {}          # 광고주 도메인 분포(Google 조회에 자동 재사용)
     for it in items:
         snap = it.get("snapshot") or {}
         df = (snap.get("display_format") or "?")
         if snap:
             fmt_dist[df] = fmt_dist.get(df, 0) + 1
+            dm = _ad_domain(snap)
+            if dm:
+                dom_dist[dm] = dom_dist.get(dm, 0) + 1
         for im in _normalize(it):
             if im["u"] in seen:
                 continue
@@ -174,12 +206,13 @@ def collect(kw, country="KR", max_ads=MAX_ADS, logs=None, page_url=None, probe=F
     perf_sum = {"maxDays": max(dl) if dl else None,
                 "active": sum(1 for im in images if im.get("act")),
                 "winners": sum(1 for d in dl if d >= 30)}   # 30일+ 집행 = 검증 소재
-    logs.append("[apify] 완료 kw=%s images=%d formats=%s perf=%s" % (kw, len(images), fmt_dist, perf_sum))
+    ad_domain = max(dom_dist, key=dom_dist.get) if dom_dist else None   # 최빈 광고주 도메인
+    logs.append("[apify] 완료 kw=%s images=%d formats=%s perf=%s domain=%s" % (kw, len(images), fmt_dist, perf_sum, ad_domain))
     if probe and items:
         logs.append("PROBE:" + json.dumps(_raw_probe(items[0]), ensure_ascii=False))
     return {"kw": kw, "images": images, "count": len(images), "formats": fmt_dist,
-            "perf": perf_sum, "at": _now_kst(), "source": "apify_live",
-            "precise": bool(page_url)}
+            "perf": perf_sum, "adDomain": ad_domain, "at": _now_kst(),
+            "source": "apify_live", "precise": bool(page_url)}
 
 
 class handler(BaseHTTPRequestHandler):
