@@ -78,7 +78,23 @@ def _normalize(item):
     return out
 
 
-def collect(kw, country="KR", max_ads=MAX_ADS, logs=None, page_url=None):
+def _raw_probe(item):
+    """(임시) 실데이터에서 날짜/활성 필드 키·값을 확인하기 위한 요약."""
+    def summ(d):
+        o = {}
+        for k, v in d.items():
+            if isinstance(v, (str, int, float, bool)) or v is None:
+                o[k] = v
+            elif isinstance(v, list):
+                o[k] = "[list %d]" % len(v)
+            elif isinstance(v, dict):
+                o[k] = "{keys: %s}" % ",".join(list(v.keys())[:14])
+        return o
+    snap = item.get("snapshot") or {}
+    return {"top": summ(item), "snapshot": summ(snap)}
+
+
+def collect(kw, country="KR", max_ads=MAX_ADS, logs=None, page_url=None, probe=False):
     """page_url(경쟁사가 직접 등록한 정확한 Meta 광고 라이브러리/페이지 URL)이 있으면
     그 광고주 페이지의 광고만 정확히 가져온다. 없을 때만 키워드 텍스트 검색으로
     폴백하는데, 이 경우 그 키워드가 언급된 무관한 제3자 광고까지 섞여 나올 수 있다
@@ -129,6 +145,8 @@ def collect(kw, country="KR", max_ads=MAX_ADS, logs=None, page_url=None):
         if len(images) >= max_ads:
             break
     logs.append("[apify] 완료 kw=%s images=%d formats=%s" % (kw, len(images), fmt_dist))
+    if probe and items:
+        logs.append("PROBE:" + json.dumps(_raw_probe(items[0]), ensure_ascii=False))
     return {"kw": kw, "images": images, "count": len(images), "formats": fmt_dist,
             "at": _now_kst(), "source": "apify_live",
             "precise": bool(page_url)}
@@ -141,17 +159,18 @@ class handler(BaseHTTPRequestHandler):
         name = _fix_kr((qs.get("name", [""])[0] or "").strip()) or kw
         page_url = _fix_kr((qs.get("url", [""])[0] or "").strip())
         debug = (qs.get("debug", [""])[0] or "").strip() in ("1", "true", "yes")
+        probe = (qs.get("probe", [""])[0] or "").strip() in ("1", "true", "yes")
         if not kw and not page_url:
             return self._send({"error": "kw 또는 url이 필요합니다"}, 400)
         logs = []
         try:
-            res = collect(kw or name, logs=logs, page_url=page_url or None)
+            res = collect(kw or name, logs=logs, page_url=page_url or None, probe=probe)
         except Exception as e:
             return self._send({"error": str(e)[:200], "logs": logs}, 500)
         if res is None:
             return self._send({"error": "미설정 또는 수집 실패", "logs": logs}, 503)
         res["name"] = name
-        if debug:
+        if debug or probe:
             res["logs"] = logs
         self._send(res, 200)
 
