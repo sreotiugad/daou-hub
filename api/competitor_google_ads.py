@@ -199,7 +199,15 @@ def collect(target, country="KR", max_ads=MAX_ADS, logs=None, probe=False):
                 "winners": sum(1 for d in dl if d >= 30)}
     logs.append("[google] 완료 %s=%s images=%d perf=%s" % (stype, key, len(images), perf_sum))
     if probe and items:
-        logs.append("PROBE:" + json.dumps(_raw_probe(items[0]), ensure_ascii=False))
+        dump = []
+        for it in items[:20]:
+            vs = []
+            for v in (it.get("variants") or []):
+                c = v.get("content") or ""
+                vs.append({"fmt": v.get("format"), "hasImg": ("<img" in c),
+                           "content": c[:180], "image": (v.get("image") or "")[:60]})
+            dump.append({"ft": it.get("format_type"), "variants": vs})
+        logs.append("PROBE:" + json.dumps(dump, ensure_ascii=False))
     return {"target": "%s:%s" % (stype, key), "images": images,
             "count": len(images), "perf": perf_sum, "at": _now_kst(),
             "source": "apify_google_live", "precise": True}
