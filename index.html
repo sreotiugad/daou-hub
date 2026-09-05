@@ -1339,30 +1339,14 @@ const DUComp=(function(){
   function loadGoogle(){const x=_daCtx,c=x.c,gl=x.gLink;
     let home=(c.home||'').trim();const gu=(c.google||'').trim();
     let autoHome='';
-    // 홈페이지를 안 넣었으면 이미 받아온 SERP 자연검색 결과(organic)에서 도메인을 재활용한다.
-    // 새로 조회하지도, AI를 호출하지도 않고 — 브랜드명 검색 시 이미 잡힌 그 브랜드
-    // 사이트(us:true, 즉 경쟁사명과 일치가 확인된 결과)의 도메인만 신뢰해서 쓴다.
-    // ⚠️ "최상단 결과로 폴백"은 일부러 안 한다 — 실측해보니 브랜드명 검색이 애매하면
-    // 최상단이 네이버쇼핑 브릿지 링크 같은 엉뚱한 도메인일 수 있고, 그걸로 조회하면
-    // "광고 없음"과 구분 안 되는 또 다른 오탐이 생긴다. 확실한 매치가 없으면 수동 입력을
-    // 요청하는 게 조용히 틀린 도메인을 쓰는 것보다 낫다.
+    // 홈페이지 미입력 시 자동 도메인은 **Meta 광고의 광고주 본인 도메인(adDomain)만** 신뢰한다.
+    // (그 브랜드가 자기 광고에 직접 건 랜딩이라 정확). ⚠️ 예전엔 네이버 자연검색(organic)
+    // 결과의 도메인도 폴백으로 썼는데, "올리브영" 언급된 뉴스기사(khan.co.kr) 도메인을 브랜드로
+    // 오인하는 사고가 있어 organic 추정은 제거. adDomain도 없으면(Meta 미로드/실패) 조용히
+    // 틀린 도메인 쓰지 말고 홈페이지 직접 입력을 요청한다.
     if(!home&&!gu){
-      // 1순위: Meta 광고에서 뽑은 광고주 본인 도메인. Meta 탭이 먼저 로드되며 그 브랜드가
-      // 자기 광고에 직접 건 랜딩(caption/link_url) → 가장 신뢰도 높은 자동 도메인.
       const md=(x.meta&&x.meta.adDomain)||'';
       if(md){home=md;autoHome=md;}
-      else{
-        // 2순위: 이미 받아온 SERP 자연검색(organic)에서 그 브랜드 사이트(us:true) 도메인 재활용.
-        // ⚠️ "최상단 결과로 폴백"은 일부러 안 한다 — 브랜드명 검색이 애매하면 최상단이
-        // 네이버쇼핑 브릿지 같은 엉뚱한 도메인일 수 있어 "광고 없음"과 구분 안 되는 오탐이 생긴다.
-        const organic=(x.snap&&x.snap.organic)||[];
-        // us:true 만으론 부족(리셀러/마켓플레이스도 제목에 브랜드명 있으면 잡힘) → 뻔한 도메인 제외.
-        const DENY=['naver.com','coupang.com','gmarket.co.kr','auction.co.kr','11st.co.kr',
-          'wemakeprice.com','tmon.co.kr','ssg.com','lotteon.com','amazon.co.kr','aliexpress.com',
-          'oliveyoung.co.kr','ielirare.com'];
-        const hit=organic.find(o=>o&&o.us&&o.domain&&!DENY.some(d=>o.domain===d||o.domain.endsWith('.'+d)));
-        if(hit){home=hit.domain;autoHome=hit.domain;}
-      }
     }
     const paint=e=>{e._plat='google';x.google=e;if(x.plat==='google'){_daFilter=_defFilter(e);paintDA(e);}};
     const empty=msg=>{x.google={images:[],_plat:'google'};if(x.plat==='google'){const b=el('daBody');if(b)b.innerHTML='<div class="da-fallback">'+msg+' · <a href="'+esc(gl)+'" target="_blank" rel="noopener">투명성센터에서 보기 ↗</a></div>';}};
