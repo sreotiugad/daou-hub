@@ -1208,7 +1208,7 @@ const DUComp=(function(){
         // 영상 소재이고 재생 URL(im.v)이 있으면 <video>로 클릭 재생/일시정지, 없으면 포스터/이미지만
         const media=(ty==='video'&&vurl)
           ? '<video class="thumb" src="'+esc(vurl)+'" poster="'+esc(u)+'" muted loop playsinline preload="none"'+ar+'></video><span class="da-play">▶</span>'
-          : '<img class="thumb" src="'+esc(u)+'" loading="lazy"'+ar+' alt="광고 소재">';
+          : '<img class="thumb" src="'+esc(u)+'"'+ar+' alt="광고 소재">';
         // 성과 배지: 집행 일수(활성이면 '째'). 30일+ = 검증 승자(🏆), 그 외 활성은 🔥
         const days=(im&&typeof im.days==='number')?im.days:null;
         const win=days!=null&&days>=30, act=im&&im.act;
