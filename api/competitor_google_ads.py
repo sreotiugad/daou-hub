@@ -49,8 +49,20 @@ def _adv_items(data):
     return []
 
 
+def _norm_name(s):
+    return "".join((s or "").split()).lower()
+
+
+def _adv_id(it):
+    for k in ("advertiserId", "advertiser_id", "id", "advertiserID"):
+        if it.get(k):
+            return str(it[k])
+    return None
+
+
 def _resolve_advertiser(name, region, api_key, logs):
-    """이름 → Google 광고주 검색 → advertiser_id. 도메인 조회보다 정확(도메인은 매칭이 안 되는 경우 多)."""
+    """이름 → Google 광고주 검색 → advertiser_id. '브이티'처럼 흔한 이름은 후보가 여러 개라
+    첫 결과가 엉뚱할 수 있으므로(예: (주)우전브이티) 이름 유사도로 랭킹해 최적 후보를 고른다."""
     try:
         r = requests.get(ADV_URL, params={"query": name, "region": region},
                          headers={"x-api-key": api_key}, timeout=30)
@@ -64,15 +76,31 @@ def _resolve_advertiser(name, region, api_key, logs):
         data = r.json()
     except Exception:
         return None
+    cands = []
     for it in _adv_items(data):
-        for k in ("advertiserId", "advertiser_id", "id", "advertiserID"):
-            v = it.get(k)
-            if v:
-                nm = it.get("name") or it.get("advertiserName") or ""
-                logs.append("[google] 광고주 검색 '%s' → advertiser_id=%s (%s)" % (name, v, nm))
-                return str(v)
-    logs.append("[google] 광고주 검색 '%s' → 결과 없음" % name)
-    return None
+        aid = _adv_id(it)
+        if aid:
+            cands.append((aid, it.get("name") or it.get("advertiserName") or ""))
+    if not cands:
+        logs.append("[google] 광고주 검색 '%s' → 결과 없음" % name)
+        return None
+    q = _norm_name(name)
+
+    def score(nm):
+        n = _norm_name(nm)
+        if n == q:
+            return (0, len(n))          # 정확히 같은 이름 최우선
+        if n.startswith(q) or q + "cosmetic" in n or "vt" == n or n.startswith("vt"):
+            return (1, len(n))
+        if q in n:
+            return (2, len(n))          # 포함이면 짧은 이름 우선(유통사 접두어 붙은 긴 이름 후순위)
+        return (9, len(n))
+
+    cands.sort(key=lambda c: score(c[1]))
+    logs.append("[google] 광고주 후보: " + " · ".join("%s(%s…)" % (c[1], c[0][:8]) for c in cands[:5]))
+    best = cands[0]
+    logs.append("[google] 선택 advertiser_id=%s (%s)" % (best[0], best[1]))
+    return best[0]
 
 
 def _fix_kr(s):
@@ -145,8 +173,10 @@ def _parse_ts(s):
 def _perf(ad):
     """성과 프록시: 얼마나 오래·최근까지 집행했는가(광고주는 안 먹히는 소재를 바로 끔).
     Google은 is_active가 없어 lastShown이 최근(≤10일)이면 활성으로 본다."""
-    sd = _parse_ts(ad.get("firstShown"))
-    ls = _parse_ts(ad.get("lastShown"))
+    sd = _parse_ts(ad.get("firstShown") or ad.get("first_shown") or ad.get("firstShownDate")
+                   or ad.get("startDate") or ad.get("start_date"))
+    ls = _parse_ts(ad.get("lastShown") or ad.get("last_shown") or ad.get("lastShownDate")
+                   or ad.get("endDate") or ad.get("end_date"))
     days, act, since = None, False, None
     now = datetime.now(timezone.utc).timestamp()
     if sd:
@@ -158,17 +188,47 @@ def _perf(ad):
     return {"days": days, "act": act, "since": since}
 
 
+def _looks_img(s):
+    """구글 광고 이미지 URL 판별(랜딩 URL 오인 방지). 구글 디스플레이 크리에이티브는
+    googlesyndication / googleusercontent / ggpht 호스트이거나 이미지 확장자."""
+    if not isinstance(s, str) or not s.startswith("http"):
+        return False
+    sl = s.lower().split("?")[0]
+    return ("googlesyndication" in sl or "googleusercontent" in sl or "ggpht" in sl
+            or "gstatic" in sl or sl.endswith((".jpg", ".jpeg", ".png", ".webp", ".gif")))
+
+
+def _deep_img(o, depth=0):
+    """get_ad_details 응답 구조가 제각각이라(필드명·중첩 위치 변동) 객체 전체를 훑어
+    이미지처럼 보이는 첫 URL을 찾는다."""
+    if depth > 6:
+        return None
+    if isinstance(o, str):
+        return o if _looks_img(o) else None
+    if isinstance(o, dict):
+        for v in o.values():
+            r = _deep_img(v, depth + 1)
+            if r:
+                return r
+    elif isinstance(o, list):
+        for it in o:
+            r = _deep_img(it, depth + 1)
+            if r:
+                return r
+    return None
+
+
 def _normalize(ads):
-    """ScrapeCreators ads[] → 프론트 da-item {u,t,type,성과}. imageUrl 없는 광고(텍스트 등)는 건너뜀."""
+    """ScrapeCreators ads[] → 프론트 da-item {u,t,type,성과}. 이미지 못 찾으면(텍스트 광고 등) 건너뜀."""
     out = []
     for ad in ads:
-        img = ad.get("imageUrl")
+        img = ad.get("imageUrl") if _looks_img(ad.get("imageUrl")) else _deep_img(ad)
         if not img:
             continue
-        f = (ad.get("format") or "").lower()
+        f = (ad.get("format") or ad.get("adFormat") or ad.get("creativeFormat") or "").lower()
         ty = "video" if "video" in f else ("text" if "text" in f else "image")
         p = _perf(ad)
-        out.append({"u": img, "t": ad.get("advertiserName") or "", "type": ty,
+        out.append({"u": img, "t": ad.get("advertiserName") or ad.get("advertiser_name") or "", "type": ty,
                     "days": p["days"], "act": p["act"], "since": p["since"]})
     return out
 
