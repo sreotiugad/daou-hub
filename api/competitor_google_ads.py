@@ -29,9 +29,50 @@ from urllib.parse import urlparse, parse_qs
 import requests
 
 API_URL = "https://api.scrapecreators.com/v1/google/company/ads"
+ADV_URL = "https://api.scrapecreators.com/v1/google/adLibrary/advertisers/search"
 MAX_ADS = 24
 KST = timezone(timedelta(hours=9))
 _now_kst = lambda: datetime.now(KST).strftime("%Y-%m-%d %H:%M")   # Vercel 서버는 UTC라 KST로 보정
+
+
+def _adv_items(data):
+    if isinstance(data, list):
+        return data
+    if isinstance(data, dict):
+        for k in ("advertisers", "results", "data", "items"):
+            v = data.get(k)
+            if isinstance(v, list):
+                return v
+        for v in data.values():
+            if isinstance(v, list) and v and isinstance(v[0], dict):
+                return v
+    return []
+
+
+def _resolve_advertiser(name, region, api_key, logs):
+    """이름 → Google 광고주 검색 → advertiser_id. 도메인 조회보다 정확(도메인은 매칭이 안 되는 경우 多)."""
+    try:
+        r = requests.get(ADV_URL, params={"query": name, "region": region},
+                         headers={"x-api-key": api_key}, timeout=30)
+    except Exception as e:
+        logs.append("[google] 광고주 검색 실패: %s" % str(e)[:120])
+        return None
+    if r.status_code >= 400:
+        logs.append("[google] 광고주 검색 status=%s body=%s" % (r.status_code, r.text[:140]))
+        return None
+    try:
+        data = r.json()
+    except Exception:
+        return None
+    for it in _adv_items(data):
+        for k in ("advertiserId", "advertiser_id", "id", "advertiserID"):
+            v = it.get(k)
+            if v:
+                nm = it.get("name") or it.get("advertiserName") or ""
+                logs.append("[google] 광고주 검색 '%s' → advertiser_id=%s (%s)" % (name, v, nm))
+                return str(v)
+    logs.append("[google] 광고주 검색 '%s' → 결과 없음" % name)
+    return None
 
 
 def _fix_kr(s):
@@ -132,15 +173,20 @@ def _normalize(ads):
     return out
 
 
-def collect(target, country="KR", max_ads=MAX_ADS, logs=None, probe=False):
+def collect(target, country="KR", max_ads=MAX_ADS, logs=None, probe=False, name=None):
     logs = logs if logs is not None else []
-    stype, key = target
-    if not key:
-        logs.append("⚠️ [google] 도메인/advertiser 를 확인할 수 없음 (홈페이지 URL 등록 필요)")
-        return None
     api_key = os.environ.get("SCRAPECREATORS_API_KEY")
     if not api_key:
         logs.append("⚠️ [google] SCRAPECREATORS_API_KEY 없음 — 건너뜀")
+        return None
+    stype, key = target
+    # 경쟁사명이 있으면 광고주 검색으로 advertiser_id 확보(도메인 조회는 매칭 실패가 잦음).
+    if name and stype != "advertiser_id":
+        aid = _resolve_advertiser(name, country, api_key, logs)
+        if aid:
+            stype, key = "advertiser_id", aid
+    if not key:
+        logs.append("⚠️ [google] 광고주/도메인을 확인할 수 없음 (이름 검색 실패 · 홈페이지 URL 등록 필요)")
         return None
     # ⚠️ 2025-11-10 ScrapeCreators 변경: get_ad_details 없이는 advertiserId·creativeId 만 오고
     # imageUrl 이 안 온다(=소재 0개로 보임). 소재를 받으려면 get_ad_details=true 필수(광고당 25크레딧).
@@ -192,12 +238,12 @@ class handler(BaseHTTPRequestHandler):
         target = _resolve_target(gv("domain"), gv("url"), gv("home"))
         debug = gv("debug") in ("1", "true", "yes")
         probe = gv("probe") in ("1", "true", "yes")
-        if not target[1]:
-            return self._send({"error": "도메인 또는 홈페이지 URL이 필요합니다",
+        if not target[1] and not name:
+            return self._send({"error": "도메인·홈페이지 URL 또는 경쟁사명이 필요합니다",
                                "images": []}, 400)
         logs = []
         try:
-            res = collect(target, logs=logs, probe=probe)
+            res = collect(target, logs=logs, probe=probe, name=name)
         except Exception as e:
             return self._send({"error": str(e)[:200], "logs": logs}, 500)
         if res is None:

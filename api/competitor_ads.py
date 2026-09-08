@@ -47,7 +47,11 @@ def _ad_library_url(kw, country="KR"):
 
 
 _BAD_DOM = ("facebook.com", "instagram.com", "fb.com", "l.facebook.com",
-            "fb.me", "wa.me", "youtube.com", "linktr.ee")
+            "fb.me", "wa.me", "youtube.com", "linktr.ee",
+            # 단축링크·리테일러·마켓 — 브랜드 본인 도메인이 아니므로 Google 도메인 조회에 부적합
+            "oy.run", "naver.me", "smartstore.naver.com", "shopping.naver.com",
+            "coupang.com", "oliveyoung.co.kr", "bit.ly", "me2.do", "abr.ge",
+            "vip.link", "link.coupang.com", "kko.to", "open.kakao.com")
 
 
 def _ad_domain(snap):

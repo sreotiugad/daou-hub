@@ -1423,7 +1423,7 @@ const DUComp=(function(){
     }
     const paint=e=>{e._plat='google';x.google=e;if(x.plat==='google'){_daFilter=_defFilter(e);paintDA(e);}_aiRun(false);};
     const empty=msg=>{x.google={images:[],_plat:'google'};_aiRun(false);if(x.plat==='google'){const b=el('daBody');if(b)b.innerHTML='<div class="da-fallback">'+msg+' · <a href="'+esc(gl)+'" target="_blank" rel="noopener">투명성센터에서 보기 ↗</a></div>';}};
-    if(!home&&!gu){empty('이 경쟁사의 공식 도메인을 자동으로 못 찾았어요 — 등록 편집에서 <b>공식 홈페이지</b>를 채워주세요(구글은 도메인 기준 조회)');return;}
+    if(!home&&!gu&&!(c.name||'').trim()){empty('이 경쟁사의 공식 도메인·이름을 확인할 수 없어요 — 등록 편집에서 <b>경쟁사명</b>이나 <b>공식 홈페이지</b>를 채워주세요');return;}
     const qs='home='+encodeURIComponent(home)+'&url='+encodeURIComponent(gu)+'&name='+encodeURIComponent(c.name||'');
     fetch('/api/competitor_google_ads?'+qs)
       .then(r=>r.ok?r.json():Promise.reject())
