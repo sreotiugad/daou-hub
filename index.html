@@ -1158,17 +1158,18 @@ const DUComp=(function(){
     +'<input data-f="'+name+'" value="'+esc(val||'')+'" placeholder="'+esc(ph)+'"></div>';}
   function formHTML(c){c=c||{};
     // 고급에 값이 하나라도 있으면(편집 시) 펼쳐서 보여준다.
-    const advOpen=((c.kw&&c.kw!==c.name)||c.meta||c.promo||c.products)?' open':'';
+    const advOpen=((c.kw&&c.kw!==c.name)||c.meta||c.google||c.promo||c.products)?' open':'';
     return '<div class="card-h" style="border:0;padding:0 0 8px"><h3>'+(c.id?'경쟁사 편집':'경쟁사 등록')+'</h3></div>'
     +'<div class="comp-fld">'
-    +fld('경쟁사명 *','name',c.name,'예: 올리브영')
-    +fld('공식 홈페이지 (권장)','home',c.home,'예: oliveyoung.co.kr · 구글 광고가 이 도메인으로 조회돼요',1)
+    +fld('경쟁사명 *','name',c.name,'예: 플레이오토')
+    +fld('공식 홈페이지 (권장)','home',c.home,'예: playauto.co.kr · 구글 광고가 이 도메인으로 조회',1)
     +'</div>'
     +'<details class="comp-adv"'+advOpen+'><summary>고급 설정 (선택)</summary><div class="comp-fld" style="margin-top:10px">'
     +fld('네이버 검색어 별칭','kw',c.kw,'이름과 검색어가 다를 때만 · 비우면 경쟁사명으로 검색',1)
     +fld('Meta 광고 라이브러리 URL','meta',c.meta,'비우면 경쟁사명으로 검색 · 채우면 이 광고주만 정확히',1)
+    +fld('Google 투명성센터 URL','google',c.google,'adstransparency.google.com 광고주 URL · 채우면 정확한 광고주로 조회',1)
     +fld('추적 프로모션 URL','promo',c.promo,'https:// (현재 혜택·가격 감지)',1)
-    +fld('대표 상품명 (쉼표로 구분)','products',c.products,'예: 웍스, 그룹웨어',1)
+    +fld('대표 상품명 (쉼표로 구분)','products',c.products,'예: 통합관리, 자동주문',1)
     +'</div></details>'
     +'<div class="comp-form-act"><button type="button" class="kw-btn primary" id="compSave">저장</button>'
     +'<button type="button" class="kw-btn" id="compCancel">취소</button>'
@@ -1176,7 +1177,7 @@ const DUComp=(function(){
   function openForm(c){const box=el('compForm');box.innerHTML=formHTML(c);box.hidden=false;
     const g=n=>{const i=box.querySelector('[data-f="'+n+'"]');return i?i.value.trim():'';};
     el('compSave').onclick=()=>{const name=g('name'),kw=g('kw')||name;if(!name){alert('경쟁사명을 입력하세요');return;}
-      const obj={name,kw,home:g('home'),promo:g('promo'),products:g('products'),meta:g('meta'),google:(c&&c.google)||''};
+      const obj={name,kw,home:g('home'),promo:g('promo'),products:g('products'),meta:g('meta'),google:g('google')};
       if(c&&c.id){Object.assign(cur(),obj);}
       else{if(list.length>=5){alert('무료 플랜은 경쟁사 5개까지예요');return;}obj.id=uid();list.push(obj);curId=obj.id;}
       save();box.hidden=true;renderSel();fetchSnap(true);};
@@ -1208,7 +1209,7 @@ const DUComp=(function(){
     else{pb='<div class="comp-sub">프로모션 URL 등록 시 혜택·가격을 추적합니다.</div>';}
     cards.push('<div class="card comp-card"><div class="card-h"><h3>프로모션</h3>'+accHTML(d.promoLabel||'미설정')+'</div><div class="card-b">'+pb+'</div></div>');
     // '경쟁사' 칩은 원래 남의 경쟁사를 감시할 때를 전제한 문구다. 이 도구를 자기 브랜드
-    // (예: 우리가 파는 뷰티 브랜드 본인) 등록해 노출 순위를 보는 데 쓰면 정반대로 읽힌다
+    // (예: 우리 브랜드 본인) 등록해 노출 순위를 보는 데 쓰면 정반대로 읽힌다
     // — 정작 검색한 그 브랜드 본인이 '경쟁사'로 뜬다. 그래서 (1) 맨 위에 순위를 문장으로
     // 먼저 강조하고 (2) 줄 안의 칩도 중립적인 "추적 브랜드"로 바꾼다.
     const myIdx=ads.findIndex(a=>a.us);
