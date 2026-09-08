@@ -1383,8 +1383,7 @@ const DUComp=(function(){
     // 구글은 유료 조회($5/1000)라 탭 열자마자 자동 실행하지 않고 버튼으로만(비용 절약).
     // Meta는 저렴해서 기존대로 자동 로드.
     if(p==='google'){
-      body.innerHTML='<div class="da-manual"><button type="button" class="kw-btn primary" id="daGoLoad">🔵 구글 광고 불러오기</button>'
-        +'<div class="da-manual-note">조회 시 불러옵니다 · 24시간 캐시</div></div>';
+      body.innerHTML='<div class="da-manual"><button type="button" class="kw-btn primary" id="daGoLoad">🔵 구글 광고 불러오기</button></div>';
       const b=el('daGoLoad');if(b)b.onclick=()=>{if(x.plat!=='google')return;body.innerHTML='<div class="da-loading">구글 광고 불러오는 중…</div>';loadGoogle();};
       return;
     }
