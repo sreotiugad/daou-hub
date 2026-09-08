@@ -142,9 +142,11 @@ def collect(target, country="KR", max_ads=MAX_ADS, logs=None, probe=False):
     if not api_key:
         logs.append("⚠️ [google] SCRAPECREATORS_API_KEY 없음 — 건너뜀")
         return None
-    params = {"topic": "all", "region": country, "format": "image"}
+    # ⚠️ 2025-11-10 ScrapeCreators 변경: get_ad_details 없이는 advertiserId·creativeId 만 오고
+    # imageUrl 이 안 온다(=소재 0개로 보임). 소재를 받으려면 get_ad_details=true 필수(광고당 25크레딧).
+    params = {"topic": "all", "region": country, "format": "image", "get_ad_details": "true"}
     params["advertiser_id" if stype == "advertiser_id" else "domain"] = key
-    logs.append("[google] 조회 %s=%s (scrapecreators)" % (stype, key))
+    logs.append("[google] 조회 %s=%s (scrapecreators · get_ad_details) " % (stype, key))
     try:
         r = requests.get(API_URL, params=params,
                          headers={"x-api-key": api_key}, timeout=45)

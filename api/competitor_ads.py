@@ -1,20 +1,20 @@
 """Vercel 서버리스 함수 — 경쟁사 Meta 광고 소재 온디맨드(실시간) 조회.
 
 comp-ads/manifest.json(GitHub Actions "FB Ads Capture" 수동 트리거로만 갱신되는
-정적 캡처)의 대안. Apify curious_coder/facebook-ads-library-scraper 액터를
-요청 시점에 그때그때 호출해 임의 경쟁사 키워드에 대해 즉시 결과를 돌려준다.
+정적 캡처)의 대안. ScrapeCreators Facebook 광고 라이브러리 API로 요청 시점에
+그때그때 호출해 임의 경쟁사에 대해 즉시 결과를 돌려준다(구글 조회와 같은 계정/키).
 
-실측(2026-09-03, 키워드 "브이티" 기준):
-  - run-sync-get-dataset-items 응답 ~10초, 광고 10건
-  - 반환되는 fbcdn 이미지 URL은 GraphQL 응답 기반이라 세션/IP 무관하게 다운로드
-    가능(서명 만료까지 ~4일 여유) — DOM 스크래핑 방식(fb_ads_capture.py)이 겪던
-    "렌더·다운로드 세션 불일치 → 403" 문제가 없음
-  - 비용: 광고 1,000건당 $0.75 (Apify pay-per-event)
+엔드포인트(ScrapeCreators, 헤더 x-api-key: SCRAPECREATORS_API_KEY):
+  - GET /v1/facebook/adLibrary/search/companies?query=<이름>  → 광고주 page_id
+  - GET /v1/facebook/adLibrary/company/ads?pageId=<id>        → 그 광고주 광고(정확)
+  - GET /v1/facebook/adLibrary/search/ads?query=<키워드>       → 키워드 검색(폴백)
+반환 광고는 FB GraphQL snapshot 구조라 fbcdn 이미지 URL을 세션/IP 무관 다운로드 가능.
 
-  /api/competitor_ads?kw=<검색어>&name=<표시용 이름>
+  /api/competitor_ads?kw=<검색어>&name=<표시용 이름>&url=<광고주 라이브러리 URL>
+  (debug=1 진단 로그, probe=1 첫 광고 원본 구조 확인)
 
 프론트(index.html DUComp.renderDA)는 이 엔드포인트를 우선 호출하고,
-APIFY_TOKEN 미설정이거나 실패하면 기존 comp-ads/manifest.json 정적 캡처로 폴백한다.
+키 미설정이거나 실패하면 기존 comp-ads/manifest.json 정적 캡처로 폴백한다.
 """
 import os
 import json
@@ -24,7 +24,7 @@ from urllib.parse import urlparse, parse_qs, quote
 
 import requests
 
-ACTOR = "curious_coder~facebook-ads-library-scraper"
+API_BASE = "https://api.scrapecreators.com/v1/facebook/adLibrary"
 MAX_ADS = 24
 KST = timezone(timedelta(hours=9))
 _now_kst = lambda: datetime.now(KST).strftime("%Y-%m-%d %H:%M")   # Vercel 서버는 UTC라 KST로 보정
@@ -96,7 +96,7 @@ def _perf(item):
 
 
 def _normalize(item):
-    """Apify 원본 아이템 → 프론트 da-item 카드가 기대하는 {u,t,type,...} 리스트.
+    """FB 광고 라이브러리 원본 아이템(snapshot) → 프론트 da-item 카드가 기대하는 {u,t,type,...} 리스트.
     ⚠️ 이미지 광고(캐러셀·DPA·DCO)는 크리에이티브를 snapshot.cards[] 에 담는다.
     images/videos 만 읽으면 그런 이미지 광고를 통째로 놓쳐 '전부 영상'으로 보인다.
     videos·images·cards 를 모두 훑고, 각 크리에이티브를 영상/이미지로 판정한다.
@@ -146,40 +146,95 @@ def _raw_probe(item):
     return {"top": summ(item), "snapshot": summ(snap)}
 
 
-def collect(kw, country="KR", max_ads=MAX_ADS, logs=None, page_url=None, probe=False):
-    """page_url(경쟁사가 직접 등록한 정확한 Meta 광고 라이브러리/페이지 URL)이 있으면
-    그 광고주 페이지의 광고만 정확히 가져온다. 없을 때만 키워드 텍스트 검색으로
-    폴백하는데, 이 경우 그 키워드가 언급된 무관한 제3자 광고까지 섞여 나올 수 있다
-    (예: "브이티" 키워드 검색 시 관련 리셀러·후기 계정의 광고도 포함됨)."""
-    logs = logs if logs is not None else []
-    token = os.environ.get("APIFY_TOKEN")
-    if not token:
-        logs.append("⚠️ [apify] APIFY_TOKEN 없음 — 건너뜀")
+def _extract_items(data):
+    """ScrapeCreators 응답에서 광고(또는 회사) 리스트를 유연하게 뽑는다.
+    래퍼 키(ads/results/searchResults/companies/data/items)가 뭐든, 리스트를 찾는다."""
+    if isinstance(data, list):
+        return data
+    if isinstance(data, dict):
+        for k in ("ads", "results", "searchResults", "companies", "data", "items"):
+            v = data.get(k)
+            if isinstance(v, list):
+                return v
+        for v in data.values():          # 폴백: 딕셔너리들의 첫 리스트
+            if isinstance(v, list) and v and isinstance(v[0], dict):
+                return v
+    return []
+
+
+def _first_page_id(data):
+    """search/companies 응답에서 첫 회사의 광고 라이브러리 page id."""
+    for it in _extract_items(data):
+        for k in ("page_id", "pageId", "id", "ad_library_page_id", "adLibraryPageId"):
+            v = it.get(k)
+            if v:
+                return str(v)
+    return None
+
+
+def _pid_from_url(u):
+    """등록된 Meta 광고 라이브러리 URL에서 view_all_page_id / id 추출(있으면 정확 조회)."""
+    if not u:
         return None
-    if page_url:
-        url = page_url
-        logs.append("[apify] 광고주 페이지 URL로 정확히 조회")
-    else:
-        url = _ad_library_url(kw, country)
-        logs.append("[apify] 키워드 검색(광고주 페이지 URL 미등록 — 무관 광고 섞일 수 있음)")
     try:
-        r = requests.post(
-            "https://api.apify.com/v2/acts/%s/run-sync-get-dataset-items" % ACTOR,
-            params={"token": token},
-            json={"urls": [{"url": url}], "count": max_ads},
-            timeout=55,
-        )
+        q = parse_qs(urlparse(u).query)
+        for k in ("view_all_page_id", "id", "page_id"):
+            if q.get(k):
+                return q[k][0]
+    except Exception:
+        pass
+    return None
+
+
+def _sc_get(path, params, key, logs):
+    try:
+        r = requests.get(API_BASE + path, params=params, headers={"x-api-key": key}, timeout=45)
     except Exception as e:
-        logs.append("❌ [apify] 요청 실패: %s" % str(e)[:200])
+        logs.append("❌ [sc]%s 요청 실패: %s" % (path, str(e)[:160]))
         return None
     if r.status_code >= 400:
-        logs.append("❌ [apify] status=%s body=%s" % (r.status_code, r.text[:200]))
+        logs.append("❌ [sc]%s status=%s body=%s" % (path, r.status_code, r.text[:160]))
         return None
     try:
-        items = r.json()
+        return r.json()
     except Exception:
-        logs.append("❌ [apify] JSON 파싱 실패")
+        logs.append("❌ [sc]%s JSON 파싱 실패" % path)
         return None
+
+
+def collect(kw, country="KR", max_ads=MAX_ADS, logs=None, page_url=None, probe=False):
+    """ScrapeCreators Facebook 광고 라이브러리로 경쟁사 광고를 가져온다.
+    우선순위: (1) 등록된 페이지 URL의 page_id → company/ads (정확),
+    (2) 이름으로 search/companies → page_id → company/ads (정확·자동셋업),
+    (3) 폴백: search/ads 키워드 검색(무관 광고 섞일 수 있음).
+    파싱(_normalize/_ad_domain/_perf)은 FB snapshot 구조 그대로 재활용."""
+    logs = logs if logs is not None else []
+    key = os.environ.get("SCRAPECREATORS_API_KEY")
+    if not key:
+        logs.append("⚠️ [sc] SCRAPECREATORS_API_KEY 없음 — 건너뜀")
+        return None
+    items, precise = None, False
+    pid = _pid_from_url(page_url)
+    if not pid and kw:                     # 이름 → 회사 page id (자동셋업)
+        cj = _sc_get("/search/companies", {"query": kw}, key, logs)
+        if cj is not None:
+            pid = _first_page_id(cj)
+            if pid:
+                logs.append("[sc] search/companies '%s' → pageId=%s" % (kw, pid))
+    if pid:                                # 그 광고주 광고만 정확히
+        aj = _sc_get("/company/ads", {"pageId": pid, "country": country}, key, logs)
+        if aj is not None:
+            items = _extract_items(aj)
+            precise = True
+            logs.append("[sc] company/ads pageId=%s ads=%d" % (pid, len(items)))
+    if not items:                          # 폴백: 키워드 검색
+        sj = _sc_get("/search/ads", {"query": kw or "", "country": country}, key, logs)
+        if sj is None:
+            return None
+        items = _extract_items(sj)
+        logs.append("[sc] search/ads '%s' ads=%d (키워드 검색 — 무관 광고 섞일 수 있음)" % (kw, len(items)))
+    if not isinstance(items, list):
+        items = []
     images, seen = [], set()
     fmt_dist = {}          # snapshot.display_format 분포(진짜 타입 확인용)
     dom_dist = {}          # 광고주 도메인 분포(Google 조회에 자동 재사용)
@@ -207,12 +262,12 @@ def collect(kw, country="KR", max_ads=MAX_ADS, logs=None, page_url=None, probe=F
                 "active": sum(1 for im in images if im.get("act")),
                 "winners": sum(1 for d in dl if d >= 30)}   # 30일+ 집행 = 검증 소재
     ad_domain = max(dom_dist, key=dom_dist.get) if dom_dist else None   # 최빈 광고주 도메인
-    logs.append("[apify] 완료 kw=%s images=%d formats=%s perf=%s domain=%s" % (kw, len(images), fmt_dist, perf_sum, ad_domain))
+    logs.append("[sc] 완료 kw=%s images=%d formats=%s perf=%s domain=%s" % (kw, len(images), fmt_dist, perf_sum, ad_domain))
     if probe and items:
         logs.append("PROBE:" + json.dumps(_raw_probe(items[0]), ensure_ascii=False))
     return {"kw": kw, "images": images, "count": len(images), "formats": fmt_dist,
             "perf": perf_sum, "adDomain": ad_domain, "at": _now_kst(),
-            "source": "apify_live", "precise": bool(page_url)}
+            "source": "scrapecreators_live", "precise": precise}
 
 
 class handler(BaseHTTPRequestHandler):
@@ -242,7 +297,7 @@ class handler(BaseHTTPRequestHandler):
         self.send_response(code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         # 소재가 실제로 담긴 성공 응답만 Vercel CDN에 캐시 → 같은 경쟁사(kw/url) 반복 조회 시
-        # 6시간에 딱 1번만 실제 Apify 실행(유료), 그 사이는 CDN이 응답(비용 0). 실패·0건은
+        # 6시간에 딱 1번만 실제 ScrapeCreators 호출(유료), 그 사이는 CDN이 응답(비용 0). 실패·0건은
         # 캐시 금지(간헐적 0건이 6h 굳는 것 방지·다음 조회 재시도 가능).
         # (이전 no-store는 매 조회마다 유료 실행 → 월 한도 초과 사고의 원인)
         if code == 200 and (obj.get("count") or 0) > 0:
