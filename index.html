@@ -1264,7 +1264,10 @@ const DUComp=(function(){
     const adv=isG?((imgs.find(im=>im&&im.t)||{}).t||''):'';   // 구글: 광고주명(카드마다 반복 대신 헤더 1회)
     const chip=(k,lab,n)=>'<span class="da-fchip'+(_daFilter===k?' on':'')+'" data-f="'+k+'">'+lab+' '+n+'</span>';
     const liveTag=e._live?(' '+accHTML('관측')+(e._plat==='google'
-        ? (e._autoHome?' <span style="color:var(--muted);font-size:11px">자동 감지 도메인: '+esc(e._autoHome)+'</span>':'')
+        ? (e.advBy==='name'&&e.advertiser
+            ? ' <span style="color:var(--warning);font-size:11px">광고주 추정: '+esc(e.advertiser)+' · 다르면 편집에서 <b>Google 투명성센터 URL</b> 지정</span>'
+            : (e.advBy==='url'?' <span style="color:var(--muted);font-size:11px">광고주 확정(URL)</span>'
+               : (e._autoHome?' <span style="color:var(--muted);font-size:11px">자동 감지 도메인: '+esc(e._autoHome)+'</span>':'')))
         : (e.precise?'':' <span style="color:var(--muted);font-size:11px">키워드 검색 · 무관 광고 섞일 수 있음</span>'))):'';
     const pf=e.perf||{};
     const pfNote=(pf.maxDays!=null)?(' · 최장 <b>'+pf.maxDays+'일</b> 집행 · 활성 '+(pf.active||0)+'개 · 🏆검증 '+(pf.winners||0)+'개'):'';

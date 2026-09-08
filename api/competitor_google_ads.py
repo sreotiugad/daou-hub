@@ -83,7 +83,7 @@ def _resolve_advertiser(name, region, api_key, logs):
             cands.append((aid, it.get("name") or it.get("advertiserName") or ""))
     if not cands:
         logs.append("[google] 광고주 검색 '%s' → 결과 없음" % name)
-        return None
+        return None, None
     q = _norm_name(name)
 
     def score(nm):
@@ -99,8 +99,8 @@ def _resolve_advertiser(name, region, api_key, logs):
     cands.sort(key=lambda c: score(c[1]))
     logs.append("[google] 광고주 후보: " + " · ".join("%s(%s…)" % (c[1], c[0][:8]) for c in cands[:5]))
     best = cands[0]
-    logs.append("[google] 선택 advertiser_id=%s (%s)" % (best[0], best[1]))
-    return best[0]
+    logs.append("[google] 선택 advertiser_id=%s (%s) — 부정확하면 투명성센터 URL 지정 권장" % (best[0], best[1]))
+    return best[0], best[1]
 
 
 def _fix_kr(s):
@@ -183,8 +183,9 @@ def _perf(ad):
         end = ls if (ls and ls > sd) else now
         days = int((end - sd) // 86400)
         since = datetime.fromtimestamp(sd, timezone.utc).strftime("%Y-%m-%d")
-        if ls and (now - ls) <= 10 * 86400:
-            act = True
+    # 활성 판정은 firstShown 이 없어도 lastShown 만으로(최근 10일 내 노출이면 집행 중).
+    if ls and (now - ls) <= 10 * 86400:
+        act = True
     return {"days": days, "act": act, "since": since}
 
 
@@ -240,11 +241,12 @@ def collect(target, country="KR", max_ads=MAX_ADS, logs=None, probe=False, name=
         logs.append("⚠️ [google] SCRAPECREATORS_API_KEY 없음 — 건너뜀")
         return None
     stype, key = target
-    # 경쟁사명이 있으면 광고주 검색으로 advertiser_id 확보(도메인 조회는 매칭 실패가 잦음).
+    adv_name, adv_by = None, ("url" if stype == "advertiser_id" else None)
+    # URL(투명성센터)로 advertiser_id 가 이미 잡혔으면 그걸 신뢰(정확). 없을 때만 이름 검색 폴백.
     if name and stype != "advertiser_id":
-        aid = _resolve_advertiser(name, country, api_key, logs)
+        aid, adv_name = _resolve_advertiser(name, country, api_key, logs)
         if aid:
-            stype, key = "advertiser_id", aid
+            stype, key, adv_by = "advertiser_id", aid, "name"
     if not key:
         logs.append("⚠️ [google] 광고주/도메인을 확인할 수 없음 (이름 검색 실패 · 홈페이지 URL 등록 필요)")
         return None
@@ -287,7 +289,8 @@ def collect(target, country="KR", max_ads=MAX_ADS, logs=None, probe=False, name=
         logs.append("PROBE:" + json.dumps(ads[0], ensure_ascii=False)[:500])
     return {"target": "%s:%s" % (stype, key), "images": images,
             "count": len(images), "perf": perf_sum, "at": _now_kst(),
-            "source": "scrapecreators_live", "precise": True}
+            "source": "scrapecreators_live", "precise": (adv_by == "url"),
+            "advertiser": adv_name, "advBy": adv_by}
 
 
 class handler(BaseHTTPRequestHandler):
