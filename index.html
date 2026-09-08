@@ -432,6 +432,10 @@
   .da-fchip{font-size:11.5px;font-weight:500;padding:4px 11px;border-radius:20px;border:1px solid var(--border);color:var(--muted);cursor:pointer;background:var(--surface)}
   .da-fchip.on{background:var(--primary-weak);color:var(--primary);border-color:transparent;font-weight:600}
   .da-empty{font-size:12px;color:var(--muted);padding:14px 2px}
+  .ins-wrap{display:flex;flex-direction:column;gap:13px}
+  .ins-row{display:flex;flex-direction:column;gap:3px;padding-left:12px;border-left:3px solid var(--primary)}
+  .ins-h{font-size:12px;font-weight:700;color:var(--fg);letter-spacing:.01em}
+  .ins-b{font-size:13.5px;line-height:1.6;color:var(--muted)}
   .da-item video.thumb{width:100%;height:auto;display:block;background:#000;cursor:pointer}
   .da-item.has-vid .da-play{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2;width:36px;height:36px;border-radius:50%;background:rgba(15,23,42,.55);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;pointer-events:none;backdrop-filter:blur(2px);transition:opacity .16s}
   /* 재생 중엔 완전히 숨기지 않고 옅게 — 클릭하면 멈춘다는 걸 계속 알 수 있게 */
@@ -1371,13 +1375,13 @@ const DUComp=(function(){
     loadMeta();}
   function loadMeta(){const x=_daCtx,c=x.c,lib=x.metaLib;
     const key=(c.kw||c.name||'').trim();
-    const paint=e=>{e._plat='meta';x.meta=e;if(x.plat==='meta'){_daFilter=_defFilter(e);paintDA(e);}};
+    const paint=e=>{e._plat='meta';x.meta=e;if(x.plat==='meta'){_daFilter=_defFilter(e);paintDA(e);}_aiRun(false);};
     // 정적 캡처(comp-ads/manifest.json, GitHub Actions 수동 트리거) — 실시간 조회 실패 시 폴백
     const fallbackStatic=()=>{
       const done=mf=>{_daMf=mf;const nm=(c.name||'').trim();
         let e=null;for(const s in mf){const y=mf[s];if(y&&(y.kw===key||y.kw===nm)){e=y;break;}}
         if(e&&e.images&&e.images.length){paint(e);}
-        else{x.meta={images:[],_plat:'meta'};if(x.plat==='meta'){const body=el('daBody');if(body)body.innerHTML='<div class="da-fallback">아직 이 경쟁사 Meta 광고 소재가 수집되지 않았어요. · '
+        else{x.meta={images:[],_plat:'meta'};_aiRun(false);if(x.plat==='meta'){const body=el('daBody');if(body)body.innerHTML='<div class="da-fallback">아직 이 경쟁사 Meta 광고 소재가 수집되지 않았어요. · '
             +'<a href="'+esc(lib)+'" target="_blank" rel="noopener">라이브러리에서 보기 ↗</a></div>';}}};
       if(_daMf){done(_daMf);return;}
       fetch('comp-ads/manifest.json',{cache:'no-store'}).then(r=>r.ok?r.json():{}).then(done)
@@ -1403,8 +1407,8 @@ const DUComp=(function(){
       const md=(x.meta&&x.meta.adDomain)||'';
       if(md){home=md;autoHome=md;}
     }
-    const paint=e=>{e._plat='google';x.google=e;if(x.plat==='google'){_daFilter=_defFilter(e);paintDA(e);}};
-    const empty=msg=>{x.google={images:[],_plat:'google'};if(x.plat==='google'){const b=el('daBody');if(b)b.innerHTML='<div class="da-fallback">'+msg+' · <a href="'+esc(gl)+'" target="_blank" rel="noopener">투명성센터에서 보기 ↗</a></div>';}};
+    const paint=e=>{e._plat='google';x.google=e;if(x.plat==='google'){_daFilter=_defFilter(e);paintDA(e);}_aiRun(false);};
+    const empty=msg=>{x.google={images:[],_plat:'google'};_aiRun(false);if(x.plat==='google'){const b=el('daBody');if(b)b.innerHTML='<div class="da-fallback">'+msg+' · <a href="'+esc(gl)+'" target="_blank" rel="noopener">투명성센터에서 보기 ↗</a></div>';}};
     if(!home&&!gu){empty('이 경쟁사의 공식 도메인을 자동으로 못 찾았어요 — 등록 편집에서 <b>공식 홈페이지</b>를 채워주세요(구글은 도메인 기준 조회)');return;}
     const qs='home='+encodeURIComponent(home)+'&url='+encodeURIComponent(gu)+'&name='+encodeURIComponent(c.name||'');
     fetch('/api/competitor_google_ads?'+qs)
@@ -1413,27 +1417,57 @@ const DUComp=(function(){
         else empty('이 경쟁사의 구글 광고를 관측하지 못했어요'+(autoHome?' <span style="color:var(--muted);font-size:11px">(자동 감지 도메인: '+esc(autoHome)+' · 다르면 편집에서 직접 지정)</span>':''));})
       .catch(()=>empty('구글 광고를 불러오지 못했어요'));}
 
-  function renderAi(d,c){const box=el('compAi');
-    box.innerHTML='<div class="card-h"><h3>AI 대응 제안</h3></div>'
-      +'<div class="card-b"><div class="line" style="color:var(--muted)">분석 중…</div></div>';
-    const it=d.intensity||{},content=d.content||{},trend=d.trend||{},promo=d.promo,ads=d.ads||[];
-    const ctx='[경쟁사 스냅샷] '+(c.name||d.name)
-      +'\n- 광고 집행 강도: '+(it.score||0)+'/100 ('+(it.band||'')+'), 근거: '+(it.basis||'')
-      +'\n- 블로그·카페 발행량: '+(content.volume!=null?content.volume:'미확인')+', 검색 추이: '+(trend.dir||'')+(trend.pct?(' '+trend.pct+'%'):'')
-      +'\n- 상위 콘텐츠 주제: '+((content.topics||[]).slice(0,4).join(' / ')||'없음')
-      +'\n- SERP 파워링크 광고주: '+(ads.slice(0,5).map(a=>a.name+(a.copy?('('+a.copy+')'):'')).join(', ')||'없음')
-      +'\n- 프로모션: '+(promo&&promo.promos&&promo.promos.length?((promo.summary||'')+' | '+promo.promos.map(p=>p.kind+':'+p.headline).join(', ')):'미확인')
-      +'\n[우리] 다우오피스(그룹웨어) 관점.';
-    const q='위 경쟁사 스냅샷을 딱 3줄로. 1) 이 경쟁사가 지금 무엇에 집중/변화하는지 2) 네이버 검색·콘텐츠에서 무엇이 관측되는지 3) 우리(다우오피스) 대응 후보 1가지. 각 줄 앞에 "· " 붙이고 한 문장씩, 군더더기 없이.';
-    fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'user',content:q}],context:ctx})})
-      .then(r=>r.json()).then(j=>{const t=(j&&j.reply)||'';
-        // 3줄 불릿을 한 덩어리로 <br>만 넣지 않고, 줄마다 별도 .line으로 나눠 사이 간격을 준다
-        // (붙어보이는 문제 수정).
-        const lines=t.split(/\n+/).map(s=>s.trim()).filter(Boolean);
-        box.innerHTML='<div class="card-h"><h3>AI 대응 제안</h3></div><div class="card-b">'+(lines.length
-          ? lines.map(s=>'<div class="line">'+esc(s)+'</div>').join('')
-          : '<div class="line">요약을 받지 못했어요.</div>')+'</div>';})
-      .catch(()=>{box.innerHTML='<div class="card-h"><h3>AI 대응 제안</h3></div><div class="card-b"><div class="line" style="color:var(--muted)">AI 요약을 불러오지 못했어요.</div></div>';});}
+  // ── AI 경쟁 인텔리전스 ── 스냅샷 지표 + 실제 소재 관측(카피·집행일수·포맷·채널)을
+  // 근거로, '집중 제품/오퍼 · 광고 전략 · 벤치마크 시사점'을 뽑는다. 벤치마크 관점(우리 브랜드)은
+  // 경쟁사에 맞춰 AI가 자동 선택. 소재가 로드될 때마다(_aiRun) 근거를 보강해 다시 분석한다.
+  var _ins={d:null,c:null}, _aiSig='';
+  function _distinct(arr){var seen={},out=[];(arr||[]).forEach(function(s){s=(s||'').trim();if(s&&s.length>=4&&!seen[s]){seen[s]=1;out.push(s);}});return out;}
+  function _aiBrief(){
+    var x=_daCtx||{},d=_ins.d||{},c=_ins.c||{};
+    var M=(x.meta&&x.meta.images)||[],G=(x.google&&x.google.images)||[];
+    var mv=M.filter(function(im){return daType(im)==='video'}).length,mi=M.length-mv;
+    var mOcr=_distinct(M.map(function(im){return im.t})).slice(0,15);
+    var longest=M.concat(G).filter(function(im){return typeof im.days==='number'})
+      .sort(function(a,b){return b.days-a.days}).slice(0,8)
+      .map(function(im){return im.days+'일'+(im.t?(' "'+String(im.t).slice(0,40)+'"'):'')});
+    var it=d.intensity||{},content=d.content||{},promo=d.promo,ads=d.ads||[];
+    return '[경쟁사 실제 광고 관측 · '+(c.name||d.name||'')+']'
+      +'\n집행 강도: '+(it.score||0)+'/100 ('+(it.band||'')+')'
+      +'\n메타 소재: '+M.length+'개(영상 '+mv+'·이미지 '+mi+')'+((x.meta&&x.meta.adDomain)?(' · 광고 도메인 '+x.meta.adDomain):'')
+      +'\n구글 소재: '+G.length+'개(디스플레이 이미지)'
+      +(mOcr.length?('\n소재 카피(문구): '+mOcr.map(function(s){return '"'+s+'"'}).join(' / ')):'')
+      +(longest.length?('\n최장 집행=검증 승자: '+longest.join(' · ')):'')
+      +((content.topics&&content.topics.length)?('\n블로그·카페 상위 주제: '+content.topics.slice(0,4).join(' / ')):'')
+      +(ads.length?('\nSERP 광고: '+ads.slice(0,4).map(function(a){return a.name+(a.copy?('('+a.copy+')'):'')}).join(', ')):'')
+      +((promo&&promo.promos&&promo.promos.length)?('\n프로모션: '+(promo.summary||'')+' | '+promo.promos.map(function(p){return p.kind+':'+p.headline}).join(', ')):'')
+      +'\n[우리 브랜드 후보] 사방넷(이커머스 통합관리·쇼핑몰 솔루션) / 애드콘(모바일쿠폰·기프티콘) / 다우오피스(그룹웨어·협업툴)';
+  }
+  function _aiHead(sub){return '<div class="card-h"><h3>AI 경쟁 인텔리전스</h3>'+(sub?'<span class="hint">'+sub+'</span>':'')+'</div>';}
+  function _aiRun(force){
+    var box=el('compAi');if(!box||!_ins.d)return;
+    var x=_daCtx||{},M=(x.meta&&x.meta.images)||[],G=(x.google&&x.google.images)||[],c=_ins.c||{};
+    var sig=(c.id||c.name||'')+'|m'+M.length+'|g'+G.length;
+    if(!force&&sig===_aiSig)return; _aiSig=sig;
+    var q='위는 경쟁사의 실제 운영 광고 관측 데이터야. 정확히 3줄만, 각 줄 "키|내용" 형식으로(키는 집중제품·광고전략·벤치마크):\n'
+      +'집중제품|지금 이 경쟁사가 미는 제품과 핵심 오퍼(무료/할인 등)를 소재 카피 근거로 한 문장.\n'
+      +'광고전략|포맷(영상 vs 이미지)·채널(메타/구글)·오래 돌리는 검증 승자 소재의 특징을 한 문장.\n'
+      +'벤치마크|우리 브랜드 후보 중 이 경쟁사와 가장 관련된 하나를 고르고 그 관점의 대응 액션을 한 문장.\n'
+      +'서론·군더더기 금지. 관측 수치와 카피를 인용해.';
+    box.innerHTML=_aiHead('소재 관측 기반')+'<div class="card-b"><div class="line" style="color:var(--muted)">소재 분석 중…</div></div>';
+    fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'user',content:q}],context:_aiBrief()})})
+      .then(function(r){return r.json()}).then(function(j){_aiRender(box,(j&&j.reply)||'')})
+      .catch(function(){box.innerHTML=_aiHead()+'<div class="card-b"><div class="line" style="color:var(--muted)">AI 분석을 불러오지 못했어요.</div></div>';});
+  }
+  function _aiRender(box,t){
+    var LAB={집중제품:['🎯','집중 제품·오퍼'],광고전략:['📣','광고 전략'],벤치마크:['🧭','벤치마크 시사점']};
+    var rows=String(t).split(/\n+/).map(function(s){return s.trim()}).filter(Boolean).map(function(l){
+      var i=l.indexOf('|');return [i<0?'':l.slice(0,i).replace(/[^가-힣]/g,''), (i<0?l:l.slice(i+1)).trim()];});
+    var html=rows.map(function(kv){var m=LAB[kv[0]]||['•',kv[0]||'인사이트'];
+      return '<div class="ins-row"><div class="ins-h">'+m[0]+' '+esc(m[1])+'</div><div class="ins-b">'+esc(kv[1])+'</div></div>';}).join('');
+    box.innerHTML=_aiHead('소재 관측 기반')+'<div class="card-b ins-wrap">'+(html||'<div class="line">분석을 받지 못했어요.</div>')+'</div>';
+  }
+  function renderAi(d,c){_ins={d:d,c:c};_aiSig='';var box=el('compAi');
+    if(box)box.innerHTML=_aiHead()+'<div class="card-b"><div class="line" style="color:var(--muted)">소재 수집 후 분석해요…</div></div>';}
 
   function fetchSnap(force){const c=cur();if(!c){el('compSnap').hidden=true;return;}el('compEmpty').hidden=true;
     const cc=snaps()[c.id];if(!force&&cc&&(Date.now()-cc.t<3600000)){renderSnap(cc.d);return;}
