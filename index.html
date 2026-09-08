@@ -529,7 +529,7 @@
 <main id="v-home" class="view home">
   <div class="mk">D</div>
   <h1>Daou Hub</h1>
-  <p class="sub">사방넷 · 애드콘 · 다우오피스 광고 성과와 경쟁 키워드를 한 곳에서</p>
+  <p class="sub">사방넷 · 애드콘 · 다우오피스 광고 성과 · 경쟁 분석</p>
   <div class="home-search">
     <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
     <input id="homeSearch" placeholder="키워드로 검색량·경쟁 분석 (예: 그룹웨어)">
@@ -602,7 +602,7 @@
     <div id="compForm" class="card" hidden style="margin-bottom:14px"></div>
     <div id="compEmpty" class="card comp-empty">
       <b>추적할 경쟁사를 등록하세요</b>
-      <p>경쟁사명·네이버 검색어·프로모션 URL만 있으면 광고 집행 강도·블로그 발행량·검색 추이·프로모션 스냅샷을 자동으로 뽑아요. 정보는 이 브라우저에만 저장됩니다.</p>
+      <p>경쟁사명만 입력하면 광고 소재·집행 강도·프로모션을 분석합니다. (이 브라우저에만 저장)</p>
       <button type="button" id="compEmptyAdd" class="kw-btn primary">＋ 첫 경쟁사 등록</button>
     </div>
     <div id="compLoading" hidden style="text-align:center;padding:44px;color:var(--muted);font-size:13.5px">경쟁사 분석 중… <span style="display:block;font-size:12px;margin-top:4px">네이버 · SERP 광고 · 프로모션 수집</span></div>
@@ -664,7 +664,7 @@
 <!-- CUSTOM REPORT -->
 <main id="v-custom" class="view" hidden>
   <div class="rep-head">
-    <div><h1 style="font-size:21px;font-weight:700">커스텀 리포트</h1><div class="repsub" style="color:var(--muted);font-size:13px;margin-top:4px">차원과 지표를 직접 골라 표를 조립하세요 · 네이버·메타 열 설정처럼</div></div>
+    <div><h1 style="font-size:21px;font-weight:700">커스텀 리포트</h1><div class="repsub" style="color:var(--muted);font-size:13px;margin-top:4px">차원·지표를 골라 표를 구성합니다</div></div>
     <button id="cxExport" class="cx-btn">CSV 내보내기</button>
   </div>
   <div class="card cx-panel">
@@ -1204,8 +1204,8 @@ const DUComp=(function(){
       pb=(promo.summary?'<div class="comp-sub" style="margin-bottom:9px">'+esc(promo.summary)+'</div>':'')
         +(promo.promos||[]).slice(0,4).map(p=>'<div class="comp-promo-item"><span class="comp-chip">'+esc(p.kind||'기타')+'</span><b>'+esc(p.headline||'')+'</b>'
           +(p.price?' · '+esc(p.price):'')+(p.deadline?' <span style="color:var(--danger);font-size:11px">'+esc(p.deadline)+'</span>':'')+'</div>').join('');
-    }else if(c.promo){pb='<div class="comp-sub">프로모션을 감지하지 못했어요. 페이지 구조에 따라 다를 수 있어요.</div>';}
-    else{pb='<div class="comp-sub">프로모션 URL을 등록하면 현재 혜택·가격·CTA를 추적해요.</div>';}
+    }else if(c.promo){pb='<div class="comp-sub">프로모션을 감지하지 못했습니다.</div>';}
+    else{pb='<div class="comp-sub">프로모션 URL 등록 시 혜택·가격을 추적합니다.</div>';}
     cards.push('<div class="card comp-card"><div class="card-h"><h3>프로모션</h3>'+accHTML(d.promoLabel||'미설정')+'</div><div class="card-b">'+pb+'</div></div>');
     // '경쟁사' 칩은 원래 남의 경쟁사를 감시할 때를 전제한 문구다. 이 도구를 자기 브랜드
     // (예: 우리가 파는 뷰티 브랜드 본인) 등록해 노출 순위를 보는 데 쓰면 정반대로 읽힌다
@@ -1272,7 +1272,7 @@ const DUComp=(function(){
     const pf=e.perf||{};
     const pfNote=(pf.maxDays!=null)?(' · 최장 <b>'+pf.maxDays+'일</b> 집행 · 활성 '+(pf.active||0)+'개 · 🏆검증 '+(pf.winners||0)+'개'):'';
     let html='<div class="da-note">'+imgs.length+'개 소재'+(adv?' · 광고주 <b>'+esc(adv)+'</b>':'')+' · 수집 '+esc(e.at||'')+liveTag+pfNote+'</div>'
-      +((pf.maxDays!=null)?'<div class="da-legend">🏆·🔥 배지 = 그 광고를 며칠째 집행 중인지. 광고주는 성과 안 나는 소재를 바로 끄니까, <b>오래·계속 돌리는 소재 = 검증된 승자</b>예요. 오래 돌린 순으로 정렬했어요.'+(isG?' 소재는 <b>크기별(가로·정사각·세로)</b>로 묶었어요.':'')+'</div>':'')
+      +((pf.maxDays!=null)?'<div class="da-legend">🏆 30일↑ · 🔥 집행 중 · 오래 운영순'+(isG?' · 크기별 분류':'')+'</div>':'')
       +'<div class="da-filter">'+chip('all','전체',imgs.length)
         +(nImg?chip('image','🖼 이미지',nImg):'')
         +(nVid?chip('video','🎬 영상',nVid):'')
@@ -1384,7 +1384,7 @@ const DUComp=(function(){
     // Meta는 저렴해서 기존대로 자동 로드.
     if(p==='google'){
       body.innerHTML='<div class="da-manual"><button type="button" class="kw-btn primary" id="daGoLoad">🔵 구글 광고 불러오기</button>'
-        +'<div class="da-manual-note">구글 광고 조회는 유료라 <b>누를 때만</b> 실행돼요. 한 번 불러오면 24시간 저장됩니다.</div></div>';
+        +'<div class="da-manual-note">조회 시 불러옵니다 · 24시간 캐시</div></div>';
       const b=el('daGoLoad');if(b)b.onclick=()=>{if(x.plat!=='google')return;body.innerHTML='<div class="da-loading">구글 광고 불러오는 중…</div>';loadGoogle();};
       return;
     }
@@ -1445,7 +1445,7 @@ const DUComp=(function(){
     pump();}
   function renderMulti(){
     var box=el('compMulti');if(!box)return;
-    if(!list.length){box.innerHTML='<div class="card comp-empty"><b>등록된 경쟁사가 없어요</b><p>개요 탭에서 경쟁사를 먼저 등록하면 여기서 한꺼번에 비교할 수 있어요.</p></div>';return;}
+    if(!list.length){box.innerHTML='<div class="card comp-empty"><b>등록된 경쟁사가 없습니다</b><p>개요 탭에서 경쟁사를 먼저 등록하세요.</p></div>';return;}
     box.innerHTML='<div class="line" style="color:var(--muted);padding:22px 2px">경쟁군 소재 불러오는 중…</div>';
     var build=function(mf){_daMf=mf;
       var rows=list.map(function(c){return {c:c,e:_metaFor(mf,c)};});
