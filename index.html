@@ -1129,7 +1129,13 @@ const DUBudget=(function(){
 
 /* ===================== 경쟁사 (개요) ===================== */
 const DUComp=(function(){
-  const LS='daouhub_competitors_v1', SNAP='daouhub_comp_snap_v1';
+  const LS='daouhub_competitors_v1', SNAP='daouhub_comp_snap_v1', SEEDED='daouhub_comp_seeded_v1';
+  // 사방넷 경쟁군 기본 시드(최초 1회만). 삭제하면 다시 생기지 않음.
+  const SEED_COMPS=[
+    {id:'seed_playauto',name:'플레이오토',kw:'플레이오토',home:'playauto.co.kr'},
+    {id:'seed_ezadmin',name:'이지어드민',kw:'이지어드민',home:'ezadmin.co.kr'},
+    {id:'seed_shoplinker',name:'샵링커',kw:'샵링커',home:'shoplinker.co.kr'},
+    {id:'seed_nextengine',name:'넥스트엔진',kw:'넥스트엔진',home:'next-engine.net'}];
   let list=[], curId=null, tab='overview';
   const el=id=>document.getElementById(id);
   const esc=s=>String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
@@ -1137,7 +1143,9 @@ const DUComp=(function(){
   const ACC={'실측':'ok','관측':'obs','추정':'est','미확인':'unk','미설정':'unk'};
   const accHTML=l=>'<span class="acc '+(ACC[l]||'unk')+'">'+esc(l)+'</span>';
   const gcol=s=>s>=67?COL.danger:s>=34?COL.warning:COL.success;   // 강도 높음=위협
-  function load(){try{list=JSON.parse(localStorage.getItem(LS)||'[]')||[]}catch(_){list=[]}}
+  function load(){try{list=JSON.parse(localStorage.getItem(LS)||'[]')||[]}catch(_){list=[]}
+    if(!list.length){var seeded=false;try{seeded=!!localStorage.getItem(SEEDED)}catch(_){}
+      if(!seeded){list=SEED_COMPS.map(function(c){return Object.assign({},c)});save();try{localStorage.setItem(SEEDED,'1')}catch(_){}}}}
   function save(){try{localStorage.setItem(LS,JSON.stringify(list))}catch(_){}}
   function snaps(){try{return JSON.parse(localStorage.getItem(SNAP)||'{}')||{}}catch(_){return{}}}
   function setSnap(id,d){try{var c=snaps();c[id]={t:Date.now(),d:d};localStorage.setItem(SNAP,JSON.stringify(c))}catch(_){}}
