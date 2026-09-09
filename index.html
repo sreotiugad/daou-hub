@@ -484,8 +484,9 @@
   .ms-head b{font-size:14px}
   .ms-head span{font-size:11px;color:var(--muted);font-family:var(--mono);text-align:right}
   .ms-strip{display:flex;gap:8px;overflow-x:auto;padding-bottom:5px}
-  .ms-item{position:relative;flex:0 0 auto;width:98px;height:98px;border-radius:9px;overflow:hidden;background:var(--bg);border:1px solid var(--border-soft)}
-  .ms-item img{width:100%;height:100%;object-fit:cover;display:block}
+  /* 스트립은 높이만 맞추고 너비는 실제 비율대로 — 1:1 cover 크롭은 9:16 릴스를 절반 넘게 잘라먹는다 */
+  .ms-item{position:relative;flex:0 0 auto;height:98px;width:auto;min-width:56px;max-width:200px;border-radius:9px;overflow:hidden;background:var(--bg);border:1px solid var(--border-soft)}
+  .ms-item img{height:100%;width:auto;max-width:200px;object-fit:contain;display:block}
   .ms-day{position:absolute;top:4px;right:4px;font-size:9px;font-weight:700;color:#fff;background:rgba(15,23,42,.66);border-radius:20px;padding:1px 6px;backdrop-filter:blur(3px)}
   .ms-empty{font-size:12px;color:var(--muted);padding:4px 0}
   .da-item video.thumb{width:100%;height:auto;display:block;background:#000;cursor:pointer}
