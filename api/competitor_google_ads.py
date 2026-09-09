@@ -253,8 +253,7 @@ def collect(target, country="KR", max_ads=MAX_ADS, logs=None, probe=False, name=
         return None
     # ⚠️ 2025-11-10 ScrapeCreators 변경: get_ad_details 없이는 advertiserId·creativeId 만 오고
     # imageUrl 이 안 온다(=소재 0개로 보임). 소재를 받으려면 get_ad_details=true 필수(광고당 25크레딧).
-    # format=all → 디스플레이(이미지)+유튜브(영상) 광고 모두. 프론트에서 이미지/영상 필터로 구분.
-    params = {"topic": "all", "region": country, "format": "all", "get_ad_details": "true"}
+    params = {"topic": "all", "region": country, "format": "image", "get_ad_details": "true"}
     params["advertiser_id" if stype == "advertiser_id" else "domain"] = key
     logs.append("[google] 조회 %s=%s (scrapecreators · get_ad_details) " % (stype, key))
     try:
