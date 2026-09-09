@@ -150,6 +150,20 @@
   .comment li{display:flex;gap:9px;align-items:flex-start;font-size:12.5px;color:var(--muted);line-height:1.6}
   .comment li .k{flex:none;margin-top:1px}
   .comment b.hl{color:var(--fg);font-weight:600}
+  .action-card{margin-bottom:14px;overflow:hidden}
+  .action-grid{display:grid;grid-template-columns:1fr 1.2fr;gap:12px}
+  @media(max-width:800px){.action-grid{grid-template-columns:1fr}}
+  .action-block{padding:13px;border:1px solid var(--border-soft);border-radius:var(--r-sm);background:var(--bg)}
+  .action-block .lab{font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em}
+  .action-block .txt{font-size:13px;line-height:1.6;color:var(--fg)}
+  .action-controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:center}
+  .action-controls input,.action-controls select{height:34px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface);color:var(--fg);padding:0 9px;font:12px var(--sans)}
+  .action-controls input{flex:1 1 190px}
+  .action-history{margin-top:12px;border-top:1px solid var(--border-soft);padding-top:10px}
+  .action-item{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:start;padding:7px 0;font-size:12px;border-bottom:1px dashed var(--border-soft)}
+  .action-item:last-child{border-bottom:0}
+  .action-status{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--primary);background:var(--primary-weak);padding:3px 6px;border-radius:5px}
+  .action-meta{color:var(--muted);font-family:var(--mono);font-size:10px;white-space:nowrap}
 
   /* ===== KEYWORD ===== */
   .searchbar{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:6px 6px 6px 16px;display:flex;align-items:center;gap:10px;margin-bottom:12px}
@@ -572,7 +586,7 @@
         <div class="legend"><span><i style="background:var(--c1)"></i>광고비(백만원)</span><span><i style="background:var(--c2)"></i>가입(백건)</span><span><i style="background:var(--c3)"></i>클릭(천건)</span></div></div>
     </div>
     <div class="card">
-      <div class="card-h"><h3>매체별 광고비</h3><span class="hint">네이버·구글</span></div>
+      <div class="card-h"><h3>매체별 광고비</h3><span class="hint">선택 기간 · 상세 원천 집계</span></div>
       <div class="card-b"><div class="donut-wrap" id="donut"></div>
         <div class="legend c"><span><i style="background:var(--naver)"></i>네이버</span><span><i style="background:var(--google)"></i>구글</span><span><i style="background:var(--meta)"></i>메타</span></div></div>
     </div>
@@ -580,6 +594,24 @@
   <div class="r-mid">
     <div class="card"><div class="card-h"><h3>캠페인 유형별 광고비</h3><span class="hint">비중 순</span></div><div class="card-b"><div id="barCt"></div></div></div>
     <div class="card"><div class="card-b" style="padding-top:16px"><div class="comment" id="comment"></div></div></div>
+  </div>
+  <div class="card action-card">
+    <div class="card-h"><h3>오늘의 운영 판단</h3><span class="hint" id="actionScope">선택 기간 · 실측 지표 기반</span></div>
+    <div class="card-b">
+      <div class="action-grid">
+        <div class="action-block"><div class="lab">근거</div><div class="txt" id="actionEvidence"></div></div>
+        <div class="action-block"><div class="lab">추천 행동</div><div class="txt" id="actionSuggestion"></div></div>
+      </div>
+      <div class="action-controls">
+        <select id="actionStatus" aria-label="진행 상태"><option>검토 대기</option><option>채택</option><option>실행</option><option>결과 확인</option><option>보류</option></select>
+        <input id="actionOwner" placeholder="담당자 (선택)">
+        <input id="actionNote" placeholder="실행 내용·결과 (선택)">
+        <button id="actionSave" class="kw-btn primary">현재 판단 기록</button>
+        <button id="actionCsv" class="kw-btn">기록 CSV</button>
+      </div>
+      <div class="action-history" id="actionHistory"></div>
+      <div class="hint" style="margin-top:8px;color:var(--muted)">업무 검증용 기록이며 이 브라우저에만 저장됩니다. 관측 사실과 원인 가설을 구분해 기록하세요.</div>
+    </div>
   </div>
   <div class="card"><div class="card-h"><h3 id="tblTitle">세부 브랜드별 성과</h3><span class="hint mono" id="tblPeriod"></span></div><div class="card-b" style="overflow-x:auto"><div id="tableWrap"></div></div></div>
 </main>
@@ -718,7 +750,7 @@
 
 <button id="duChatBtn" title="AI 분석 어시스턴트"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>AI 분석</button>
 <div id="duChat" role="dialog" aria-label="AI 분석 어시스턴트">
-  <div class="dc-h"><span class="dc-ava"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 4.5L18.5 9l-4.6 1.5L12 15l-1.9-4.5L5.5 9l4.6-1.5z"/><circle cx="18" cy="18" r="2.4"/></svg></span><div><div class="t">AI 분석 어시스턴트</div><div class="s">우리 광고 실데이터 기반</div></div><button class="x" id="dcReset" title="새 대화" style="margin-left:auto"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></button><button class="x" id="dcClose" title="닫기" style="margin-left:0">✕</button></div>
+  <div class="dc-h"><span class="dc-ava"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 4.5L18.5 9l-4.6 1.5L12 15l-1.9-4.5L5.5 9l4.6-1.5z"/><circle cx="18" cy="18" r="2.4"/></svg></span><div><div class="t">AI 분석 어시스턴트</div><div class="s" id="dcMeta">Claude · 선택 화면 데이터 기반</div></div><button class="x" id="dcReset" title="새 대화" style="margin-left:auto"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></button><button class="x" id="dcClose" title="닫기" style="margin-left:0">✕</button></div>
   <div class="dc-body" id="dcBody"></div>
   <div class="dc-sug" id="dcSug"></div>
   <div class="dc-in"><textarea id="dcInput" placeholder="예: 사방넷 최근 성과 어때?" rows="1"></textarea><button id="dcSend">전송</button></div>
@@ -752,18 +784,21 @@ const DUReport=(function(){
     "다우오피스HR":{group:"다우오피스",cost:372000,cpa:13300,cpc:720,ctr:.031,mo:-.5,media:{네이버:.64,구글:.36},ct:{브랜드검색:.12,파워링크:.28,쇼핑검색:.02,구글검색:.30,실적최대화:.20,동영상:.08}},
   };
   const GROUP_SUBS={"사방넷":["사방넷","사방넷미니","풀필먼트"],"애드콘":["애드콘","엔팩스"],"다우오피스":["다우오피스","다우오피스HR"]};
-  let state={group:"사방넷",sub:"전체",N:30},fullDates=[],labels=[];
+  let state={group:"사방넷",sub:"전체",N:30},viewN=30,fullDates=[],labels=[];
+  function availableDays(requested){const F=window.DAOU_DATA&&window.DAOU_DATA.report&&window.DAOU_DATA.report.facts;if(!F||!F.length)return requested;const ds=F.map(f=>f.d).filter(Boolean).sort();if(!ds.length)return requested;const span=Math.round((new Date(ds[ds.length-1])-new Date(ds[0]))/86400000)+1;return Math.max(1,Math.min(requested,span))}
   function genSub(name,N){const s=SUBS[name],r=MUL(H(name)+N*7);const cost=[],signup=[],imp=[],click=[];for(let i=0;i<N;i++){const t=N>1?i/(N-1):0;const trend=1+s.mo*(t-.5)*.44;const noise=.85+r()*.30;const dow=(i+2)%7;const wk=(dow===5||dow===6)?.9:1;const c=Math.max(0,s.cost*trend*noise*wk);cost.push(c);click.push(c/s.cpc);imp.push(c/s.cpc/s.ctr);signup.push(c/s.cpa)}return{cost,signup,imp,click}}
   function realSub(){return (window.DAOU_DATA&&window.DAOU_DATA.report&&window.DAOU_DATA.report.subs)||null}
   function subDaily(name,N){const R=realSub();if(R&&R[name]&&R[name].cost&&R[name].cost.length){const a=R[name],L=a.cost.length,st=Math.max(0,L-N);return{cost:a.cost.slice(st),signup:a.signup.slice(st),imp:a.imp.slice(st),click:a.click.slice(st)}}return genSub(name,N)}
   function metaOf(name){const R=realSub();if(R&&R[name])return{media:R[name].media||SUBS[name].media,ct:R[name].ct||SUBS[name].ct};return SUBS[name]}
-  function aggregate(names,N){const cost=Array(N).fill(0),signup=Array(N).fill(0),imp=Array(N).fill(0),click=Array(N).fill(0);const media={네이버:0,구글:0},ct={};CT_ORDER.forEach(k=>ct[k]=0);
+  function factBreakdown(names,N){const D=window.DAOU_DATA,P=D&&D.period,F=D&&D.report&&D.report.facts;if(!P||!P.dates||!F||!F.length)return null;const ds=P.dates.slice(-N),lo=ds[0],hi=ds[ds.length-1],media={네이버:0,구글:0,메타:0},ct={};CT_ORDER.forEach(k=>ct[k]=0);let rows=0;F.forEach(f=>{if(names.indexOf(f.svc)<0||f.d<lo||f.d>hi)return;rows++;media[f.media]=(media[f.media]||0)+(+f.cost||0);ct[f.ct]=(ct[f.ct]||0)+(+f.cost||0)});return rows?{media,ct,lo,hi}:null}
+  function aggregate(names,N){const cost=Array(N).fill(0),signup=Array(N).fill(0),imp=Array(N).fill(0),click=Array(N).fill(0);let media={네이버:0,구글:0,메타:0},ct={};CT_ORDER.forEach(k=>ct[k]=0);
     names.forEach(n=>{const d=subDaily(n,N),s=metaOf(n);let tot=0;for(let i=0;i<N;i++){cost[i]+=d.cost[i];signup[i]+=d.signup[i];imp[i]+=d.imp[i];click[i]+=d.click[i];tot+=d.cost[i]}media.네이버+=tot*s.media.네이버;media.구글+=tot*s.media.구글;CT_ORDER.forEach(k=>ct[k]+=tot*(s.ct[k]||0))});
+    const fb=factBreakdown(names,N);if(fb){media=fb.media;ct=fb.ct}
     const sum=a=>a.reduce((x,y)=>x+y,0);const tCost=sum(cost),tSign=sum(signup),tImp=sum(imp),tClick=sum(click);const half=Math.floor(N/2);const seg=(a,lo,hi)=>a.slice(lo,hi).reduce((x,y)=>x+y,0);const dv=a=>{const p=seg(a,0,half),c=seg(a,N-half,N);return p>0?(c-p)/p*100:0};
     const cpaS=(lo,hi)=>{const c=seg(cost,lo,hi),g=seg(signup,lo,hi);return g>0?c/g:0};const ctrS=(lo,hi)=>{const cl=seg(click,lo,hi),im=seg(imp,lo,hi);return im>0?cl/im*100:0};const cpaP=cpaS(0,half),cpaC=cpaS(N-half,N),ctrP=ctrS(0,half),ctrC=ctrS(N-half,N);
     return{cost,signup,imp,click,tCost,tSign,tImp,tClick,media,ct,cpa:tSign>0?tCost/tSign:0,ctr:tImp>0?tClick/tImp*100:0,d:{cost:dv(cost),signup:dv(signup),cpa:cpaP>0?(cpaC-cpaP)/cpaP*100:0,ctr:ctrP>0?(ctrC-ctrP)/ctrP*100:0}}}
   const fmtKRW=v=>v>=1e8?(v/1e8).toFixed(2)+"억":Math.round(v/1e4).toLocaleString()+"만";
-  const won=v=>"₩"+fmtKRW(v),cpaF=v=>"₩"+comma(v),pct=v=>v.toFixed(2)+"%";
+  const won=v=>"₩"+fmtKRW(v),cpaF=v=>v>0?"₩"+comma(v):"전환 없음",pct=v=>v.toFixed(2)+"%";
   function deltaHTML(v,inv){const good=inv?v<0:v>0;if(Math.abs(v)<0.05)return `<span class="delta flat">±0.0%</span>`;return `<span class="delta ${good?'up':'down'}">${v>0?'▲':'▼'} ${Math.abs(v).toFixed(1)}%</span>`}
 
   function drawLine(agg){const W=700,H=248,pl=34,pr=12,pt=12,pb=26,iw=W-pl-pr,ih=H-pt-pb;
@@ -780,18 +815,26 @@ const DUReport=(function(){
   function drawDonut(agg){const order=[["네이버",COL.naver],["구글",COL.google],["메타",COL.meta]];let segs=order.filter(o=>(agg.media[o[0]]||0)>0).map(o=>({l:o[0],v:agg.media[o[0]]||0,c:o[1]}));if(!segs.length)segs=[{l:"네이버",v:1,c:COL.naver}];const total=segs.reduce((a,s)=>a+s.v,0)||1,R=72,r=48,cx=88,cy=88,gap=.025;let ang=-Math.PI/2,arcs="";segs.forEach(s=>{const a0=ang+gap,a1=ang+(s.v/total)*6.283-gap,lg=(a1-a0)>Math.PI?1:0;const P=(a,rd)=>[cx+rd*Math.cos(a),cy+rd*Math.sin(a)];const[x0,y0]=P(a0,R),[x1,y1]=P(a1,R),[x2,y2]=P(a1,r),[x3,y3]=P(a0,r);arcs+=`<path d="M${x0.toFixed(1)},${y0.toFixed(1)} A${R},${R} 0 ${lg} 1 ${x1.toFixed(1)},${y1.toFixed(1)} L${x2.toFixed(1)},${y2.toFixed(1)} A${r},${r} 0 ${lg} 0 ${x3.toFixed(1)},${y3.toFixed(1)} Z" fill="${s.c}"><title>${s.l}: ${won(s.v)}</title></path>`;ang+=(s.v/total)*6.283});const top=segs.slice().sort((a,b)=>b.v-a.v)[0];const pctTop=(top.v/total*100).toFixed(0);document.getElementById('donut').innerHTML=`<svg viewBox="0 0 176 176" width="180" height="180">${arcs}<text x="88" y="83" text-anchor="middle" font-size="11" fill="${COL.muted}" font-family="IBM Plex Mono">${top.l}</text><text x="88" y="103" text-anchor="middle" font-size="22" font-weight="600" fill="${COL.fg}" font-family="Pretendard,IBM Plex Sans KR">${pctTop}%</text></svg>`;}
   function drawBar(agg){const rows=CT_ORDER.map(k=>({l:k,v:agg.ct[k]})).sort((a,b)=>b.v-a.v);const W=560,H=224,pl=38,pr=10,pt=10,pb=40,iw=W-pl-pr,ih=H-pt-pb;const max=niceMax(Math.max(...rows.map(r=>r.v))*1.14),step=iw/rows.length,bw=Math.min(38,step*.52),y=v=>pt+ih*(1-v/max);let grid="";for(let k=0;k<=4;k++){const t=max*k/4;grid+=`<line x1="${pl}" y1="${y(t)}" x2="${W-pr}" y2="${y(t)}" stroke="${COL.line}"/><text x="${pl-6}" y="${y(t)+3.5}" text-anchor="end" font-size="10" fill="${COL.muted}" font-family="IBM Plex Mono">${t>=1e6?(t/1e6).toFixed(0)+'M':Math.round(t/1e4)+'만'}</text>`}let bars="";rows.forEach((r,i)=>{const bx=pl+step*i+step/2,by=y(r.v),bh=pt+ih-by;bars+=`<rect class="bx" data-l="${r.l}" data-v="${r.v}" x="${(bx-bw/2).toFixed(1)}" y="${by.toFixed(1)}" width="${bw}" height="${bh.toFixed(1)}" rx="3" fill="${COL.c1}" opacity="${1-i*0.1}"/><text x="${bx.toFixed(1)}" y="${H-24}" text-anchor="middle" font-size="10" fill="${COL.muted}" font-family="Pretendard,IBM Plex Sans KR">${r.l}</text>`});document.getElementById('barCt').innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%">${grid}${bars}</svg>`;document.querySelectorAll('#barCt .bx').forEach(b=>{b.addEventListener('mousemove',e=>{TIP.innerHTML=`<div class="t">${b.dataset.l}</div><div class="row"><i style="background:${COL.c1}"></i><b>${won(+b.dataset.v)}</b></div>`;TIP.style.left=e.clientX+'px';TIP.style.top=e.clientY+'px';TIP.style.opacity='1';b.style.opacity='.75'});b.addEventListener('mouseleave',()=>{TIP.style.opacity='0';b.style.opacity=''})})}
   function spark(data,color){const W=110,Hh=26,max=Math.max(...data),min=Math.min(...data),rng=(max-min)||1;const pts=data.map((v,i)=>[i/(data.length-1)*W,Hh-2-((v-min)/rng)*(Hh-5)]);return `<svg viewBox="0 0 ${W} ${Hh}" width="70" height="26"><path d="${smooth(pts)}" fill="none" stroke="${color}" stroke-width="1.6" stroke-linecap="round"/></svg>`}
-  function buildComment(group,agg){const topCt=CT_ORDER.map(k=>[k,agg.ct[k]]).sort((a,b)=>b[1]-a[1])[0];const nv=(agg.media.네이버/(agg.media.네이버+agg.media.구글)*100).toFixed(0);const cpaGood=agg.d.cpa<0;const cpaTxt=cpaGood?`CPA <b class="hl">${Math.abs(agg.d.cpa).toFixed(1)}% 개선</b>`:`CPA ${agg.d.cpa.toFixed(1)}% 상승`;const sTxt=agg.d.signup>0?`가입 <b class="hl">${agg.d.signup.toFixed(1)}% 증가</b>`:`가입 ${Math.abs(agg.d.signup).toFixed(1)}% 감소`;const items=[[cpaGood?'check':'alert',cpaGood?COL.success:COL.warning,`직전 대비 ${cpaTxt}. 현재 CPA <b class="hl">${cpaF(agg.cpa)}</b>.`],['trend',COL.primary,`광고비 <b class="hl">${won(agg.tCost)}</b>, ${sTxt} · 총 <b class="hl">${comma(agg.tSign)}건</b>.`],['target',COL.accent,`<b class="hl">${topCt[0]}</b> 비중 1위(${(topCt[1]/agg.tCost*100).toFixed(0)}%) · 네이버 ${nv}%·구글 ${100-nv}%.`]];document.getElementById('comment').innerHTML=`<div class="ci"><span class="ico">${ic('trend',COL.primary,15)}</span><div><b>AI 데일리 코멘트</b> <em>${group} · Gemini</em></div></div><ul>${items.map(it=>`<li><span class="k">${ic(it[0],it[1],15)}</span><span>${it[2]}</span></li>`).join('')}</ul>`}
+  function buildComment(group,agg){const topCt=CT_ORDER.map(k=>[k,agg.ct[k]||0]).sort((a,b)=>b[1]-a[1])[0];const mt=Object.keys(agg.media).filter(k=>agg.media[k]>0).sort((a,b)=>agg.media[b]-agg.media[a]);const mediaTxt=mt.map(k=>k+' '+(agg.tCost?agg.media[k]/agg.tCost*100:0).toFixed(0)+'%').join(' · ');const cpaGood=agg.d.cpa<0;const cpaTxt=cpaGood?`CPA <b class="hl">${Math.abs(agg.d.cpa).toFixed(1)}% 개선</b>`:`CPA ${agg.d.cpa.toFixed(1)}% 상승`;const sTxt=agg.d.signup>0?`가입 <b class="hl">${agg.d.signup.toFixed(1)}% 증가</b>`:`가입 ${Math.abs(agg.d.signup).toFixed(1)}% 감소`;const items=[[cpaGood?'check':'alert',cpaGood?COL.success:COL.warning,`직전 대비 ${cpaTxt}. 현재 CPA <b class="hl">${cpaF(agg.cpa)}</b>.`],['trend',COL.primary,`광고비 <b class="hl">${won(agg.tCost)}</b>, ${sTxt} · 총 <b class="hl">${comma(agg.tSign)}건</b>.`],['target',COL.accent,`<b class="hl">${topCt[0]}</b> 비중 1위(${(topCt[1]/(agg.tCost||1)*100).toFixed(0)}%) · ${mediaTxt}.`]];document.getElementById('comment').innerHTML=`<div class="ci"><span class="ico">${ic('trend',COL.primary,15)}</span><div><b>자동 성과 요약</b> <em>${group} · 계산식</em></div></div><ul>${items.map(it=>`<li><span class="k">${ic(it[0],it[1],15)}</span><span>${it[2]}</span></li>`).join('')}</ul>`}
+
+  const ACTION_LS='daouhub_action_log_v1';let currentAction=null;
+  function actionRows(){try{return JSON.parse(localStorage.getItem(ACTION_LS)||'[]')||[]}catch(_){return[]}}
+  function renderAction(names,agg,N){const scope=(state.sub==='전체'?state.group:state.sub)+' · '+N+'일 · '+periodText();let evidence,action;if(agg.d.cpa>5){evidence=`CPA가 직전 동기간보다 ${agg.d.cpa.toFixed(1)}% 상승해 현재 ${cpaF(agg.cpa)}입니다. 광고비 ${won(agg.tCost)}, 가입 ${comma(agg.tSign)}건입니다.`;action='CPA 상승 폭이 큰 캠페인의 CPC와 전환율을 분리 확인하고, 비용 상위 캠페인부터 입찰·소재 조정 실험을 검토하세요.'}else if(agg.d.signup<-5){evidence=`가입이 직전 동기간보다 ${Math.abs(agg.d.signup).toFixed(1)}% 감소했습니다. 현재 ${comma(agg.tSign)}건, CPA ${cpaF(agg.cpa)}입니다.`;action='유입 감소와 전환율 하락을 분리하고, 감소 기여도가 큰 매체·캠페인의 랜딩 및 소재 변경 여부를 확인하세요.'}else{evidence=`CPA ${cpaF(agg.cpa)}, 가입 ${comma(agg.tSign)}건입니다. 직전 동기간 대비 CPA 변화는 ${agg.d.cpa.toFixed(1)}%입니다.`;action='성과를 유지하면서 비용 상위 캠페인 한 곳에 소규모 소재 실험을 등록하고 다음 동일 기간에 결과를 비교하세요.'}currentAction={scope,evidence,action,cost:Math.round(agg.tCost),signup:+agg.tSign.toFixed(1),cpa:Math.round(agg.cpa)};document.getElementById('actionScope').textContent=scope;document.getElementById('actionEvidence').textContent=evidence;document.getElementById('actionSuggestion').textContent=action;renderActionHistory()}
+  function renderActionHistory(){const rows=actionRows().slice(-5).reverse(),box=document.getElementById('actionHistory');box.innerHTML=rows.length?rows.map(r=>`<div class="action-item"><span class="action-status">${r.status}</span><span><b>${r.scope}</b><br>${r.note||r.action}</span><span class="action-meta">${r.owner? r.owner+' · ':''}${String(r.at||'').slice(0,10)}</span></div>`).join(''):'<div style="font-size:12px;color:var(--muted)">아직 기록이 없습니다. 현재 판단을 저장하면 업무 적용 근거가 쌓입니다.</div>'}
+  function saveAction(){if(!currentAction)return;const rows=actionRows();rows.push(Object.assign({},currentAction,{status:document.getElementById('actionStatus').value,owner:document.getElementById('actionOwner').value.trim(),note:document.getElementById('actionNote').value.trim(),at:new Date().toISOString()}));try{localStorage.setItem(ACTION_LS,JSON.stringify(rows))}catch(_){}document.getElementById('actionNote').value='';renderActionHistory()}
+  function exportActions(){const rows=actionRows(),cell=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';const out=[['기록시각','상태','범위','담당자','근거','추천행동','실행내용·결과','광고비','가입','CPA']].concat(rows.map(r=>[r.at,r.status,r.scope,r.owner,r.evidence,r.action,r.note,r.cost,r.signup,r.cpa])).map(r=>r.map(cell).join(',')).join('\r\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['﻿'+out],{type:'text/csv;charset=utf-8'}));a.download='daouhub_action_log.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
 
   function buildDates(N){fullDates=[];labels=[];const lng=N>45;const P=window.DAOU_DATA&&window.DAOU_DATA.period;if(P&&P.dates&&P.dates.length){const st=Math.max(0,P.dates.length-N);P.dates.slice(st).forEach(iso=>{const p=String(iso).split('-');const mm=+p[1],dd=+p[2];fullDates.push(`${mm}/${dd}`);labels.push(lng?`${mm}/${dd}`:`${dd}`)});return}const end=new Date(2026,7,22);for(let i=N-1;i>=0;i--){const d=new Date(end);d.setDate(end.getDate()-i);const mm=d.getMonth()+1,dd=d.getDate();fullDates.push(`${mm}/${dd}`);labels.push(lng?`${mm}/${dd}`:`${dd}`)}}
   function periodText(){return `${fullDates[0]}–${fullDates[fullDates.length-1]}`}
   function currentSubs(){return state.sub==="전체"?GROUP_SUBS[state.group]:[state.sub]}
-  function renderTabs(){document.getElementById('tabbar').innerHTML=GROUPS.map(g=>{const agg=aggregate(GROUP_SUBS[g.key],state.N);return `<button class="tab ${state.group===g.key?'on':''}" data-g="${g.key}" style="--tabc:${GCOLOR[g.key]}"><span class="d"></span><b>${g.key}</b><span class="amt">${won(agg.tCost)}</span></button>`}).join('');document.querySelectorAll('#tabbar .tab').forEach(t=>t.addEventListener('click',()=>{state.group=t.dataset.g;state.sub="전체";render()}))}
-  function renderPills(){const box=document.getElementById('pills');const opts=["전체",...GROUP_SUBS[state.group]];box.innerHTML=opts.map(o=>{let dl="";if(o!=="전체"){const a=aggregate([o],state.N);dl=`<span class="d">${won(a.tCost)}</span>`}return `<button class="pill ${state.sub===o?'on':''}" data-s="${o}">${o}${dl}</button>`}).join('');box.querySelectorAll('.pill').forEach(p=>p.addEventListener('click',()=>{state.sub=p.dataset.s;render()}))}
+  function renderTabs(){document.getElementById('tabbar').innerHTML=GROUPS.map(g=>{const agg=aggregate(GROUP_SUBS[g.key],viewN);return `<button class="tab ${state.group===g.key?'on':''}" data-g="${g.key}" style="--tabc:${GCOLOR[g.key]}"><span class="d"></span><b>${g.key}</b><span class="amt">${won(agg.tCost)}</span></button>`}).join('');document.querySelectorAll('#tabbar .tab').forEach(t=>t.addEventListener('click',()=>{state.group=t.dataset.g;state.sub="전체";render()}))}
+  function renderPills(){const box=document.getElementById('pills');const opts=["전체",...GROUP_SUBS[state.group]];box.innerHTML=opts.map(o=>{let dl="";if(o!=="전체"){const a=aggregate([o],viewN);dl=`<span class="d">${won(a.tCost)}</span>`}return `<button class="pill ${state.sub===o?'on':''}" data-s="${o}">${o}${dl}</button>`}).join('');box.querySelectorAll('.pill').forEach(p=>p.addEventListener('click',()=>{state.sub=p.dataset.s;render()}))}
   function renderKPIs(agg){const c=[['광고비',won(agg.tCost),agg.d.cost,false,agg.cost,true],['가입',comma(agg.tSign)+'<u>건</u>',agg.d.signup,false,agg.signup,false],['CPA',cpaF(agg.cpa),agg.d.cpa,true,null,false],['CTR',pct(agg.ctr),agg.d.ctr,false,null,false]];document.getElementById('kpis').innerHTML=c.map(k=>`<div class="card kpi${k[5]?' hero':''}"><div class="lab">${k[0]}</div><div class="val num">${k[1]}</div><div class="foot">${deltaHTML(k[2],k[3])}${k[4]?spark(k[4],COL.c1):''}</div></div>`).join('')}
-  function renderTable(){const rows=GROUP_SUBS[state.group];const body=rows.map(n=>{const a=aggregate([n],state.N),g=SUBS[n].group,dl=a.d.cost;return `<tr class="mrow"><td><div class="bname"><span class="bdot" style="background:${GCOLOR[g]}"></span><b>${n}</b></div></td><td class="r mono">${won(a.tCost)}</td><td class="r mono">${comma(a.tSign)}</td><td class="r mono">${cpaF(a.cpa)}</td><td class="r mono">${pct(a.ctr)}</td><td class="r mono" style="color:var(--muted)">${comma(a.tImp)}</td><td class="r mono" style="color:var(--muted)">${comma(a.tClick)}</td><td class="r"><span class="delta ${dl>=0?'up':'down'}">${dl>=0?'▲':'▼'} ${Math.abs(dl).toFixed(1)}%</span></td></tr>`}).join('');document.getElementById('tableWrap').innerHTML=`<table><thead><tr><th>브랜드</th><th class="r">광고비</th><th class="r">가입</th><th class="r">CPA</th><th class="r">CTR</th><th class="r">노출</th><th class="r">클릭</th><th class="r">증감</th></tr></thead><tbody>${body}</tbody></table>`;document.getElementById('tblTitle').textContent=`${state.group} 세부 브랜드별 성과`;document.getElementById('tblPeriod').textContent=periodText()}
-  function render(){buildDates(state.N);const subs=currentSubs();const agg=aggregate(subs,state.N);document.getElementById('repTitle').textContent=state.sub==="전체"?`${state.group} 광고 리포트`:`${state.sub}`;document.getElementById('repSub').textContent=`${GROUP_SUBS[state.group].join(" · ")} · 최근 ${state.N}일 (${periodText()})`;document.getElementById('trendHint').textContent=periodText();renderTabs();renderPills();renderKPIs(agg);drawLine(agg);drawDonut(agg);drawBar(agg);buildComment(state.group,agg);renderTable()}
+  function renderTable(){const rows=GROUP_SUBS[state.group];const body=rows.map(n=>{const a=aggregate([n],viewN),g=SUBS[n].group,dl=a.d.cost;return `<tr class="mrow"><td><div class="bname"><span class="bdot" style="background:${GCOLOR[g]}"></span><b>${n}</b></div></td><td class="r mono">${won(a.tCost)}</td><td class="r mono">${comma(a.tSign)}</td><td class="r mono">${cpaF(a.cpa)}</td><td class="r mono">${pct(a.ctr)}</td><td class="r mono" style="color:var(--muted)">${comma(a.tImp)}</td><td class="r mono" style="color:var(--muted)">${comma(a.tClick)}</td><td class="r"><span class="delta ${dl>=0?'up':'down'}">${dl>=0?'▲':'▼'} ${Math.abs(dl).toFixed(1)}%</span></td></tr>`}).join('');document.getElementById('tableWrap').innerHTML=`<table><thead><tr><th>브랜드</th><th class="r">광고비</th><th class="r">가입</th><th class="r">CPA</th><th class="r">CTR</th><th class="r">노출</th><th class="r">클릭</th><th class="r">증감</th></tr></thead><tbody>${body}</tbody></table>`;document.getElementById('tblTitle').textContent=`${state.group} 세부 브랜드별 성과`;document.getElementById('tblPeriod').textContent=periodText()}
+  function render(){viewN=availableDays(state.N);buildDates(viewN);const subs=currentSubs();const agg=aggregate(subs,viewN),coverage=viewN<state.N?` · 요청 ${state.N}일 중 관측 ${viewN}일`:'';document.getElementById('repTitle').textContent=state.sub==="전체"?`${state.group} 광고 리포트`:`${state.sub}`;document.getElementById('repSub').textContent=`${GROUP_SUBS[state.group].join(" · ")} · 최근 ${viewN}일 (${periodText()})${coverage}`;document.getElementById('trendHint').textContent=periodText()+coverage;renderTabs();renderPills();renderKPIs(agg);drawLine(agg);drawDonut(agg);drawBar(agg);buildComment(state.group,agg);renderAction(subs,agg,viewN);renderTable()}
   document.getElementById('periodChips').addEventListener('click',e=>{if(e.target.tagName!=='BUTTON')return;document.querySelectorAll('#periodChips button').forEach(b=>b.classList.remove('on'));e.target.classList.add('on');state.N=+e.target.dataset.n;render()});
-  document.getElementById('repAi').addEventListener('click',function(){if(!window.DUChat)return;var who=state.sub==='전체'?state.group+' 그룹('+GROUP_SUBS[state.group].join('·')+')':state.sub;window.DUChat.open(who+' 최근 '+state.N+'일 광고 실적을 분석하고, 잘된 점과 개선이 필요한 지점·다음 액션을 알려줘.')});
+  document.getElementById('repAi').addEventListener('click',function(){if(!window.DUChat)return;var services=currentSubs(),who=state.sub==='전체'?state.group+' 그룹('+GROUP_SUBS[state.group].join('·')+')':state.sub;window.DUChat.open(who+' 최근 '+viewN+'일 광고 실적을 분석하고, 잘된 점과 개선이 필요한 지점·다음 액션을 알려줘.',{days:viewN,services:services,label:who})});
+  document.getElementById('actionSave').addEventListener('click',saveAction);document.getElementById('actionCsv').addEventListener('click',exportActions);
   return {render,setBrand(b){state.group=b;state.sub="전체"}};
 })();
 
@@ -905,7 +948,7 @@ const DUKeyword=(function(){
     document.getElementById('kCpcSub').textContent=_sub||"2위 기준·VAT별도";
     document.getElementById('kSpendSub').textContent=d.clk?("월 광고클릭 "+comma(d.clk)+"회 × CPC"):"검색량 기반 추정";
     var flags=[[d.commercial?'상업성':'정보성',COL.primary],['시즌성',d.seasonal?COL.c2:null],['이슈 급상승',d.issue?COL.warning:null]].filter(function(f){return f[1]});
-    if(d._demo)flags.unshift(['추정치(미수집)',COL.danger]);
+    var src=d.sources||{};if(d._demo)flags.unshift(['추정치(미수집)',COL.danger]);else if(!src.day_hour||src.day_hour==='estimated')flags.unshift(['요일·시간대 모델 추정',COL.warning]);
     document.getElementById('rFlags').innerHTML=flags.map(function(f){return '<span class="kf" style="color:'+f[1]+';border-color:color-mix(in srgb,'+f[1]+' 38%,var(--border-soft))">'+f[0]+'</span>'}).join('');
     var g=d.grade,verdict=(g.g==='A'||g.g==='B')?'상위노출·유입 기회가 큰 키워드입니다.':g.g==='C'?'경쟁과 기회가 균형적인 키워드입니다.':'경쟁이 치열해 신중한 접근이 필요합니다.';
     document.getElementById('kwDiag').innerHTML='<div class="diag"><div class="grade" style="background:'+g.c+'"><div class="g">'+g.g+'</div><div class="gl">'+g.l+'</div></div><div class="diag-b"><div class="dt">이 키워드는 검색량 <b>'+comma(d.total)+'회</b> · 문서 포화 <b>'+d.satBand.t+'</b>('+d.sat.toFixed(1)+':1) · 최고 검색월 <b>'+d.peakMonth+'월</b>(현재 지수 '+d.curIdx+'). '+verdict+'</div><div class="gauge"><div class="gh"><span>블루오션</span><span>기회지수 '+Math.round(d.opp*100)+'</span><span>레드오션</span></div><div class="gt"><div class="gk" style="left:calc('+Math.round((1-d.opp)*100)+'% - 2px)"></div></div></div></div></div>';
@@ -935,7 +978,7 @@ const DUCustom=(function(){
   const MET={
     cost:{label:"광고비",fmt:"won"}, imp:{label:"노출",fmt:"num"}, click:{label:"클릭",fmt:"num"},
     signup:{label:"가입",fmt:"num1"},
-    cpa:{label:"CPA",fmt:"won",calc:s=>s.signup>0?s.cost/s.signup:0},
+    cpa:{label:"CPA",fmt:"won",calc:s=>s.signup>0?s.cost/s.signup:null},
     ctr:{label:"CTR",fmt:"pct",calc:s=>s.imp>0?s.click/s.imp*100:0},
     cpc:{label:"CPC",fmt:"won",calc:s=>s.click>0?s.cost/s.click:0},
     cvr:{label:"전환율",fmt:"pct",calc:s=>s.click>0?s.signup/s.click*100:0},
@@ -945,7 +988,7 @@ const DUCustom=(function(){
   let _synth=null;
   const cma=n=>Math.round(n).toLocaleString();
   const wonf=n=>"₩"+Math.round(n).toLocaleString();
-  const fmtV=(m,v)=>{const f=MET[m].fmt;return f==="won"?wonf(v):f==="pct"?v.toFixed(2)+"%":f==="rank"?(v>0?v.toFixed(1)+"위":"–"):f==="num1"?(Math.round(v*10)/10).toLocaleString():cma(v)};
+  const fmtV=(m,v)=>{const f=MET[m].fmt;if(v==null)return m==="cpa"?"전환 없음":"–";return f==="won"?wonf(v):f==="pct"?v.toFixed(2)+"%":f==="rank"?(v>0?v.toFixed(1)+"위":"–"):f==="num1"?(Math.round(v*10)/10).toLocaleString():cma(v)};
   function facts(){const F=window.DAOU_DATA&&window.DAOU_DATA.report&&window.DAOU_DATA.report.facts;if(F&&F.length)return F;if(!_synth)_synth=synth();return _synth}
   function synth(){const SB=[["사방넷","사방넷"],["사방넷미니","사방넷"],["풀필먼트","사방넷"],["엔팩스","애드콘"],["애드콘","애드콘"],["다우오피스","다우오피스"],["다우오피스HR","다우오피스"]];const CT=["브랜드검색","파워링크","쇼핑검색","구글검색","실적최대화","동영상","디스플레이"];const out=[];const end=new Date(2026,7,24);for(let i=0;i<365;i++){const dt=new Date(end);dt.setDate(end.getDate()-i);const ds=dt.toISOString().slice(0,10);for(const[svc,grp]of SB){const r=MUL(H(svc+ds));for(const media of["네이버","구글","메타"]){for(const ct of CT){if(r()<0.45)continue;const cost=Math.round((5000+r()*300000));const click=Math.max(1,Math.round(cost/(400+r()*500)));const imp=Math.round(click/(0.02+r()*0.05));const signup=Math.round(click/(8+r()*30)*10)/10;const rnk=media==="네이버"?(1+r()*4):0;out.push({d:ds,svc,grp,media,ct,imp,click,cost,signup,rnkw:Math.round(rnk*imp),rnki:rnk>0?imp:0})}}}}return out}
   function maxD(F){let m="";for(const r of F)if(r.d>m)m=r.d;return m}
@@ -1279,9 +1322,9 @@ const DUComp=(function(){
                : (e._autoHome?' <span style="color:var(--muted);font-size:11px">자동 감지 도메인: '+esc(e._autoHome)+'</span>':'')))
         : (e.precise?'':' <span style="color:var(--muted);font-size:11px">키워드 검색 · 무관 광고 섞일 수 있음</span>'))):'';
     const pf=e.perf||{};
-    const pfNote=(pf.maxDays!=null)?(' · 최장 <b>'+pf.maxDays+'일</b> 집행 · 활성 '+(pf.active||0)+'개 · 🏆검증 '+(pf.winners||0)+'개'):'';
+    const pfNote=(pf.maxDays!=null)?(' · 최장 <b>'+pf.maxDays+'일</b> 집행 · 활성 '+(pf.active||0)+'개 · 장기 관측 '+(pf.winners||0)+'개'):'';
     let html='<div class="da-note">'+imgs.length+'개 소재'+(adv?' · 광고주 <b>'+esc(adv)+'</b>':'')+' · 수집 '+esc(e.at||'')+liveTag+pfNote+'</div>'
-      +((pf.maxDays!=null)?'<div class="da-legend">🏆 30일↑ · 🔥 집행 중 · 오래 운영순'+(isG?' · 크기별 분류':'')+'</div>':'')
+      +((pf.maxDays!=null)?'<div class="da-legend">🏆 30일↑ 장기 관측 · 🔥 집행 중 · 성과는 미확인'+(isG?' · 크기별 분류':'')+'</div>':'')
       +'<div class="da-filter">'+chip('all','전체',imgs.length)
         +(nImg?chip('image','🖼 이미지',nImg):'')
         +(nVid?chip('video','🎬 영상',nVid):'')
@@ -1299,7 +1342,7 @@ const DUComp=(function(){
         const media=(ty==='video'&&vurl)
           ? '<video class="thumb" src="'+esc(vurl)+'" poster="'+esc(u)+'" muted loop playsinline preload="none"'+ar+'></video><span class="da-play">▶</span>'
           : '<img class="thumb" data-src="'+esc(u)+'"'+ar+' alt="광고 소재">';
-        // 성과 배지: 집행 일수(활성이면 '째'). 30일+ = 검증 승자(🏆), 그 외 활성은 🔥
+        // 관측 배지: 집행 일수(활성이면 '째'). 30일+는 장기 관측일 뿐 성과를 뜻하지 않는다.
         const days=(im&&typeof im.days==='number')?im.days:null;
         const win=days!=null&&days>=30, act=im&&im.act;
         const perfBadge=(days!=null)
@@ -1518,7 +1561,7 @@ const DUComp=(function(){
       +'\n메타 소재: '+M.length+'개(영상 '+mv+'·이미지 '+mi+')'+((x.meta&&x.meta.adDomain)?(' · 광고 도메인 '+x.meta.adDomain):'')
       +'\n구글 소재: '+G.length+'개(디스플레이 이미지)'
       +(mOcr.length?('\n소재 카피(문구): '+mOcr.map(function(s){return '"'+s+'"'}).join(' / ')):'')
-      +(longest.length?('\n최장 집행=검증 승자: '+longest.join(' · ')):'')
+      +(longest.length?('\n장기 집행 관측 소재(성과 미확인): '+longest.join(' · ')):'')
       +((content.topics&&content.topics.length)?('\n블로그·카페 상위 주제: '+content.topics.slice(0,4).join(' / ')):'')
       +(ads.length?('\nSERP 광고: '+ads.slice(0,4).map(function(a){return a.name+(a.copy?('('+a.copy+')'):'')}).join(', ')):'')
       +((promo&&promo.promos&&promo.promos.length)?('\n프로모션: '+(promo.summary||'')+' | '+promo.promos.map(function(p){return p.kind+':'+p.headline}).join(', ')):'')
@@ -1532,7 +1575,7 @@ const DUComp=(function(){
     if(!force&&sig===_aiSig)return; _aiSig=sig;
     var q='위는 경쟁사의 실제 운영 광고 관측 데이터야. 정확히 3줄만, 각 줄 "키|내용" 형식으로(키는 집중제품·광고전략·벤치마크):\n'
       +'집중제품|지금 이 경쟁사가 미는 제품과 핵심 오퍼(무료/할인 등)를 소재 카피 근거로 한 문장.\n'
-      +'광고전략|포맷(영상 vs 이미지)·채널(메타/구글)·오래 돌리는 검증 승자 소재의 특징을 한 문장.\n'
+      +'광고전략|포맷(영상 vs 이미지)·채널(메타/구글)·장기 집행 관측 소재의 특징을 한 문장. 성과가 좋다고 단정하지 마.\n'
       +'벤치마크|우리 브랜드 후보 중 이 경쟁사와 가장 관련된 하나를 고르고 그 관점의 대응 액션을 한 문장.\n'
       +'서론·군더더기 금지. 관측 수치와 카피를 인용해.';
     box.innerHTML=_aiHead('소재 관측 기반')+'<div class="card-b"><div class="line" style="color:var(--muted)">소재 분석 중…</div></div>';
@@ -1575,7 +1618,7 @@ const DUComp=(function(){
   let cur='home';
   function show(v){cur=v;for(const k in views)views[k].hidden=(k!==v);document.querySelectorAll('.an-tabs button').forEach(b=>b.classList.toggle('on',b.dataset.go===v));if(v==='report')DUReport.render();if(v==='custom')DUCustom.render();if(v==='keyword')DUComp.render();if(v==='budget')DUBudget.render();window.scrollTo(0,0)}
   // Load real data snapshot (built daily from the Google Sheet RAW → data.json). Falls back to demo data when absent.
-  fetch('data.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{if(!d)return;window.DAOU_DATA=d;const e=document.getElementById('envPill');if(e)e.innerHTML='<b></b>'+(d.source==='live'?'실데이터 연동':'데모 데이터');if(cur==='report')DUReport.render();if(cur==='custom')DUCustom.render();if(cur==='keyword')DUKeyword.render();if(cur==='budget')DUBudget.render()}).catch(()=>{});
+  fetch('data.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{if(!d)return;window.DAOU_DATA=d;const e=document.getElementById('envPill');if(e){const m=d.meta||{},F=d.report&&d.report.facts||[],dates=F.map(x=>x.d).filter(Boolean).sort(),lo=dates[0]||'?',hi=dates[dates.length-1]||'?';e.innerHTML='<b></b>'+(m.live_report?'광고 실데이터':'광고 데모')+' · '+(m.live_keyword?'키워드 혼합':'키워드 데모');e.title='광고 관측 '+lo+'~'+hi+' · 키워드는 지표별 실측/추정 표시'}if(cur==='report')DUReport.render();if(cur==='custom')DUCustom.render();if(cur==='keyword')DUKeyword.render();if(cur==='budget')DUBudget.render()}).catch(()=>{});
   document.querySelectorAll('[data-go]').forEach(el=>el.addEventListener('click',()=>show(el.dataset.go)));
   document.querySelectorAll('[data-brand]').forEach(el=>el.addEventListener('click',()=>{DUReport.setBrand(el.dataset.brand);show('report')}));
   function hs(){const v=document.getElementById('homeSearch').value.trim();if(v){DUKeyword.setKw(v);show('keyword');DUComp.setTab('keyword');DUKeyword.render()}}
@@ -1585,7 +1628,7 @@ const DUComp=(function(){
 
 /* ── AI 분석 어시스턴트(챗봇) ── 우리 광고 실데이터를 컨텍스트로 Claude 에게 질의 */
 (function(){
-  var open=false,busy=false,hist=[];
+  var open=false,busy=false,hist=[],scope=null,AI_LS='daouhub_ai_usage_v1';
   var SUG=['이번 기간 실적 요약해줘','성과가 가장 좋은 브랜드는?','CPA 높은 브랜드랑 개선안 알려줘','최근 광고비 늘어난 브랜드 있어?'];
   function el(id){return document.getElementById(id)}
   function sum(a){return (a||[]).reduce(function(x,y){return x+(+y||0)},0)}
@@ -1593,21 +1636,27 @@ const DUComp=(function(){
   function pctd(cur,prev){if(!prev)return cur>0?'신규':'0%';var d=(cur-prev)/prev*100;return (d>=0?'+':'')+d.toFixed(0)+'%'}
   function ctx(){
     var D=window.DAOU_DATA;if(!D||!D.report)return '(대시보드 데이터가 아직 로딩되지 않음)';
-    var P=D.period||{},subs=D.report.subs||{};
-    var L=['[다우 허브 광고 실데이터] 기간 '+(P.start||'?')+'~'+(P.end||'?')+' ('+(P.days||0)+'일), 소스='+(D.source||''),
-           '규칙: 광고비=마크업·VAT포함, CPA=광고비/가입, CTR=클릭/노출. WoW=최근7일 대비 직전7일.'];
-    Object.keys(subs).forEach(function(nm){var s=subs[nm];var c=sum(s.cost),g=sum(s.signup),im=sum(s.imp),ck=sum(s.click);
-      var cpa=g>0?Math.round(c/g):0,ctr=im>0?(ck/im*100):0;
+    var P=D.period||{},subs=D.report.subs||{},days=Math.max(1,Math.min(365,(scope&&scope.days)||30));
+    var dates=P.dates||[],lo=dates[Math.max(0,dates.length-days)]||P.start||'?',hi=dates[dates.length-1]||P.end||'?';
+    var names=(scope&&scope.services&&scope.services.length)?scope.services:Object.keys(subs);
+    var L=['[다우 허브 광고 실데이터] 분석범위 '+lo+'~'+hi+' (최근 '+days+'일), 대상='+(scope&&scope.label||'전체 브랜드')+', 소스='+(D.source||''),
+           '규칙: 광고비=마크업·VAT포함, CPA=광고비/가입, CTR=클릭/노출. GA4 가입은 브랜드 기준 전환이며 매체별 확정 귀속 전환으로 단정하지 말 것. WoW=최근7일 대비 직전7일. 관측 사실과 원인 가설을 구분할 것.'];
+    names.forEach(function(nm){var raw=subs[nm];if(!raw)return;var L0=(raw.cost||[]).length,st=Math.max(0,L0-days),s={group:raw.group,cost:(raw.cost||[]).slice(st),signup:(raw.signup||[]).slice(st),imp:(raw.imp||[]).slice(st),click:(raw.click||[]).slice(st)};var c=sum(s.cost),g=sum(s.signup),im=sum(s.imp),ck=sum(s.click);
+      var cpa=g>0?Math.round(c/g):null,ctr=im>0?(ck/im*100):0;
       var wc=tailWeeks(s.cost,2),wg=tailWeeks(s.signup,2);
-      var media=Object.keys(s.media||{}).map(function(k){return k+' '+Math.round((s.media[k]||0)*100)+'%'}).join('/');
-      var ct=Object.keys(s.ct||{}).filter(function(k){return (s.ct[k]||0)>0}).sort(function(a,b){return s.ct[b]-s.ct[a]}).slice(0,4).map(function(k){return k+' '+Math.round(s.ct[k]*100)+'%'}).join('/');
-      L.push('· '+nm+'('+s.group+'): 광고비 '+Math.round(c).toLocaleString()+'원, 가입 '+Math.round(g)+', CPA '+cpa+'원, CTR '+ctr.toFixed(2)+'%, 노출 '+Math.round(im).toLocaleString()+', 클릭 '+Math.round(ck).toLocaleString()
+      var mf={},cf={};(D.report.facts||[]).forEach(function(f){if(f.svc!==nm||f.d<lo||f.d>hi)return;mf[f.media]=(mf[f.media]||0)+(+f.cost||0);cf[f.ct]=(cf[f.ct]||0)+(+f.cost||0)});var ms=Object.values(mf).reduce(function(a,b){return a+b},0)||1,cs=Object.values(cf).reduce(function(a,b){return a+b},0)||1;
+      var media=Object.keys(mf).filter(function(k){return mf[k]>0}).map(function(k){return k+' '+Math.round(mf[k]/ms*100)+'%'}).join('/');
+      var ct=Object.keys(cf).filter(function(k){return cf[k]>0}).sort(function(a,b){return cf[b]-cf[a]}).slice(0,4).map(function(k){return k+' '+Math.round(cf[k]/cs*100)+'%'}).join('/');
+      L.push('· '+nm+'('+s.group+'): 광고비 '+Math.round(c).toLocaleString()+'원, 가입 '+Math.round(g)+', CPA '+(cpa==null?'전환 없음':cpa.toLocaleString()+'원')+', CTR '+ctr.toFixed(2)+'%, 노출 '+Math.round(im).toLocaleString()+', 클릭 '+Math.round(ck).toLocaleString()
         +' | 매체 '+media+(ct?' | 유형 '+ct:'')
         +' | 최근주 광고비 '+wc[1].toLocaleString()+'('+pctd(wc[1],wc[0])+' WoW)·가입 '+wg[1]+'('+pctd(wg[1],wg[0])+' WoW)'
         +' | 4주 광고비추이 '+tailWeeks(s.cost,4).join('→')+' | 4주 가입추이 '+tailWeeks(s.signup,4).join('→'));
     });
     return L.join('\n');
   }
+  function usageState(){try{return JSON.parse(localStorage.getItem(AI_LS)||'{}')||{}}catch(_){return{}}}
+  function updateMeta(){var u=usageState(),n=(u.input_tokens||0)+(u.output_tokens||0)+(u.cache_creation_input_tokens||0)+(u.cache_read_input_tokens||0);el('dcMeta').textContent='Claude · '+(u.calls||0)+'회 · 누적 '+n.toLocaleString()+' tokens'}
+  function trackUsage(u){if(!u)return;var s=usageState();s.calls=(s.calls||0)+1;['input_tokens','output_tokens','cache_creation_input_tokens','cache_read_input_tokens'].forEach(function(k){s[k]=(s[k]||0)+(+u[k]||0)});s.model=u.model||s.model;s.updated_at=new Date().toISOString();try{localStorage.setItem(AI_LS,JSON.stringify(s))}catch(_){}updateMeta()}
   function mdEsc(s){return String(s==null?'':s).replace(/[&<>]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;'}[c]})}
   function md(t){t=mdEsc(t);
     t=t.replace(/`([^`]+)`/g,'<code>$1</code>');
@@ -1629,7 +1678,7 @@ const DUComp=(function(){
     add('user',q);hist.push({role:'user',content:q});busy=true;el('dcSend').disabled=true;typing(true);
     fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:hist.slice(-10),context:ctx()})})
       .then(function(r){return r.json()}).then(function(j){typing(false);
-        if(j&&j.reply){add('assistant',j.reply);hist.push({role:'assistant',content:j.reply})}
+        if(j&&j.reply){add('assistant',j.reply);hist.push({role:'assistant',content:j.reply});trackUsage(j.usage)}
         else{add('err',(j&&j.error)||'응답을 받지 못했어요.')}
       }).catch(function(){typing(false);add('err','네트워크 오류로 답을 못 받았어요.')})
       .then(function(){busy=false;el('dcSend').disabled=false});
@@ -1637,7 +1686,7 @@ const DUComp=(function(){
   function greet(){add('assistant','안녕하세요! 다우 허브 AI 분석 어시스턴트예요. 우리 광고 실데이터를 보고 답해드려요. 무엇이 궁금하세요?');
     el('dcSug').style.display='';el('dcSug').innerHTML=SUG.map(function(s){return '<button type="button">'+s+'</button>'}).join('');
     Array.prototype.forEach.call(el('dcSug').querySelectorAll('button'),function(bt){bt.addEventListener('click',function(){send(bt.textContent)})})}
-  function reset(){hist=[];el('dcBody').innerHTML='';greet();el('dcInput').focus()}
+  function reset(){hist=[];scope=null;el('dcBody').innerHTML='';greet();el('dcInput').focus()}
   function toggle(v){open=(v==null?!open:v);el('duChat').classList.toggle('on',open);el('duChatBtn').style.display=open?'none':'';
     if(open&&!el('dcBody').children.length)greet();
     if(open)setTimeout(function(){el('dcInput').focus()},60);
@@ -1647,6 +1696,7 @@ const DUComp=(function(){
   var rb=el('dcReset');if(rb)rb.addEventListener('click',reset);
   el('dcSend').addEventListener('click',function(){send()});
   el('dcInput').addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}});
-  window.DUChat={open:function(q){toggle(true);if(q)setTimeout(function(){send(q)},80)}};
+  updateMeta();
+  window.DUChat={open:function(q,nextScope){scope=nextScope||null;toggle(true);if(q)setTimeout(function(){send(q)},80)}};
 })();
 </script>

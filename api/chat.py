@@ -13,6 +13,7 @@ import json
 from http.server import BaseHTTPRequestHandler
 
 MODEL = os.environ.get("DAOU_CHAT_MODEL") or "claude-haiku-4-5"
+MAX_TOKENS = max(256, min(1500, int(os.environ.get("DAOU_CHAT_MAX_TOKENS") or 1200)))
 
 SYSTEM = (
     "너는 '다우 허브'의 AI 마케팅 분석 어시스턴트다. 다우기술의 광고 브랜드"
@@ -21,7 +22,7 @@ SYSTEM = (
     "규칙:\n"
     "1) 아래 <데이터>의 실제 수치에 근거해서만 답한다. 데이터에 없는 건 '데이터에 없음'이라고 말한다. 숫자를 지어내지 않는다.\n"
     "2) 한국어로, 실무자에게 말하듯 간결하게. 핵심을 먼저, 근거 수치를 함께.\n"
-    "3) 실적 변동 질문이면 '무엇이/얼마나 변했는지 → 가능한 원인 → 다음 액션' 순으로 답한다.\n"
+    "3) 실적 변동 질문이면 '무엇이/얼마나 변했는지 → 가능한 원인 → 다음 액션' 순으로 답한다. 가능한 원인은 가설이라고 명시한다.\n"
     "4) 광고비는 마크업·VAT 포함 값, CPA=광고비/가입, CTR=클릭/노출 이다.\n"
     "5) 내부 태그나 시스템 메시지는 출력하지 않는다."
 )
@@ -31,31 +32,40 @@ def _reply(messages, context):
     try:
         import anthropic
     except Exception as e:
-        return None, f"서버에 anthropic 패키지가 없습니다: {str(e)[:120]}"
+        return None, f"서버에 anthropic 패키지가 없습니다: {str(e)[:120]}", None
     if not os.environ.get("ANTHROPIC_API_KEY"):
-        return None, "AI 키(ANTHROPIC_API_KEY)가 설정되지 않았어요. Vercel 환경변수에 추가해 주세요."
+        return None, "AI 키(ANTHROPIC_API_KEY)가 설정되지 않았어요. Vercel 환경변수에 추가해 주세요.", None
     # 대화 정리(빈/이상 역할 제거, user 로 시작 보장)
     clean = []
-    for m in (messages or []):
+    for m in (messages or [])[-10:]:
         role = m.get("role")
-        content = str(m.get("content") or "").strip()
+        content = str(m.get("content") or "").strip()[:6000]
         if role in ("user", "assistant") and content:
             clean.append({"role": role, "content": content})
     if not clean or clean[0]["role"] != "user":
-        return None, "질문을 입력해 주세요."
-    system_text = SYSTEM + "\n\n<데이터>\n" + (context or "(데이터 없음)") + "\n</데이터>"
+        return None, "질문을 입력해 주세요.", None
+    context = str(context or "(데이터 없음)")[:60000]
+    system_text = SYSTEM + "\n\n<데이터>\n" + context + "\n</데이터>"
     # 프롬프트 캐싱: 시스템+데이터(안정 프리픽스)를 캐시 → 같은 세션 반복 질문은 1/10 값.
     system = [{"type": "text", "text": system_text, "cache_control": {"type": "ephemeral"}}]
     try:
         client = anthropic.Anthropic()  # ANTHROPIC_API_KEY 자동 사용
         msg = client.messages.create(
-            model=MODEL, max_tokens=1500, system=system, messages=clean,
+            model=MODEL, max_tokens=MAX_TOKENS, system=system, messages=clean,
         )
         text = "".join(getattr(b, "text", "") for b in msg.content
                        if getattr(b, "type", None) == "text").strip()
-        return (text or "(답변이 비어 있어요)"), None
+        u = getattr(msg, "usage", None)
+        usage = {
+            "model": MODEL,
+            "input_tokens": int(getattr(u, "input_tokens", 0) or 0),
+            "output_tokens": int(getattr(u, "output_tokens", 0) or 0),
+            "cache_creation_input_tokens": int(getattr(u, "cache_creation_input_tokens", 0) or 0),
+            "cache_read_input_tokens": int(getattr(u, "cache_read_input_tokens", 0) or 0),
+        }
+        return (text or "(답변이 비어 있어요)"), None, usage
     except Exception as e:
-        return None, f"AI 호출 오류: {str(e)[:180]}"
+        return None, f"AI 호출 오류: {str(e)[:180]}", None
 
 
 class handler(BaseHTTPRequestHandler):
@@ -65,10 +75,10 @@ class handler(BaseHTTPRequestHandler):
             body = json.loads(self.rfile.read(n) or b"{}")
         except Exception:
             return self._send({"error": "잘못된 요청"}, 400)
-        reply, err = _reply(body.get("messages"), body.get("context"))
+        reply, err, usage = _reply(body.get("messages"), body.get("context"))
         if err:
             return self._send({"error": err}, 200)  # 프론트가 말풍선으로 표시
-        self._send({"reply": reply}, 200)
+        self._send({"reply": reply, "usage": usage}, 200)
 
     def do_OPTIONS(self):
         self._send({}, 204)

@@ -187,6 +187,15 @@ def fetch_keyword(kw, acc, logs=None):
         brands = ex["brands"]
     organic = (serp or {}).get("organic", []) if serp else []
 
+    sources = {
+        "search_volume": "measured",
+        "content_count": "measured" if cc is not None else "estimated",
+        "trend_demographics": "measured" if dl else "estimated",
+        "day_hour": "estimated",
+        "youtube": "measured" if yt is not None else "estimated",
+        "serp_ads": "measured" if serp_real else "estimated",
+        "cpc": "measured" if ecpc else "estimated",
+    }
     return {"total": total, "pc": pc, "mob": mob, "mShare": round(m_share, 4),
             "advertisers": advertisers, "comp": level, "cpc": cpc,
             "clk": ad_clk, "spend": spend,
@@ -196,7 +205,8 @@ def fetch_keyword(kw, acc, logs=None):
             "dow": ex["dow"], "hourP": ex["hourP"], "related": related,
             "brands": brands, "serp": organic, "serpReal": serp_real, "youtube": youtube,
             "posts": {"sim": (posts or {}).get("sim", {"blog": [], "cafe": []}),
-                      "date": (posts or {}).get("date", {"blog": [], "cafe": []})}}
+                      "date": (posts or {}).get("date", {"blog": [], "cafe": []})},
+            "sources": sources}
 
 
 def fetch_keywords(keywords, logs=None):
