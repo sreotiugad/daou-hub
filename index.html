@@ -348,6 +348,10 @@
   .ctabs button.on{color:var(--primary);border-bottom-color:var(--primary)}
   .comp-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}
   .comp-updated{font-size:11.5px;color:var(--muted);font-family:var(--mono);margin-left:auto}
+  .comp-loading{display:flex;align-items:center;justify-content:center;min-height:170px;color:var(--muted)}
+  .comp-loading .box{display:flex;flex-direction:column;align-items:center;gap:12px}
+  .comp-loading .spin{width:30px;height:30px;border-width:3px}
+  .comp-loading b{font-size:13.5px;color:var(--fg);font-weight:600}
   .acc{display:inline-flex;align-items:center;gap:4px;font-family:var(--mono);font-size:10.5px;font-weight:600;border-radius:5px;padding:2px 7px;white-space:nowrap}
   .acc::before{content:"";width:5px;height:5px;border-radius:50%}
   .acc.ok{color:var(--success);background:color-mix(in srgb,var(--success) 13%,transparent)}.acc.ok::before{background:var(--success)}
@@ -637,7 +641,7 @@
       <p>경쟁사명만 입력하면 광고 소재·집행 강도·프로모션을 분석합니다. (이 브라우저에만 저장)</p>
       <button type="button" id="compEmptyAdd" class="kw-btn primary">＋ 첫 경쟁사 등록</button>
     </div>
-    <div id="compLoading" hidden style="text-align:center;padding:44px;color:var(--muted);font-size:13.5px">경쟁사 분석 중… <span style="display:block;font-size:12px;margin-top:4px">네이버 · SERP 광고 · 프로모션 수집</span></div>
+    <div id="compLoading" class="comp-loading" hidden><div class="box"><div class="spin"></div><b>경쟁사 분석 중…</b></div></div>
     <div id="compSnap" hidden>
       <div id="compHero" class="card comp-hero"></div>
       <div class="comp-grid" id="compCards"></div>
