@@ -133,7 +133,8 @@
   .delta.up{color:var(--success)}.delta.down{color:var(--danger)}.delta.flat{color:var(--muted)}
 
   .r-focal{display:grid;grid-template-columns:1.9fr 1fr;gap:14px;margin-bottom:14px}
-  .r-mid{display:grid;grid-template-columns:1.4fr 1fr;gap:14px;margin-bottom:14px}
+  /* align-items:start — AI 코멘트가 길어져도 옆 차트 카드가 딸려 늘어나(빈 공간 생겨) 깨져 보이지 않게 */
+  .r-mid{display:grid;grid-template-columns:1.4fr 1fr;gap:14px;margin-bottom:14px;align-items:start}
   @media(max-width:900px){.r-focal,.r-mid{grid-template-columns:1fr}}
   .donut-wrap{display:flex;justify-content:center;padding-top:6px}
 
