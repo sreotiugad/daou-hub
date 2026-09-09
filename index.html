@@ -1408,7 +1408,10 @@ const DUComp=(function(){
       html+='<div class="da-grid'+(isG?' da-grid-uni':'')+'">'+shown.map(im=>{const u=(typeof im==='string')?im:im.u;
         const t=(im&&typeof im==='object'&&im.t)?im.t:'';const ty=daType(im);
         const vurl=(im&&typeof im==='object'&&im.v)?im.v:'';
-        const ar=(!isG&&im&&im.w&&im.h)?' style="aspect-ratio:'+im.w+'/'+im.h+'"':'';
+        // 구글도 manifest 비율을 인라인으로 내보낸다. groupBySize의 arOf() 폴백이 읽는 게
+        // 바로 이 값이라, 여기서 빼면 <video>로 렌더되는 구글 소재는 videoWidth=0 →
+        // 폴백도 비어서 다시 '정사각' 그룹으로 떨어진다.
+        const ar=(im&&im.w&&im.h)?' style="aspect-ratio:'+im.w+'/'+im.h+'"':'';
         // 영상 소재이고 재생 URL(im.v)이 있으면 <video>로 클릭 재생/일시정지, 없으면 포스터/이미지만
         const media=(ty==='video'&&vurl)
           ? '<video class="thumb" src="'+esc(vurl)+'" poster="'+esc(u)+'" muted loop playsinline preload="none"'+ar+'></video><span class="da-play">▶</span>'
