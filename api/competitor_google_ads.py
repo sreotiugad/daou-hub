@@ -220,6 +220,27 @@ def _deep_img(o, depth=0):
     return None
 
 
+def _all_imgs(o, depth=0, acc=None, seen=None):
+    """한 광고 객체 안의 '이미지처럼 보이는' URL을 전부(중복 제거) 수집.
+    반응형 광고면 마케팅이미지·로고·합성 스크린샷이 여러 개 나올 수 있어 — 깨끗한 소재를
+    고르려면 후보가 몇 개인지부터 봐야 한다(probe 진단용)."""
+    if acc is None:
+        acc, seen = [], set()
+    if depth > 7 or len(acc) >= 12:
+        return acc
+    if isinstance(o, str):
+        if _looks_img(o) and o not in seen:
+            seen.add(o)
+            acc.append(o)
+    elif isinstance(o, dict):
+        for v in o.values():
+            _all_imgs(v, depth + 1, acc, seen)
+    elif isinstance(o, list):
+        for it in o:
+            _all_imgs(it, depth + 1, acc, seen)
+    return acc
+
+
 def _normalize(ads):
     """ScrapeCreators ads[] → 프론트 da-item {u,t,type,성과}. 이미지 못 찾으면(텍스트 광고 등) 건너뜀."""
     out = []
@@ -287,7 +308,13 @@ def collect(target, country="KR", max_ads=MAX_ADS, logs=None, probe=False, name=
                 "winners": sum(1 for d in dl if d >= 30)}
     logs.append("[google] 완료 %s=%s images=%d perf=%s" % (stype, key, len(images), perf_sum))
     if probe and ads:
-        logs.append("PROBE:" + json.dumps(ads[0], ensure_ascii=False)[:500])
+        # 앞 3개 광고에 대해: 필드 키 · imageUrl · format · 발견된 모든 이미지 후보 URL.
+        # 후보가 광고당 2개 이상이면 '깨끗한 asset vs 합성 스크린샷'을 구분해 뗄 여지가 있다.
+        dump = [{"keys": list(ad.keys()),
+                 "format": ad.get("format") or ad.get("adFormat") or ad.get("creativeFormat"),
+                 "imageUrl": ad.get("imageUrl"),
+                 "allImgs": _all_imgs(ad)} for ad in ads[:3]]
+        logs.append("PROBE:" + json.dumps(dump, ensure_ascii=False))
     return {"target": "%s:%s" % (stype, key), "images": images,
             "count": len(images), "perf": perf_sum, "at": _now_kst(),
             "source": "scrapecreators_live", "precise": (adv_by == "url"),
