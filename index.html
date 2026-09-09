@@ -415,10 +415,10 @@
   .da-seclab{font-size:12px;font-weight:600;color:var(--fg);margin:16px 0 9px;display:flex;align-items:center;gap:7px}
   .da-seclab:first-child{margin-top:4px}
   .da-seclab .ic{font-size:11px;color:var(--muted);font-weight:500}
-  .da-secgrid{display:grid;gap:12px}
-  .da-secgrid.wide{grid-template-columns:repeat(auto-fill,minmax(380px,1fr))}
-  .da-secgrid.square{grid-template-columns:repeat(auto-fill,minmax(230px,1fr))}
-  .da-secgrid.tall{grid-template-columns:repeat(auto-fill,minmax(210px,1fr))}
+  .da-secgrid{display:grid;gap:14px}
+  .da-secgrid.wide{grid-template-columns:repeat(auto-fill,minmax(320px,1fr))}
+  .da-secgrid.square{grid-template-columns:repeat(auto-fill,minmax(180px,1fr))}
+  .da-secgrid.tall{grid-template-columns:repeat(auto-fill,minmax(170px,1fr))}
   .da-secgrid .da-item .thumb{object-fit:contain;background:var(--bg);height:auto}
   .da-secgrid.wide .da-item .thumb{aspect-ratio:1.91/1}
   .da-secgrid.square .da-item .thumb{aspect-ratio:1/1}
@@ -447,6 +447,15 @@
   .da-legend{font-size:11px;color:var(--muted);margin:-4px 0 12px;line-height:1.5}
   .da-legend b{color:#b45309}
   .da-filter{display:flex;gap:7px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
+  .da-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin:0 0 12px}
+  .da-sum{border:1px solid var(--border-soft);background:var(--bg);border-radius:10px;padding:9px 11px}
+  .da-sum b{display:block;font-size:18px;font-family:var(--mono);line-height:1.15}
+  .da-sum span{display:block;margin-top:2px;font-size:11px;color:var(--muted)}
+  .da-copy-list{display:grid;gap:8px;margin:0 0 15px}
+  .da-copy{display:grid;grid-template-columns:auto 1fr auto;gap:9px;align-items:start;border:1px solid var(--border-soft);background:var(--bg);border-radius:10px;padding:9px 11px}
+  .da-copy .no{font-family:var(--mono);font-size:11px;color:var(--muted);padding-top:2px}
+  .da-copy b{font-size:12.5px;line-height:1.45;font-weight:600}
+  .da-copy .src{font-size:10.5px;color:var(--muted);white-space:nowrap;padding-top:2px}
   .da-fchip{font-size:11.5px;font-weight:500;padding:4px 11px;border-radius:20px;border:1px solid var(--border);color:var(--muted);cursor:pointer;background:var(--surface)}
   .da-fchip.on{background:var(--primary-weak);color:var(--primary);border-color:transparent;font-weight:600}
   .da-empty{font-size:12px;color:var(--muted);padding:14px 2px}
@@ -1299,7 +1308,7 @@ const DUComp=(function(){
   // 구글 소재를 실제 크기로 가로/정사각/세로 그룹으로 나눠(잘림 없이) 각 비율 격자에 배치.
   function groupBySize(body){
     const grid=body.querySelector('.da-grid');if(!grid)return;
-    const cards=[...grid.querySelectorAll('.da-item')];if(!cards.length)return;
+    const cards=[...grid.querySelectorAll('.da-item')];if(!cards.length){grid.remove();return;}
     const arOf=c=>{const im=c.querySelector('img.thumb,video.thumb');
       const w=(im&&(im.naturalWidth||im.videoWidth))||0,h=(im&&(im.naturalHeight||im.videoHeight))||0;return h?w/h:1;};
     const bkt=ar=>ar>=1.3?'wide':(ar<0.8?'tall':'square');
@@ -1317,11 +1326,18 @@ const DUComp=(function(){
     grid.replaceWith(wrap);
   }
   function paintDA(e){const body=el('daBody');if(!body)return;
-    const imgs=e.images||[];
+    const raw=e.images||[];
+    const seen={};
+    const norm=s=>(s||'').toString().replace(/\s+/g,' ').trim().toLowerCase();
+    const imgs=raw.filter(im=>{const ty=daType(im),u=(typeof im==='string')?im:(im.u||''),t=(im&&typeof im==='object')?(im.t||''):'';
+      const key=ty+'|'+(ty==='text'?norm(t):u.split('?')[0]);
+      if(!key||seen[key])return false;seen[key]=1;return true;});
     const cnt=t=>imgs.filter(im=>daType(im)===t).length;
     const nImg=cnt('image'),nVid=cnt('video'),nTxt=cnt('text');
-    const shown=imgs.filter(im=>_daFilter==='all'||daType(im)===_daFilter)
+    const textAds=imgs.filter(im=>daType(im)==='text'&&im&&im.t).slice(0,8);
+    const mediaShown=imgs.filter(im=>{const ty=daType(im);return ty!=='text'&&(_daFilter==='all'||ty===_daFilter)})
       .slice().sort((a,b)=>((typeof b.days==='number'?b.days:-1)-(typeof a.days==='number'?a.days:-1)));  // 오래 운영 순
+    const shown=(_daFilter==='text')?textAds:mediaShown;
     const oneType=((nImg>0?1:0)+(nVid>0?1:0)+(nTxt>0?1:0))===1;
     const isG=e._plat==='google';
     const adv=isG?((imgs.find(im=>im&&im.t)||{}).t||''):'';   // 구글: 광고주명(카드마다 반복 대신 헤더 1회)
@@ -1334,8 +1350,10 @@ const DUComp=(function(){
         : (e.precise?'':' <span style="color:var(--muted);font-size:11px">키워드 검색 · 무관 광고 섞일 수 있음</span>'))):'';
     const pf=e.perf||{};
     const pfNote=(pf.maxDays!=null)?(' · 최장 <b>'+pf.maxDays+'일</b> 집행 · 활성 '+(pf.active||0)+'개 · 장기 관측 '+(pf.winners||0)+'개'):'';
-    let html='<div class="da-note">'+imgs.length+'개 소재'+(adv?' · 광고주 <b>'+esc(adv)+'</b>':'')+' · 수집 '+esc(e.at||'')+liveTag+pfNote+'</div>'
-      +((pf.maxDays!=null)?'<div class="da-legend">🏆 30일↑ 장기 관측 · 🔥 집행 중 · 성과는 미확인'+(isG?' · 크기별 분류':'')+'</div>':'')
+    const dup=raw.length-imgs.length;
+    let html='<div class="da-note">대표 소재 '+imgs.length+'개'+(dup>0?' · 중복 '+dup+'개 묶음':'')+(adv?' · 광고주 <b>'+esc(adv)+'</b>':'')+' · 수집 '+esc(e.at||'')+liveTag+pfNote+'</div>'
+      +'<div class="da-summary"><div class="da-sum"><b>'+nImg+'</b><span>이미지 배너</span></div><div class="da-sum"><b>'+nVid+'</b><span>영상 소재</span></div><div class="da-sum"><b>'+nTxt+'</b><span>텍스트 카피</span></div></div>'
+      +((pf.maxDays!=null)?'<div class="da-legend">🏆 30일↑ 장기 관측 · 🔥 집행 중 · 성과는 미확인 · 배너는 크기별 분류</div>':'')
       +'<div class="da-filter">'+chip('all','전체',imgs.length)
         +(nImg?chip('image','🖼 이미지',nImg):'')
         +(nVid?chip('video','🎬 영상',nVid):'')
@@ -1344,7 +1362,10 @@ const DUComp=(function(){
       html+='<div class="da-empty">'+(_daFilter==='image'
         ? '이 경쟁사는 수집된 <b>정지 이미지 소재가 없어요</b> — 관측된 '+nVid+'개가 모두 릴스·동영상 광고예요.'
         : '표시할 소재가 없어요.')+'</div>';
+    }else if(_daFilter==='text'){
+      html+='<div class="da-copy-list">'+shown.map((im,i)=>'<div class="da-copy"><span class="no">'+(i+1)+'</span><b>'+esc(im.t||'텍스트 소재')+'</b><span class="src">'+esc(im.src||im.p||'광고 카피')+'</span></div>').join('')+'</div>';
     }else{
+      if(textAds.length&&_daFilter==='all')html+='<div class="da-seclab">텍스트 소재 <b>'+textAds.length+'</b><span class="ic">배너와 분리해 카피만 요약</span></div><div class="da-copy-list">'+textAds.slice(0,4).map((im,i)=>'<div class="da-copy"><span class="no">'+(i+1)+'</span><b>'+esc(im.t||'텍스트 소재')+'</b><span class="src">'+esc(im.src||im.p||'광고 카피')+'</span></div>').join('')+'</div>';
       html+='<div class="da-grid'+(isG?' da-grid-uni':'')+'">'+shown.map(im=>{const u=(typeof im==='string')?im:im.u;
         const t=(im&&typeof im==='object'&&im.t)?im.t:'';const ty=daType(im);
         const vurl=(im&&typeof im==='object'&&im.v)?im.v:'';
