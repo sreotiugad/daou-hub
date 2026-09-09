@@ -528,7 +528,6 @@
     <nav class="an-tabs">
       <button data-go="home" class="on">홈</button>
       <button data-go="report">리포트</button>
-      <button data-go="custom">커스텀 리포트</button>
       <button data-go="keyword">경쟁사</button>
       <button data-go="budget">예산 관리</button>
     </nav>
@@ -558,7 +557,7 @@
   <div class="home-two">
     <button data-go="report">
       <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 13l3-3 3 2 5-6"/></svg></span>
-      <span><b>브랜드 광고 리포트</b><p>브랜드별 광고비·가입·CPA·CTR과 매체·캠페인 성과</p></span>
+      <span><b>광고 리포트 제작</b><p>브랜드 성과를 보고, RAW와 피벗을 내려받아 광고주 보고서를 만듭니다</p></span>
     </button>
     <button data-go="keyword">
       <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span>
@@ -572,6 +571,7 @@
   <div class="rep-head">
     <div><h2 id="repTitle">광고 리포트</h2><div class="s" id="repSub"></div></div>
     <div style="display:flex;align-items:center;gap:10px">
+      <div class="seg" id="reportMode"><button data-rmode="summary" class="on">요약</button><button data-rmode="builder">보고서 제작</button></div>
       <button id="repAi" class="kw-btn" title="이 화면을 AI가 분석"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 4.5L18.5 9l-4.6 1.5L12 15l-1.9-4.5L5.5 9l4.6-1.5z"/><circle cx="18" cy="18" r="2.4"/></svg>AI 분석</button>
       <div class="seg" id="periodChips"><button data-n="14">14D</button><button data-n="30" class="on">30D</button><button data-n="90">90D</button><button data-n="365">1년</button></div>
     </div>
@@ -696,8 +696,12 @@
 <!-- CUSTOM REPORT -->
 <main id="v-custom" class="view" hidden>
   <div class="rep-head">
-    <div><h1 style="font-size:21px;font-weight:700">커스텀 리포트</h1><div class="repsub" style="color:var(--muted);font-size:13px;margin-top:4px">차원·지표를 골라 표를 구성합니다</div></div>
-    <button id="cxExport" class="cx-btn">CSV 내보내기</button>
+    <div><h1 style="font-size:21px;font-weight:700">광고주 보고서 제작</h1><div class="repsub" style="color:var(--muted);font-size:13px;margin-top:4px">누적 RAW를 내려받아 엑셀 보고서에 붙이고, 필요한 기준으로 피벗 표를 만듭니다</div></div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <div class="seg" id="reportMode2"><button data-rmode="summary">요약</button><button data-rmode="builder" class="on">보고서 제작</button></div>
+      <button id="cxRawExport" class="cx-btn">RAW CSV</button>
+      <button id="cxExport" class="cx-btn">피벗 CSV</button>
+    </div>
   </div>
   <div class="card cx-panel">
     <div class="cx-builder" id="cxBuilder">
@@ -1035,7 +1039,9 @@ const DUCustom=(function(){
     document.getElementById('cxTitle').textContent=st.dims.join(' × ')+' — '+st.mets.map(m=>MET[m].label).join('·');
     document.querySelectorAll('#cxTable th[data-sort]').forEach(h=>h.addEventListener('click',()=>{const c=h.dataset.sort;if(st.sort===c)st.dir*=-1;else{st.sort=c;st.dir=DIMS[c]!==undefined?1:-1}render()}));
   }
-  function csv(){const{list,tot}=build();const head=[...st.dims,...st.mets.map(m=>MET[m].label)];const lines=[head.join(',')];list.forEach(g=>{const row=[...g._k,...st.mets.map(m=>Math.round(metVal(m,g)*10)/10)];lines.push(row.join(','))});const blob=new Blob(["﻿"+lines.join('\n')],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='daouhub_custom_report.csv';a.click()}
+  function cell(v){return '"'+String(v==null?'':v).replace(/"/g,'""')+'"'}
+  function csv(){const{list,tot}=build();const head=[...st.dims,...st.mets.map(m=>MET[m].label)];const lines=[head.map(cell).join(',')];list.forEach(g=>{const row=[...g._k,...st.mets.map(m=>{const v=metVal(m,g);return v==null?'':Math.round(v*10)/10})];lines.push(row.map(cell).join(','))});const blob=new Blob(["﻿"+lines.join('\n')],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='daouhub_pivot_report.csv';a.click()}
+  function rawCsv(){const F=facts();const[lo,hi]=range(F);const rows=F.filter(r=>r.d>=lo&&r.d<=hi&&(!st.group||r.grp===st.group)&&(!st.media||r.media===st.media));const head=['기간','그룹','서비스','매체','캠페인유형','캠페인','광고그룹','광고','노출','클릭','광고비','가입','평균노출순위'];const lines=[head.map(cell).join(',')];rows.forEach(r=>lines.push([r.d,r.grp,r.svc,r.media,r.ct,r.cmp,r.adg,r.ad,r.imp,r.click,r.cost,r.signup,r.rnki>0?(r.rnkw/r.rnki).toFixed(2):''].map(cell).join(',')));const blob=new Blob(["﻿"+lines.join('\n')],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='daouhub_raw_for_advertiser_report.csv';a.click()}
   /* ---- 드래그&드롭 필드 빌더 ---- */
   const FIELDS=[...Object.keys(DIMS).map(k=>({id:k,label:k,type:'dim'})),...Object.keys(MET).map(k=>({id:k,label:MET[k].label,type:'met'}))];
   const FBY={};FIELDS.forEach(f=>FBY[f.id]=f);
@@ -1069,6 +1075,7 @@ const DUCustom=(function(){
   document.getElementById('cxGroup').addEventListener('change',e=>{st.group=e.target.value;render()});
   document.getElementById('cxMedia').addEventListener('change',e=>{st.media=e.target.value;render()});
   document.getElementById('cxExport').addEventListener('click',csv);
+  document.getElementById('cxRawExport').addEventListener('click',rawCsv);
   return {render};
 })();
 
@@ -1616,10 +1623,12 @@ const DUComp=(function(){
 (function(){
   const views={home:document.getElementById('v-home'),report:document.getElementById('v-report'),custom:document.getElementById('v-custom'),keyword:document.getElementById('v-keyword'),budget:document.getElementById('v-budget')};
   let cur='home';
-  function show(v){cur=v;for(const k in views)views[k].hidden=(k!==v);document.querySelectorAll('.an-tabs button').forEach(b=>b.classList.toggle('on',b.dataset.go===v));if(v==='report')DUReport.render();if(v==='custom')DUCustom.render();if(v==='keyword')DUComp.render();if(v==='budget')DUBudget.render();window.scrollTo(0,0)}
+  function syncReportMode(v){document.querySelectorAll('[data-rmode]').forEach(b=>b.classList.toggle('on',(v==='custom'?b.dataset.rmode==='builder':b.dataset.rmode==='summary')))}
+  function show(v){cur=v;for(const k in views)views[k].hidden=(k!==v);document.querySelectorAll('.an-tabs button').forEach(b=>b.classList.toggle('on',v==='custom'?b.dataset.go==='report':b.dataset.go===v));syncReportMode(v);if(v==='report')DUReport.render();if(v==='custom')DUCustom.render();if(v==='keyword')DUComp.render();if(v==='budget')DUBudget.render();window.scrollTo(0,0)}
   // Load real data snapshot (built daily from the Google Sheet RAW → data.json). Falls back to demo data when absent.
   fetch('data.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{if(!d)return;window.DAOU_DATA=d;const e=document.getElementById('envPill');if(e){const m=d.meta||{},F=d.report&&d.report.facts||[],dates=F.map(x=>x.d).filter(Boolean).sort(),lo=dates[0]||'?',hi=dates[dates.length-1]||'?';e.innerHTML='<b></b>'+(m.live_report?'광고 실데이터':'광고 데모')+' · '+(m.live_keyword?'키워드 혼합':'키워드 데모');e.title='광고 관측 '+lo+'~'+hi+' · 키워드는 지표별 실측/추정 표시'}if(cur==='report')DUReport.render();if(cur==='custom')DUCustom.render();if(cur==='keyword')DUKeyword.render();if(cur==='budget')DUBudget.render()}).catch(()=>{});
   document.querySelectorAll('[data-go]').forEach(el=>el.addEventListener('click',()=>show(el.dataset.go)));
+  document.querySelectorAll('[data-rmode]').forEach(el=>el.addEventListener('click',()=>show(el.dataset.rmode==='builder'?'custom':'report')));
   document.querySelectorAll('[data-brand]').forEach(el=>el.addEventListener('click',()=>{DUReport.setBrand(el.dataset.brand);show('report')}));
   function hs(){const v=document.getElementById('homeSearch').value.trim();if(v){DUKeyword.setKw(v);show('keyword');DUComp.setTab('keyword');DUKeyword.render()}}
   document.getElementById('homeSearchBtn').addEventListener('click',hs);
