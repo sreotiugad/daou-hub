@@ -22,6 +22,7 @@ import hmac
 import hashlib
 import base64
 import json
+from decimal import Decimal, ROUND_HALF_UP
 import requests
 import ad_config
 import config as C
@@ -34,6 +35,70 @@ _CTP = {
     "BRAND_SEARCH_ADVANCED": "브랜드검색", "POWER_CONTENTS": "파워링크",
     "PLACE": "파워링크",
 }
+
+# 사방넷 기존 리포트 앱(sreotiugad/sabangnet-report)의 BS_CONTRACTS와 동일한 규칙.
+# 브랜드검색 캠페인은 네이버 /stats 비용보다 계약 일단가가 기준이므로 여기서 대체한다.
+_SABANG_BS_CONTRACTS = {
+    "사방넷_BS_MO": (None, "2026-06-20", Decimal("2640000") / Decimal("90")),
+    "사방넷_BS_PC": (None, "2026-06-20", Decimal("3960000") / Decimal("90")),
+    "풀필먼트_BS_PC": (None, "2026-06-20", Decimal("1980000") / Decimal("90")),
+    "풀필먼트_BS_MO": (None, "2026-06-20", Decimal("1980000") / Decimal("90")),
+    "미니_BS_PC": (None, "2026-06-20", Decimal("1980000") / Decimal("90")),
+    "미니_BS_MO": (None, "2026-06-20", Decimal("2640000") / Decimal("90")),
+    "사방넷_BS_PC(2026)": ("2026-06-21", "2026-09-18", Decimal("4200000") * Decimal("1.1") / Decimal("90")),
+    "사방넷_BS_MO(2026)": ("2026-06-21", "2026-09-18", Decimal("2400000") * Decimal("1.1") / Decimal("90")),
+    "미니_BS_PC(2026)": ("2026-06-21", "2026-09-18", Decimal("2100000") * Decimal("1.1") / Decimal("90")),
+    "미니_BS_MO(2026)": ("2026-06-21", "2026-09-18", Decimal("2400000") * Decimal("1.1") / Decimal("90")),
+    "풀필먼트_BS_PC(2026)": ("2026-06-21", "2026-09-18", Decimal("2100000") * Decimal("1.1") / Decimal("90")),
+    "풀필먼트_BS_MO(2026)": ("2026-06-21", "2026-09-18", Decimal("2400000") * Decimal("1.1") / Decimal("90")),
+}
+
+
+def _round_half_up_int(x):
+    return int(Decimal(str(x or 0)).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
+
+
+def _sabang_bs_fee(campaign_name, date_iso):
+    info = _SABANG_BS_CONTRACTS.get(str(campaign_name or ""))
+    if not info:
+        return None
+    d_from, d_to, fee = info
+    d = str(date_iso)[:10]
+    if d_from and d < d_from:
+        return None
+    if d_to and d > d_to:
+        return None
+    return fee
+
+
+def _is_sabang_account(acc):
+    svc = str(acc.get("service") or acc.get("label") or "")
+    return "사방넷" in svc or "풀필" in svc or "미니" in svc
+
+
+def _append_sabang_bs_rows(rows, acc, date_iso, logs):
+    if not _is_sabang_account(acc):
+        return rows
+    existing = {r["캠페인"] for r in rows if r.get("캠페인 유형") == "브랜드검색"}
+    added = 0
+    for cname in _SABANG_BS_CONTRACTS:
+        if cname in existing:
+            continue
+        fee = _sabang_bs_fee(cname, date_iso)
+        if fee is None:
+            continue
+        rows.append({
+            "서비스": ad_config.resolve_service(acc, cname), "매체": "네이버",
+            "캠페인 유형": "브랜드검색", "캠페인": cname,
+            "광고그룹": "", "광고": "", "기간": date_iso,
+            "노출 수": 0, "클릭 수": 0, "총 비용": _round_half_up_int(fee),
+            "가입": 0.0, "광고비(마크업포함,VAT포함)": _round_half_up_int(fee),
+            "평균노출순위": 0.0,
+        })
+        added += 1
+    if added:
+        logs.append(f"[naver-ads] {acc.get('label','')} {date_iso} · 사방넷 BS 계약단가 {added}행 보정")
+    return rows
 
 
 def _headers(acc, uri, method="GET"):
@@ -121,15 +186,19 @@ def fetch_day(acc, date_iso, defaults, logs=None):
     def _mkrow(name, ctp, agname, s):
         imp = float(s.get("impCnt", 0) or 0); clk = float(s.get("clkCnt", 0) or 0)
         net = float(s.get("salesAmt", 0) or 0)
+        bs_fee = _sabang_bs_fee(name, date_iso) if _is_sabang_account(acc) else None
+        if bs_fee is not None:
+            net = float(bs_fee)
         if imp == 0 and clk == 0 and net == 0:
             return None
+        ctype = "브랜드검색" if bs_fee is not None else C.norm_ct(_CTP.get(str(ctp), "파워링크"), "네이버")
         return {
             "서비스": ad_config.resolve_service(acc, name), "매체": "네이버",
-            "캠페인 유형": C.norm_ct(_CTP.get(str(ctp), "파워링크"), "네이버"),
+            "캠페인 유형": ctype,
             "캠페인": name, "광고그룹": agname, "광고": "", "기간": date_iso,
             "노출 수": int(imp), "클릭 수": int(clk), "총 비용": int(net),
             "가입": 0.0 if ga4 else float(s.get("ccnt", 0) or 0),
-            "광고비(마크업포함,VAT포함)": ad_config.marked_cost(net, "네이버", mk, vat),
+            "광고비(마크업포함,VAT포함)": _round_half_up_int(net) if bs_fee is not None else ad_config.marked_cost(net, "네이버", mk, vat),
             "평균노출순위": round(float(s.get("avgRnk", 0) or 0), 2),
         }
 
@@ -146,9 +215,12 @@ def fetch_day(acc, date_iso, defaults, logs=None):
         rows = []
         for agid, s in stats.items():
             cn, ctp, an = ag_meta.get(agid, ("", "", ""))
+            if _sabang_bs_fee(cn, date_iso) is not None:
+                continue
             row = _mkrow(cn, ctp, an, s)
             if row:
                 rows.append(row)
+        rows = _append_sabang_bs_rows(rows, acc, date_iso, logs)
         if rows:
             logs.append(f"[naver-ads] {acc.get('label','')} {date_iso} · {len(rows)}행(광고그룹 {len(ag_meta)})")
             return rows
@@ -163,5 +235,6 @@ def fetch_day(acc, date_iso, defaults, logs=None):
         row = _mkrow(c.get("name", ""), c.get("campaignTp", ""), "", s)
         if row:
             rows.append(row)
+    rows = _append_sabang_bs_rows(rows, acc, date_iso, logs)
     logs.append(f"[naver-ads] {acc.get('label','')} {date_iso} · {len(rows)}행(캠페인 폴백)")
     return rows

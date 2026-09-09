@@ -3,6 +3,8 @@
 정적 프론트(`index.html`)는 광고 API를 직접 부르지 않는다. 무거운 수집은
 **매일 아침 9시(KST)에 GitHub Actions**가 대신 돌린다. 네가 "리포트 다운로드"를
 누르면 API들이 조합해 raw를 만들어 주던 그 과정을, 코드가 자동으로 한다.
+기존 `sabangnet-report`는 선택 기간의 리포트를 계산해 보여주는 조회형 도구이고,
+Daou Hub는 그 계산 결과를 하루 단위 RAW로 누적해 추세·기간 비교·AI 분석에 쓴다.
 
 ```
 매일 09:00 KST  (GitHub Actions 크론)
@@ -31,7 +33,8 @@ BQ를 설정하지 않으면 저장소의 `raw/` 폴더(CSV 누적)로 자동 �
 ### 1) 광고 계정·사업규칙 (`accounts.json` 또는 Secret `DAOU_AD_ACCOUNTS`)
 `pipeline/accounts.example.json`을 복사해 채운다. 계정별로:
 - `service` — 이 계정이 태우는 세부브랜드(사방넷/애드콘/…)
-- `markup`, `vat` — 광고비(마크업·VAT 포함) 환산율 (기본 0.15 / 0.10)
+- `markup`, `vat` — 광고비 환산율. 기본은 `markup=0`, `vat=0.10`.
+  구글은 VAT를 더하고, 네이버 `salesAmt`는 이미 VAT 포함이라 VAT를 제거한다.
 - `service_rules` — 한 계정이 여러 세부브랜드면 캠페인명으로 분류
 - 네이버: `customer_id`, `api_key`, `secret_key`
 - 구글: `customer_id` (OAuth 공통키는 아래 env)
