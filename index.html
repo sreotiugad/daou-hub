@@ -406,24 +406,20 @@
   .comp-da .da-block{margin-bottom:18px}.comp-da .da-block:last-child{margin-bottom:0}
   .da-h{display:flex;align-items:center;gap:9px;margin-bottom:10px;font-size:13.5px;font-weight:600}
   .da-h a{font-size:11.5px;font-weight:500}
-  .da-grid{column-width:152px;column-gap:12px}
-  .da-grid-uni{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
-  .da-grid-uni .da-item{margin:0;width:auto;break-inside:auto}
-  .da-grid-uni .da-item .thumb{aspect-ratio:1/1;object-fit:contain;height:auto;background:var(--bg)}
-  /* GDN·PMax 소재는 가로/정사각/세로가 제각각 → 크롭 금지. 실제 크기로 그룹을 나눠(가로·정사각·세로)
-     각 그룹을 그 비율의 격자로 보여준다. contain 으로 그룹 내 미세한 비율차도 잘리지 않게. */
+  /* 소재는 항상 '실제 비율' 그대로 — 크롭·레터박스(정사각 강제) 금지.
+     메이슨리 컬럼으로 가로·정사각·세로 제각각 비율을 잘림 없이 깔끔히 쌓는다. */
+  .da-grid{column-width:200px;column-gap:12px}
+  .da-grid-uni{column-width:200px;column-gap:12px}   /* 구글 초기 표시: 1:1 강제 대신 실제 비율 메이슨리 */
   .da-seclab{font-size:12px;font-weight:600;color:var(--fg);margin:16px 0 9px;display:flex;align-items:center;gap:7px}
   .da-seclab:first-child{margin-top:4px}
   .da-seclab .ic{font-size:11px;color:var(--muted);font-weight:500}
-  .da-secgrid{display:grid;gap:14px}
-  .da-secgrid.wide{grid-template-columns:repeat(auto-fit,minmax(360px,1fr))}
-  .da-secgrid.square{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
-  .da-secgrid.tall{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
-  .da-secgrid .da-item .thumb{object-fit:contain;background:var(--bg);height:auto}
+  /* 크기 그룹(가로/정사각/세로)도 각 그룹 메이슨리 — 그룹 안 미세 비율차까지 실제 비율대로(레터박스 없음).
+     가로형은 넓게, 세로형은 좁게 컬럼폭만 달리해 각자 보기 좋은 크기로 쌓는다. */
+  .da-secgrid{column-gap:12px}
+  .da-secgrid.wide{column-width:340px}
+  .da-secgrid.square{column-width:220px}
+  .da-secgrid.tall{column-width:190px}
   .da-secgrid .da-item{box-shadow:0 8px 22px -18px rgba(15,23,42,.55)}
-  .da-secgrid.wide .da-item .thumb{aspect-ratio:1.91/1}
-  .da-secgrid.square .da-item .thumb{aspect-ratio:1/1}
-  .da-secgrid.tall .da-item .thumb{aspect-ratio:4/5}
   .da-item{border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--surface);display:flex;flex-direction:column;break-inside:avoid;margin:0 0 12px;width:100%}
   .da-item .thumb{width:100%;height:auto;display:block;background:var(--bg)}
   .da-item .noimg{width:100%;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:11px;background:var(--surface-2,var(--border-soft))}
@@ -1318,11 +1314,12 @@ const DUComp=(function(){
   function groupBySize(body){
     const grid=body.querySelector('.da-grid');if(!grid)return;
     const cards=[...grid.querySelectorAll('.da-item')];if(!cards.length){grid.remove();return;}
-    const arOf=c=>{const im=c.querySelector('img.thumb,video.thumb');
-      const w=(im&&(im.naturalWidth||im.videoWidth))||0,h=(im&&(im.naturalHeight||im.videoHeight))||0;return h?w/h:1;};
     const bkt=ar=>ar>=1.3?'wide':(ar<0.8?'tall':'square');
     const G={wide:[],square:[],tall:[]};
-    cards.forEach(c=>{G[bkt(arOf(c))].push(c);});
+    cards.forEach(c=>{const im=c.querySelector('img.thumb,video.thumb');
+      const w=(im&&(im.naturalWidth||im.videoWidth))||0,h=(im&&(im.naturalHeight||im.videoHeight))||0;
+      if(im&&w&&h)im.style.aspectRatio=w+'/'+h;   // 실제 비율 고정 — 레터박스/정사각 강제 방지
+      G[bkt(w&&h?w/h:1)].push(c);});
     Object.keys(G).forEach(k=>G[k].sort((a,b)=>((+b.dataset.days||-1)-(+a.dataset.days||-1))));  // 그룹 내 오래 운영순
     const LAB={wide:['가로형 배너','큰 영역에서 메시지 확인'],square:['정사각 소재','피드형 대표'],tall:['세로형·영상','릴스/스토리형']};
     const wrap=document.createElement('div');
@@ -1412,7 +1409,7 @@ const DUComp=(function(){
       const settle=()=>{ if(++settled>=q.length) finish(); };
       const pump=()=>{ while(active<3 && idx<q.length){ loadOne(q[idx++]); } };
       const loadOne=img=>{ active++; let tried=0;
-        img.onload=()=>{ active--; settle(); pump(); };
+        img.onload=()=>{ if(img.naturalWidth&&img.naturalHeight)img.style.aspectRatio=img.naturalWidth+'/'+img.naturalHeight; active--; settle(); pump(); };  // 실제 비율로 표시(메타·구글 공통)
         img.onerror=()=>{
           if(tried++<1){ setTimeout(()=>{ img.src=img.dataset.src+(img.dataset.src.indexOf('?')<0?'?':'&')+'r='+Date.now(); }, 700); }
           else { const c=img.closest('.da-item'); if(c)c.remove(); active--; settle(); pump(); }
