@@ -8,6 +8,7 @@
     GA4_SERVICE_ACCOUNT_JSON   서비스계정 JSON (편집자로 시트 공유돼 있어야 함)
     (선택) DAOU_SHEET_WORKSHEET  워크시트 탭 이름 (기본 'RAW')
 """
+import re
 from datetime import date, datetime
 import config as C
 
@@ -86,28 +87,38 @@ def records_to_rows(records, logs=None):
     """헤더-값 dict 리스트(구글시트/엑셀 공통) → 표준 행. 알 수 없는 서비스는 스킵."""
     logs = logs if logs is not None else []
     col = C.COLS
+    _strip = lambda s: re.sub(r"\s+", "", str(s))
     out = []
     for r in records:
-        service = str(r.get(col["service"], "")).strip()
+        # 헤더 공백 차이 흡수: daou-hub 시트('캠페인 유형','노출 수')와 사방넷리포트 app.py RAW
+        # ('캠페인유형','노출수') 를 모두 인식하도록, 키의 공백을 제거해 비교한다.
+        nr = {_strip(k): v for k, v in r.items()}
+        def g(*names):
+            for n in names:
+                v = nr.get(_strip(n))
+                if v not in (None, ""):
+                    return v
+            return ""
+        service = str(g(col["service"], "서비스")).strip()
         if service not in C.BRAND_MAP:
             continue
-        media = str(r.get(col["media"], "")).strip()
-        d = _iso_date(r.get(col["date"]) or r.get(col["date_alt"]))
+        media = str(g(col["media"], "매체")).strip()
+        d = _iso_date(g(col["date"], col["date_alt"], "기간", "날짜"))
         if not d:
             continue
-        cost = _num(r.get(col["cost"]))
+        cost = _num(g(col["cost"], "광고비(마크업포함,VAT포함)"))
         if not cost:
-            cost = _num(r.get(col["cost_alt"]))
+            cost = _num(g(col["cost_alt"], "총 비용", "총비용"))
         nmedia = C.norm_media(media)
         out.append({
             "service": service,
             "media": nmedia,
-            "camptype": C.norm_ct(r.get(col["camptype"]), nmedia),
+            "camptype": C.norm_ct(g(col["camptype"], "캠페인 유형", "캠페인유형"), nmedia),
             "date": d,
-            "imp": _num(r.get(col["imp"])),
-            "click": _num(r.get(col["click"])),
+            "imp": _num(g(col["imp"], "노출 수", "노출수")),
+            "click": _num(g(col["click"], "클릭 수", "클릭수")),
             "cost": cost,
-            "signup": _num(r.get(col["signup"])),
+            "signup": _num(g(col["signup"], "가입")),
         })
     logs.append(f"[sheet] 표준 행 {len(out)}개 (서비스 {len(set(x['service'] for x in out))}종)")
     return out
