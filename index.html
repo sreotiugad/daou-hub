@@ -416,10 +416,11 @@
   .da-seclab:first-child{margin-top:4px}
   .da-seclab .ic{font-size:11px;color:var(--muted);font-weight:500}
   .da-secgrid{display:grid;gap:14px}
-  .da-secgrid.wide{grid-template-columns:repeat(auto-fill,minmax(320px,1fr))}
-  .da-secgrid.square{grid-template-columns:repeat(auto-fill,minmax(180px,1fr))}
-  .da-secgrid.tall{grid-template-columns:repeat(auto-fill,minmax(170px,1fr))}
+  .da-secgrid.wide{grid-template-columns:repeat(auto-fit,minmax(360px,1fr))}
+  .da-secgrid.square{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+  .da-secgrid.tall{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
   .da-secgrid .da-item .thumb{object-fit:contain;background:var(--bg);height:auto}
+  .da-secgrid .da-item{box-shadow:0 8px 22px -18px rgba(15,23,42,.55)}
   .da-secgrid.wide .da-item .thumb{aspect-ratio:1.91/1}
   .da-secgrid.square .da-item .thumb{aspect-ratio:1/1}
   .da-secgrid.tall .da-item .thumb{aspect-ratio:4/5}
@@ -1315,7 +1316,7 @@ const DUComp=(function(){
     const G={wide:[],square:[],tall:[]};
     cards.forEach(c=>{G[bkt(arOf(c))].push(c);});
     Object.keys(G).forEach(k=>G[k].sort((a,b)=>((+b.dataset.days||-1)-(+a.dataset.days||-1))));  // 그룹 내 오래 운영순
-    const LAB={wide:['가로형','1.91:1 · 랜드스케이프'],square:['정사각','1:1'],tall:['세로형','4:5 · 9:16']};
+    const LAB={wide:['가로형 배너','큰 영역에서 메시지 확인'],square:['정사각 소재','피드형 대표'],tall:['세로형·영상','릴스/스토리형']};
     const wrap=document.createElement('div');
     ['wide','square','tall'].forEach(k=>{if(!G[k].length)return;
       const h=document.createElement('div');h.className='da-seclab';
@@ -1330,13 +1331,15 @@ const DUComp=(function(){
     const seen={};
     const norm=s=>(s||'').toString().replace(/\s+/g,' ').trim().toLowerCase();
     const imgs=raw.filter(im=>{const ty=daType(im),u=(typeof im==='string')?im:(im.u||''),t=(im&&typeof im==='object')?(im.t||''):'';
-      const key=ty+'|'+(ty==='text'?norm(t):u.split('?')[0]);
+      const copy=norm(t);
+      const key=ty+'|'+(ty==='text'||copy.length>22?copy:u.split('?')[0]);
       if(!key||seen[key])return false;seen[key]=1;return true;});
     const cnt=t=>imgs.filter(im=>daType(im)===t).length;
     const nImg=cnt('image'),nVid=cnt('video'),nTxt=cnt('text');
     const textAds=imgs.filter(im=>daType(im)==='text'&&im&&im.t).slice(0,8);
     const mediaShown=imgs.filter(im=>{const ty=daType(im);return ty!=='text'&&(_daFilter==='all'||ty===_daFilter)})
-      .slice().sort((a,b)=>((typeof b.days==='number'?b.days:-1)-(typeof a.days==='number'?a.days:-1)));  // 오래 운영 순
+      .slice().sort((a,b)=>((typeof b.days==='number'?b.days:-1)-(typeof a.days==='number'?a.days:-1)))
+      .slice(0,12);  // 첫 화면은 대표 소재만: 많아 보여도 해석이 안 되면 분석 화면이 지저분해짐
     const shown=(_daFilter==='text')?textAds:mediaShown;
     const oneType=((nImg>0?1:0)+(nVid>0?1:0)+(nTxt>0?1:0))===1;
     const isG=e._plat==='google';
@@ -1353,6 +1356,7 @@ const DUComp=(function(){
     const dup=raw.length-imgs.length;
     let html='<div class="da-note">대표 소재 '+imgs.length+'개'+(dup>0?' · 중복 '+dup+'개 묶음':'')+(adv?' · 광고주 <b>'+esc(adv)+'</b>':'')+' · 수집 '+esc(e.at||'')+liveTag+pfNote+'</div>'
       +'<div class="da-summary"><div class="da-sum"><b>'+nImg+'</b><span>이미지 배너</span></div><div class="da-sum"><b>'+nVid+'</b><span>영상 소재</span></div><div class="da-sum"><b>'+nTxt+'</b><span>텍스트 카피</span></div></div>'
+      +(mediaShown.length&&(_daFilter==='all'||_daFilter==='image'||_daFilter==='video')?'<div class="da-legend">첫 화면은 오래 집행된 대표 소재 최대 12개만 표시합니다. 전체 개수는 위 요약과 필터에서 확인하세요.</div>':'')
       +((pf.maxDays!=null)?'<div class="da-legend">🏆 30일↑ 장기 관측 · 🔥 집행 중 · 성과는 미확인 · 배너는 크기별 분류</div>':'')
       +'<div class="da-filter">'+chip('all','전체',imgs.length)
         +(nImg?chip('image','🖼 이미지',nImg):'')
@@ -1383,7 +1387,7 @@ const DUComp=(function(){
         const badgeCls=ty==='image'?' img':ty==='text'?' txt':'';
         const badgeLab=ty==='image'?'🖼 이미지':ty==='text'?'📝 텍스트':'🎬 영상';
         const typeBadge=oneType?'':'<span class="da-badge'+badgeCls+'">'+badgeLab+'</span>';   // 한 종류뿐이면 배지 생략(필터칩에 이미 표시)
-        const showTxt=t&&!isG;   // 구글은 광고주명이 카드마다 반복돼서 카드엔 숨기고 헤더에만
+        const showTxt=false;   // 카드 아래 긴 OCR 문구는 시선을 흐려서 별도 카피 리스트로만 보여준다
         return '<div class="da-item'+(ty==='video'&&vurl?' has-vid':'')+'" data-days="'+(days!=null?days:'')+'">'+typeBadge+perfBadge
           +media
           +(showTxt?'<div class="da-ocr" title="'+esc(t)+'">'+esc(t)+'</div><span class="da-more" hidden>더 보기</span>':'')+'</div>';}).join('')+'</div>';
@@ -1396,7 +1400,7 @@ const DUComp=(function(){
     (function(){
       const q=[...body.querySelectorAll('.da-item img.thumb[data-src]')];
       let active=0, idx=0, settled=0;
-      const finish=()=>{ if(isG){ try{groupBySize(body);}catch(_){} } };  // 구글: 로드 후 실제 크기로 그룹핑
+      const finish=()=>{ try{groupBySize(body);}catch(_){} };  // 모든 DA 소재: 로드 후 실제 크기로 그룹핑
       const settle=()=>{ if(++settled>=q.length) finish(); };
       const pump=()=>{ while(active<3 && idx<q.length){ loadOne(q[idx++]); } };
       const loadOne=img=>{ active++; let tried=0;
