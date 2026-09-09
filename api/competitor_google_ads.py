@@ -196,7 +196,8 @@ def _looks_img(s):
         return False
     sl = s.lower().split("?")[0]
     return ("googlesyndication" in sl or "googleusercontent" in sl or "ggpht" in sl
-            or "gstatic" in sl or sl.endswith((".jpg", ".jpeg", ".png", ".webp", ".gif")))
+            or "gstatic" in sl or "ytimg" in sl        # ytimg = 유튜브 영상 썸네일
+            or sl.endswith((".jpg", ".jpeg", ".png", ".webp", ".gif")))
 
 
 def _deep_img(o, depth=0):
@@ -227,7 +228,7 @@ def _normalize(ads):
         if not img:
             continue
         f = (ad.get("format") or ad.get("adFormat") or ad.get("creativeFormat") or "").lower()
-        ty = "video" if "video" in f else ("text" if "text" in f else "image")
+        ty = "video" if ("video" in f or "youtube" in f) else ("text" if "text" in f else "image")
         p = _perf(ad)
         out.append({"u": img, "t": ad.get("advertiserName") or ad.get("advertiser_name") or "", "type": ty,
                     "days": p["days"], "act": p["act"], "since": p["since"]})
@@ -252,7 +253,8 @@ def collect(target, country="KR", max_ads=MAX_ADS, logs=None, probe=False, name=
         return None
     # ⚠️ 2025-11-10 ScrapeCreators 변경: get_ad_details 없이는 advertiserId·creativeId 만 오고
     # imageUrl 이 안 온다(=소재 0개로 보임). 소재를 받으려면 get_ad_details=true 필수(광고당 25크레딧).
-    params = {"topic": "all", "region": country, "format": "image", "get_ad_details": "true"}
+    # format=all → 디스플레이(이미지)+유튜브(영상) 광고 모두. 프론트에서 이미지/영상 필터로 구분.
+    params = {"topic": "all", "region": country, "format": "all", "get_ad_details": "true"}
     params["advertiser_id" if stype == "advertiser_id" else "domain"] = key
     logs.append("[google] 조회 %s=%s (scrapecreators · get_ad_details) " % (stype, key))
     try:
