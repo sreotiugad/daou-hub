@@ -205,16 +205,20 @@ def _perf(ad):
         rf, rl = _region_dates(ad)
         sd = sd or rf
         ls = ls or rl
-    days, act, since = None, False, None
+    days, act, since, last = None, False, None, None
     now = datetime.now(timezone.utc).timestamp()
     if sd:
         end = ls if (ls and ls > sd) else now
         days = int((end - sd) // 86400)
         since = datetime.fromtimestamp(sd, timezone.utc).strftime("%Y-%m-%d")
-    # 활성 판정은 firstShown 이 없어도 lastShown 만으로(최근 10일 내 노출이면 집행 중).
-    if ls and (now - ls) <= 10 * 86400:
-        act = True
-    return {"days": days, "act": act, "since": since}
+    # ⚠️ ScrapeCreators 구글은 firstShown 을 주지 않는 경우가 대부분(top-level·regionStats 모두 null)
+    #    → 시작일이 없어 집행일수(days) 계산 불가. 확실한 건 lastShown(마지막 노출)뿐이라
+    #    그걸 활성 판정과 표시(최근 노출일)에 쓴다. (억지 days 생성 금지)
+    if ls:
+        last = datetime.fromtimestamp(ls, timezone.utc).strftime("%Y-%m-%d")
+        if (now - ls) <= 10 * 86400:
+            act = True
+    return {"days": days, "act": act, "since": since, "last": last, "lts": ls or 0}
 
 
 def _looks_img(s):
@@ -280,7 +284,8 @@ def _normalize(ads):
         ty = "video" if ("video" in f or "youtube" in f) else ("text" if "text" in f else "image")
         p = _perf(ad)
         out.append({"u": img, "t": ad.get("advertiserName") or ad.get("advertiser_name") or "", "type": ty,
-                    "days": p["days"], "act": p["act"], "since": p["since"]})
+                    "days": p["days"], "act": p["act"], "since": p["since"],
+                    "last": p["last"], "lts": p["lts"]})
     return out
 
 
@@ -329,7 +334,8 @@ def collect(target, country="KR", max_ads=MAX_ADS, logs=None, probe=False, name=
         images.append(im)
         if len(images) >= max_ads:
             break
-    images.sort(key=lambda im: (1 if im.get("act") else 0, im.get("days") or -1), reverse=True)
+    # 구글은 days(집행일수)가 없으니 활성 먼저 → 최근 노출(lts) 순으로 정렬(정직한 순서).
+    images.sort(key=lambda im: (1 if im.get("act") else 0, im.get("days") or -1, im.get("lts") or 0), reverse=True)
     dl = [im["days"] for im in images if isinstance(im.get("days"), int)]
     perf_sum = {"maxDays": max(dl) if dl else None,
                 "active": sum(1 for im in images if im.get("act")),

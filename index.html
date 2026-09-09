@@ -441,6 +441,8 @@
   .da-badge.txt{background:rgba(100,116,139,.92)}
   .da-perf{position:absolute;top:6px;right:6px;z-index:3;font-size:10px;font-weight:700;padding:1px 7px;border-radius:20px;background:rgba(15,23,42,.62);color:#fff;letter-spacing:.02em;backdrop-filter:blur(3px)}
   .da-perf.win{background:linear-gradient(135deg,#d97706,#b45309)}
+  .da-perf.act{background:rgba(5,150,105,.92)}   /* 구글: 최근 집행 중 */
+  .da-perf.off{background:rgba(100,116,139,.85)} /* 구글: 종료 */
   .da-legend{font-size:11px;color:var(--muted);margin:-4px 0 12px;line-height:1.5}
   .da-legend b{color:#b45309}
   .da-filter{display:flex;gap:7px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
@@ -1374,7 +1376,11 @@ const DUComp=(function(){
                : (e._autoHome?' <span style="color:var(--muted);font-size:11px">자동 감지 도메인: '+esc(e._autoHome)+'</span>':'')))
         : (e.precise?'':' <span style="color:var(--muted);font-size:11px">키워드 검색 · 무관 광고 섞일 수 있음</span>'))):'';
     const pf=e.perf||{};
-    const pfNote=(pf.maxDays!=null)?(' · 최장 <b>'+pf.maxDays+'일</b> 집행 · 활성 '+(pf.active||0)+'개 · 장기 관측 '+(pf.winners||0)+'개'):'';
+    // 메타는 집행일수(최장 N일)로, 구글은 시작일이 없어 활성/종료 + 마지막 노출일 기준으로 표기.
+    const nAct=imgs.filter(im=>im&&im.act).length;
+    const pfNote=(pf.maxDays!=null)
+      ? (' · 최장 <b>'+pf.maxDays+'일</b> 집행 · 활성 '+(pf.active||0)+'개 · 장기 관측 '+(pf.winners||0)+'개')
+      : (isG&&imgs.length ? (' · 🔥활성 <b>'+nAct+'</b> · 종료 '+(imgs.length-nAct)+' · 마지막 노출일 기준') : '');
     const dup=raw.length-imgs.length;
     let html='<div class="da-note">대표 소재 '+imgs.length+'개'+(dup>0?' · 중복 '+dup+'개 묶음':'')+(adv?' · 광고주 <b>'+esc(adv)+'</b>':'')+' · 수집 '+esc(e.at||'')+liveTag+pfNote+'</div>'
       +'<div class="da-summary"><div class="da-sum"><b>'+nImg+'</b><span>이미지 배너</span></div><div class="da-sum"><b>'+nVid+'</b><span>영상 소재</span></div><div class="da-sum"><b>'+nTxt+'</b><span>텍스트 카피</span></div></div>'
@@ -1403,8 +1409,11 @@ const DUComp=(function(){
         // 관측 배지: 집행 일수(활성이면 '째'). 30일+는 장기 관측일 뿐 성과를 뜻하지 않는다.
         const days=(im&&typeof im.days==='number')?im.days:null;
         const win=days!=null&&days>=30, act=im&&im.act;
+        // 메타: 집행일수(N일째) 배지. 구글: 시작일이 없어 일수 대신 활성/종료 + 마지막 노출일.
         const perfBadge=(days!=null)
           ? '<span class="da-perf'+(win?' win':'')+'" title="'+esc((im.since||'')+' 집행 시작'+(act?' · 현재 집행 중':' · 종료'))+'">'+(win?'🏆 ':(act?'🔥 ':''))+days+'일'+(act?'째':'')+'</span>'
+          : (im&&im.last)
+          ? '<span class="da-perf'+(act?' act':' off')+'" title="'+esc('마지막 노출 '+im.last+(act?' · 최근 집행 중':' · 종료'))+'">'+(act?'🔥 활성':'⏹ 종료')+'</span>'
           : '';
         const badgeCls=ty==='image'?' img':ty==='text'?' txt':'';
         const badgeLab=ty==='image'?'🖼 이미지':ty==='text'?'📝 텍스트':'🎬 영상';
