@@ -460,6 +460,22 @@
   .ins-row{display:flex;flex-direction:column;gap:3px;padding-left:12px;border-left:3px solid var(--primary)}
   .ins-h{font-size:12px;font-weight:700;color:var(--fg);letter-spacing:.01em}
   .ins-b{font-size:13.5px;line-height:1.6;color:var(--muted)}
+  /* AI 카피 전략 리포트 — 소재 카피를 AI가 분류·요약(후크칩 + 구조화 행 + 대응 제안) */
+  .cp-wrap{display:flex;flex-direction:column;gap:14px}
+  .cp-hooks{display:flex;flex-wrap:wrap;gap:7px}
+  .cp-hook{font-size:12px;font-weight:600;padding:4px 12px;border-radius:20px;background:var(--primary-weak);color:var(--primary);border:1px solid transparent}
+  .cp-hook .n{opacity:.6;font-weight:500;margin-left:4px}
+  .cp-row{display:flex;gap:10px;align-items:flex-start}
+  .cp-ic{flex:none;font-size:14px;line-height:1.5}
+  .cp-k{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.02em;min-width:66px;flex:none;padding-top:1px}
+  .cp-v{font-size:13.5px;line-height:1.6;color:var(--fg)}
+  .cp-v .q{color:var(--muted);font-style:italic}
+  .cp-quote{font-size:13px;line-height:1.55;color:var(--fg);background:var(--surface-2,var(--border-soft));border-radius:8px;padding:8px 11px;border-left:3px solid #b45309}
+  .cp-quote b{color:#b45309;font-weight:700}
+  .cp-sug{border-left:3px solid var(--primary);background:var(--primary-weak);border-radius:8px;padding:9px 12px}
+  .cp-sug .cp-k{color:var(--primary)}
+  .cp-sug .cp-v{color:var(--fg)}
+  .cp-meta{font-size:11px;color:var(--muted);font-family:var(--mono)}
   .ms-hint{font-size:11.5px;color:var(--muted);margin:14px 0 10px}
   .ms-row{border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:12px;background:var(--surface)}
   .ms-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:9px}
@@ -652,6 +668,7 @@
       <div id="compHero" class="card comp-hero"></div>
       <div class="comp-grid" id="compCards"></div>
       <div id="compAi" class="card comp-ai"></div>
+      <div id="compCopyAi" class="card comp-ai" style="margin-top:14px"></div>
       <div id="compDA" style="margin-top:14px"></div>
     </div>
   </section>
@@ -1484,13 +1501,13 @@ const DUComp=(function(){
     loadMeta();}
   function loadMeta(){const x=_daCtx,c=x.c,lib=x.metaLib;
     const key=(c.kw||c.name||'').trim();
-    const paint=e=>{e._plat='meta';x.meta=e;if(x.plat==='meta'){_daFilter=_defFilter(e);paintDA(e);}_aiRun(false);};
+    const paint=e=>{e._plat='meta';x.meta=e;if(x.plat==='meta'){_daFilter=_defFilter(e);paintDA(e);}_aiRun(false);_copyRun(false);};
     // 정적 캡처(comp-ads/manifest.json, GitHub Actions 수동 트리거) — 실시간 조회 실패 시 폴백
     const fallbackStatic=()=>{
       const done=mf=>{_daMf=mf;const nm=(c.name||'').trim();
         let e=null;for(const s in mf){const y=mf[s];if(y&&(y.kw===key||y.kw===nm)){e=y;break;}}
         if(e&&e.images&&e.images.length){paint(e);}
-        else{x.meta={images:[],_plat:'meta'};_aiRun(false);if(x.plat==='meta'){const body=el('daBody');if(body)body.innerHTML='<div class="da-fallback">아직 이 경쟁사 Meta 광고 소재가 수집되지 않았어요. · '
+        else{x.meta={images:[],_plat:'meta'};_aiRun(false);_copyRun(false);if(x.plat==='meta'){const body=el('daBody');if(body)body.innerHTML='<div class="da-fallback">아직 이 경쟁사 Meta 광고 소재가 수집되지 않았어요. · '
             +'<a href="'+esc(lib)+'" target="_blank" rel="noopener">라이브러리에서 보기 ↗</a></div>';}}};
       if(_daMf){done(_daMf);return;}
       fetch('comp-ads/manifest.json',{cache:'no-store'}).then(r=>r.ok?r.json():{}).then(done)
@@ -1516,8 +1533,8 @@ const DUComp=(function(){
       const md=(x.meta&&x.meta.adDomain)||'';
       if(md){home=md;autoHome=md;}
     }
-    const paint=e=>{e._plat='google';x.google=e;if(x.plat==='google'){_daFilter=_defFilter(e);paintDA(e);}_aiRun(false);};
-    const empty=msg=>{x.google={images:[],_plat:'google'};_aiRun(false);if(x.plat==='google'){const b=el('daBody');if(b)b.innerHTML='<div class="da-fallback">'+msg+' · <a href="'+esc(gl)+'" target="_blank" rel="noopener">투명성센터에서 보기 ↗</a></div>';}};
+    const paint=e=>{e._plat='google';x.google=e;if(x.plat==='google'){_daFilter=_defFilter(e);paintDA(e);}_aiRun(false);_copyRun(false);};
+    const empty=msg=>{x.google={images:[],_plat:'google'};_aiRun(false);_copyRun(false);if(x.plat==='google'){const b=el('daBody');if(b)b.innerHTML='<div class="da-fallback">'+msg+' · <a href="'+esc(gl)+'" target="_blank" rel="noopener">투명성센터에서 보기 ↗</a></div>';}};
     if(!home&&!gu&&!(c.name||'').trim()){empty('이 경쟁사의 공식 도메인·이름을 확인할 수 없어요 — 등록 편집에서 <b>경쟁사명</b>이나 <b>공식 홈페이지</b>를 채워주세요');return;}
     const qs='home='+encodeURIComponent(home)+'&url='+encodeURIComponent(gu)+'&name='+encodeURIComponent(c.name||'');
     fetch('/api/competitor_google_ads?'+qs)
@@ -1586,7 +1603,7 @@ const DUComp=(function(){
   // ── AI 경쟁 인텔리전스 ── 스냅샷 지표 + 실제 소재 관측(카피·집행일수·포맷·채널)을
   // 근거로, '집중 제품/오퍼 · 광고 전략 · 벤치마크 시사점'을 뽑는다. 벤치마크 관점(우리 브랜드)은
   // 경쟁사에 맞춰 AI가 자동 선택. 소재가 로드될 때마다(_aiRun) 근거를 보강해 다시 분석한다.
-  var _ins={d:null,c:null}, _aiSig='';
+  var _ins={d:null,c:null}, _aiSig='', _copySig='';
   function _distinct(arr){var seen={},out=[];(arr||[]).forEach(function(s){s=(s||'').trim();if(s&&s.length>=4&&!seen[s]){seen[s]=1;out.push(s);}});return out;}
   function _aiBrief(){
     var x=_daCtx||{},d=_ins.d||{},c=_ins.c||{};
@@ -1632,8 +1649,64 @@ const DUComp=(function(){
       return '<div class="ins-row"><div class="ins-h">'+m[0]+' '+esc(m[1])+'</div><div class="ins-b">'+esc(kv[1])+'</div></div>';}).join('');
     box.innerHTML=_aiHead('소재 관측 기반')+'<div class="card-b ins-wrap">'+(html||'<div class="line">분석을 받지 못했어요.</div>')+'</div>';
   }
-  function renderAi(d,c){_ins={d:d,c:c};_aiSig='';var box=el('compAi');
-    if(box)box.innerHTML=_aiHead()+'<div class="card-b"><div class="line" style="color:var(--muted)">소재 수집 후 분석해요…</div></div>';}
+  function renderAi(d,c){_ins={d:d,c:c};_aiSig='';_copySig='';var box=el('compAi');
+    if(box)box.innerHTML=_aiHead()+'<div class="card-b"><div class="line" style="color:var(--muted)">소재 수집 후 분석해요…</div></div>';
+    var cb=el('compCopyAi');if(cb)cb.innerHTML=_copyHead('')+'<div class="card-b"><div class="line" style="color:var(--muted)">소재 수집 후 카피를 분석해요…</div></div>';}
+
+  // ── AI 카피 전략 리포트 ─────────────────────────────────────────────
+  // 경쟁사 광고 '카피(문구)'를 어떻게 운영하는지 AI가 분류·요약한다. 소스는 실제 카피가 담기는
+  // 메타 본문 카피 + 캡처 소재 OCR(구글 t는 광고주명이라 제외). "AI를 이렇게 쓴다"를 전면에 드러내는 카드.
+  function _copyTexts(){
+    var x=_daCtx||{},M=(x.meta&&x.meta.images)||[];
+    var c=_ins.c||{},brand=String(c.name||'').trim();
+    return M.filter(function(im){var t=im&&im.t&&String(im.t).trim();
+      return t&&t.length>=6&&t!==brand;});   // 실제 카피만(브랜드명 단독·빈 문구 제외)
+  }
+  function _copyHead(n){return '<div class="card-h"><h3>🧠 AI 카피 전략 리포트</h3>'+(n?'<span class="hint">'+n+'개 카피 분석</span>':'')+'</div>';}
+  function _copyBrief(){
+    var c=_ins.c||{},d=_ins.d||{},arr=_copyTexts();
+    var rows=arr.slice().sort(function(a,b){return (b.days||-1)-(a.days||-1)}).slice(0,20)
+      .map(function(im){return (typeof im.days==='number'?(im.days+'일째 '):'')+'"'+String(im.t).replace(/\s+/g,' ').slice(0,90)+'"';});
+    var uniq=_distinct(arr.map(function(im){return im.t}));
+    return '[경쟁사 광고 카피 관측 · '+(c.name||d.name||'')+']'
+      +'\n분석 카피 수: '+uniq.length+'개 (오래 집행순 인용, 집행일수=먹히는 신호)'
+      +'\n'+rows.join('\n')
+      +'\n[우리 브랜드 후보] 사방넷(이커머스 통합관리·쇼핑몰 솔루션) / 애드콘(모바일쿠폰·기프티콘) / 다우오피스(그룹웨어)';
+  }
+  function _copyRun(force){
+    var box=el('compCopyAi');if(!box||!_ins.d)return;
+    var arr=_copyTexts(),c=_ins.c||{};
+    var sig=(c.id||c.name||'')+'|cp'+arr.length;
+    if(!force&&sig===_copySig)return; _copySig=sig;
+    if(!arr.length){box.innerHTML=_copyHead('')+'<div class="card-b"><div class="line" style="color:var(--muted)">카피(문구)가 담긴 소재가 아직 없어요 — 메타 소재를 불러오면 자동 분석해요. <span class="cp-meta">(구글 배너 카피는 아직 텍스트 미수집)</span></div></div>';return;}
+    var q='위는 경쟁사가 실제 운영 중인 광고 카피(문구) 목록이야(오래 집행된 순). 이 경쟁사가 카피를 "어떻게 운영하는지" 분석해서 정확히 5줄, 각 줄 "키|내용" 형식으로:\n'
+      +'후크|카피가 쓰는 설득 트리거 유형을 2~4개 태그로(쉼표 구분). 예: 혜택강조/긴급·한정/권위·수상/가격/무료체험/공감·스토리 중 실제 카피에 맞는 것만.\n'
+      +'메시지|반복적으로 미는 핵심 카피 앵글을 실제 문구 근거로 한 문장.\n'
+      +'CTA|주로 쓰는 행동유도 문구·방식을 한 문장.\n'
+      +'검증카피|가장 오래 집행된(=먹히는) 카피 하나를 그대로 인용하고 (며칠째) 붙여.\n'
+      +'제안|우리 브랜드 후보 중 가장 관련된 하나를 골라, 이 경쟁사에 대응·차별화할 카피 방향 한 문장.\n'
+      +'서론·군더더기 금지. 실제 문구를 인용해.';
+    box.innerHTML=_copyHead(arr.length)+'<div class="card-b"><div class="line" style="color:var(--muted)">카피 분석 중…</div></div>';
+    fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'user',content:q}],context:_copyBrief()})})
+      .then(function(r){return r.json()}).then(function(j){_copyRender(box,(j&&j.reply)||'',arr.length)})
+      .catch(function(){box.innerHTML=_copyHead('')+'<div class="card-b"><div class="line" style="color:var(--muted)">카피 분석을 불러오지 못했어요.</div></div>';});
+  }
+  function _copyRender(box,t,n){
+    var rows={};String(t).split(/\n+/).map(function(s){return s.trim()}).filter(Boolean).forEach(function(l){
+      var i=l.indexOf('|');if(i<0)return;var k=l.slice(0,i).replace(/[^가-힣A-Za-z]/g,'');if(k)rows[k]=l.slice(i+1).trim();});
+    var html='';
+    if(rows['후크']){
+      var chips=rows['후크'].split(/[,、]/).map(function(s){return s.trim()}).filter(Boolean)
+        .map(function(s){return '<span class="cp-hook">'+esc(s)+'</span>';}).join('');
+      if(chips)html+='<div class="cp-hooks">'+chips+'</div>';
+    }
+    function row(k,ic,key){return rows[k]?('<div class="cp-row"><span class="cp-ic">'+ic+'</span><span class="cp-k">'+key+'</span><span class="cp-v">'+esc(rows[k])+'</span></div>'):'';}
+    html+=row('메시지','📣','핵심 메시지');
+    html+=row('CTA','👉','CTA 패턴');
+    if(rows['검증카피'])html+='<div class="cp-quote">🏆 <b>검증 카피</b> · '+esc(rows['검증카피'])+'</div>';
+    if(rows['제안'])html+='<div class="cp-sug"><div class="cp-row"><span class="cp-ic">💡</span><span class="cp-k">우리 대응</span><span class="cp-v">'+esc(rows['제안'])+'</span></div></div>';
+    box.innerHTML=_copyHead(n)+'<div class="card-b cp-wrap">'+(html||'<div class="line">분석을 받지 못했어요.</div>')+'</div>';
+  }
 
   function fetchSnap(force){const c=cur();if(!c){el('compSnap').hidden=true;return;}el('compEmpty').hidden=true;
     const cc=snaps()[c.id];if(!force&&cc&&(Date.now()-cc.t<3600000)){renderSnap(cc.d);return;}
