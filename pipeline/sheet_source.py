@@ -114,11 +114,15 @@ def records_to_rows(records, logs=None):
             "service": service,
             "media": nmedia,
             "camptype": C.norm_ct(g(col["camptype"], "캠페인 유형", "캠페인유형"), nmedia),
+            "campaign": str(g("캠페인", "캠페인명") or "").strip(),
+            "adgroup": str(g("광고그룹", "그룹", "광고그룹명") or "").strip(),   # 광고그룹 단위 보존
+            "ad": str(g("광고", "광고소재", "소재") or "").strip(),
             "date": d,
             "imp": _num(g(col["imp"], "노출 수", "노출수")),
             "click": _num(g(col["click"], "클릭 수", "클릭수")),
             "cost": cost,
             "signup": _num(g(col["signup"], "가입")),
+            "rank": _num(g("평균노출순위", "평균 노출순위", "평균노출 순위")),
         })
     logs.append(f"[sheet] 표준 행 {len(out)}개 (서비스 {len(set(x['service'] for x in out))}종)")
     return out
