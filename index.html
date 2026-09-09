@@ -892,13 +892,13 @@ const DUReport=(function(){
     ].join('\n');
     const ask=`너는 이 광고 계정을 리뷰하는 10년차 퍼포먼스 마케팅 리드다. 아래 <데이터>의 ${group} 이번 기간 성과를 진단해라. 맨 앞에 제목/머리말 없이 아래 4개 소제목(##)만, 각 항목 1~2문장으로 군더더기 없이 날카롭게. 숫자는 <데이터>에 있는 값만 쓰고 지어내지 마라. 증감이 '비교불가'로 표기된 항목은 절대 '정체·변화없음·±0%'로 해석하지 말고, 그 지표는 절대값 구조로만 평가해라.\n**한 줄 진단** — ${noPrev?'직전 비교 기준이 없으므로 증감이 아니라 \'현재 절대 효율(CPA·CVR·CPC)이 양호/주의 수준인지\'로 한 문장.':'지금이 효율개선/볼륨성장/정체/악화 중 무엇인지 한 문장.'}\n**핵심 원인** — ${noPrev?'이번 기간 CPA를 CPC÷CVR 구조로 분해해 어디가 효율을 끌고 있는지 지목(수치 포함).':'CPA 변화를 CPC vs CVR 분해로 지목(수치 포함). 클릭이 싸진 건지 전환이 좋아/나빠진 건지 명확히.'}\n**액션** — 우선순위대로 2~3개, 구체적으로. 채널·캠페인 편중이 크면 지적.\n**확인·리스크** — 판단에 꼭 필요한 것 1개(${noPrev?'직전 데이터 부재로 추세 확인 불가 → 다음 동일기간 확보, 목표 CPA 등':'계절성/목표CPA 등'}).`;
     // 캐시(그룹·기간·규모·델타 시그니처, 24h) — 같은 화면 반복 렌더 시 재호출 안 함
-    const sig=[group,agg.cost?agg.cost.length:0,Math.round(agg.tCost),Math.round(agg.tSign),(d.cpa||0).toFixed(1),(d.signup||0).toFixed(1)].join('|');
-    let cache={};try{cache=JSON.parse(localStorage.getItem('daouhub_perf_ai_v1')||'{}')||{}}catch(_){}
+    const sig=[group,agg.cost?agg.cost.length:0,Math.round(agg.tCost),Math.round(agg.tSign),noPrev?'np':(d.cpa==null?'x':d.cpa.toFixed(1)),(d.signup==null?'x':d.signup.toFixed(1))].join('|');
+    let cache={};try{cache=JSON.parse(localStorage.getItem('daouhub_perf_ai_v2')||'{}')||{}}catch(_){}
     const paint=txt=>{box.innerHTML=head+'<div class="ai-diag md">'+aiMd(txt)+'</div>';};
     const hit=cache[sig];if(hit&&hit.txt&&Date.now()-hit.t<864e5){paint(hit.txt);return;}
     box.innerHTML=head+'<div class="ai-diag" style="color:var(--muted);font-size:12.5px;padding:8px 2px">10년차 관점으로 분석 중…</div>';
     fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'user',content:ask}],context:ctx})})
-      .then(r=>r.json()).then(j=>{if(j&&j.reply){paint(j.reply);cache[sig]={txt:j.reply,t:Date.now()};try{localStorage.setItem('daouhub_perf_ai_v1',JSON.stringify(cache))}catch(_){}}else fallback();})
+      .then(r=>r.json()).then(j=>{if(j&&j.reply){paint(j.reply);cache[sig]={txt:j.reply,t:Date.now()};try{localStorage.setItem('daouhub_perf_ai_v2',JSON.stringify(cache))}catch(_){}}else fallback();})
       .catch(fallback);}
 
   const ACTION_LS='daouhub_action_log_v1';let currentAction=null;
