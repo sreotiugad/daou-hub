@@ -1333,12 +1333,19 @@ const DUComp=(function(){
   function groupBySize(body){
     const grid=body.querySelector('.da-grid');if(!grid)return;
     const cards=[...grid.querySelectorAll('.da-item')];if(!cards.length){grid.remove();return;}
-    const bkt=ar=>ar>=1.3?'wide':(ar<0.8?'tall':'square');
+    const bkt=ar=>ar>=1.25?'wide':(ar<0.85?'tall':'square');
     const G={wide:[],square:[],tall:[]};
+    // 비율: 이미지는 자연크기. 영상은 preload="none"이라 videoWidth=0 → 렌더 시 넣어둔
+    // style.aspectRatio(=manifest w/h)를 읽어야 세로 영상이 '정사각'으로 오분류되지 않는다.
+    const arOf=im=>{const w=(im&&(im.naturalWidth||im.videoWidth))||0,h=(im&&(im.naturalHeight||im.videoHeight))||0;
+      if(w&&h)return w/h;
+      const s=im&&im.style&&im.style.aspectRatio;
+      if(s&&s.indexOf('/')>0){const p=s.split('/').map(parseFloat);if(p[0]&&p[1])return p[0]/p[1];}
+      return 1;};
     cards.forEach(c=>{const im=c.querySelector('img.thumb,video.thumb');
       const w=(im&&(im.naturalWidth||im.videoWidth))||0,h=(im&&(im.naturalHeight||im.videoHeight))||0;
       if(im&&w&&h)im.style.aspectRatio=w+'/'+h;   // 실제 비율 고정 — 레터박스/정사각 강제 방지
-      G[bkt(w&&h?w/h:1)].push(c);});
+      G[bkt(arOf(im))].push(c);});
     Object.keys(G).forEach(k=>G[k].sort((a,b)=>((+b.dataset.days||-1)-(+a.dataset.days||-1))));  // 그룹 내 오래 운영순
     const LAB={wide:['가로형 배너','큰 영역에서 메시지 확인'],square:['정사각 소재','피드형 대표'],tall:['세로형·영상','릴스/스토리형']};
     const wrap=document.createElement('div');
