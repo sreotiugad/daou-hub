@@ -170,6 +170,30 @@ def _parse_ts(s):
     return None
 
 
+def _region_dates(ad):
+    """일부 응답은 top-level firstShown 이 비고 실제 시작·종료일이 regionStats(지역별)에
+    들어온다. regionStats/creativeRegions/regions 리스트를 훑어 first/last 로 보이는 값을
+    모두 모아 (가장 이른 시작, 가장 늦은 종료)를 돌려준다."""
+    firsts, lasts = [], []
+    for coll in (ad.get("regionStats"), ad.get("creativeRegions"), ad.get("regions")):
+        if not isinstance(coll, list):
+            continue
+        for it in coll:
+            if not isinstance(it, dict):
+                continue
+            for k, v in it.items():
+                kl = k.lower()
+                if "first" in kl and "shown" in kl:
+                    t = _parse_ts(v)
+                    if t:
+                        firsts.append(t)
+                elif ("last" in kl and "shown" in kl) or kl in ("startdate", "enddate"):
+                    t = _parse_ts(v)
+                    if t:
+                        lasts.append(t)
+    return (min(firsts) if firsts else None, max(lasts) if lasts else None)
+
+
 def _perf(ad):
     """성과 프록시: 얼마나 오래·최근까지 집행했는가(광고주는 안 먹히는 소재를 바로 끔).
     Google은 is_active가 없어 lastShown이 최근(≤10일)이면 활성으로 본다."""
@@ -177,6 +201,10 @@ def _perf(ad):
                    or ad.get("startDate") or ad.get("start_date"))
     ls = _parse_ts(ad.get("lastShown") or ad.get("last_shown") or ad.get("lastShownDate")
                    or ad.get("endDate") or ad.get("end_date"))
+    if sd is None or ls is None:          # top-level 이 비면 지역별(regionStats)에서 보강
+        rf, rl = _region_dates(ad)
+        sd = sd or rf
+        ls = ls or rl
     days, act, since = None, False, None
     now = datetime.now(timezone.utc).timestamp()
     if sd:
@@ -312,9 +340,10 @@ def collect(target, country="KR", max_ads=MAX_ADS, logs=None, probe=False, name=
         # 후보가 광고당 2개 이상이면 '깨끗한 asset vs 합성 스크린샷'을 구분해 뗄 여지가 있다.
         dump = [{"keys": list(ad.keys()),
                  "format": ad.get("format") or ad.get("adFormat") or ad.get("creativeFormat"),
-                 "imageUrl": ad.get("imageUrl"),
-                 "allImgs": _all_imgs(ad)} for ad in ads[:3]]
-        logs.append("PROBE:" + json.dumps(dump, ensure_ascii=False))
+                 "firstShown": ad.get("firstShown"), "lastShown": ad.get("lastShown"),
+                 "regionStats": ad.get("regionStats"),
+                 "allImgs": _all_imgs(ad)} for ad in ads[:2]]
+        logs.append("PROBE:" + json.dumps(dump, ensure_ascii=False)[:1400])
     return {"target": "%s:%s" % (stype, key), "images": images,
             "count": len(images), "perf": perf_sum, "at": _now_kst(),
             "source": "scrapecreators_live", "precise": (adv_by == "url"),
