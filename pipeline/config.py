@@ -40,7 +40,7 @@ GROUP_SUBS = {
 GROUPS = ["사방넷", "애드콘", "다우오피스"]
 
 # 캠페인유형 표준 7종 (프론트 CT_ORDER 와 동일)
-CT_ORDER = ["브랜드검색", "파워링크", "쇼핑검색", "구글검색", "실적최대화", "동영상", "디스플레이"]
+CT_ORDER = ["브랜드검색", "파워링크", "쇼핑검색", "구글검색", "실적최대화", "동영상", "GDN", "디스플레이"]
 
 # 매체 표준: 네이버 / 구글 / 메타
 def norm_media(m) -> str:
@@ -67,8 +67,9 @@ def norm_ct(raw: str, media: str = "") -> str:
         return "실적최대화"
     if "동영상" in s or "VIDEO" in s.upper():
         return "동영상"
-    if "디스플레이" in s or "DISPLAY" in s.upper() or "배너" in s:
-        return "디스플레이"
+    if "디스플레이" in s or "DISPLAY" in s.upper() or "배너" in s or "GDN" in s.upper():
+        # 구글 디스플레이는 'GDN'으로 라벨링, 그 외(메타 등)는 '디스플레이'
+        return "GDN" if str(media).strip() == "구글" else "디스플레이"
     if "검색" in s or "SEARCH" in s.upper():
         # 네이버 일반 검색은 파워링크, 구글 검색은 구글검색
         return "구글검색" if str(media).strip() == "구글" else "파워링크"

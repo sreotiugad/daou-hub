@@ -19,8 +19,8 @@ import config as C
 
 # 구글 advertising_channel_type → 표준 캠페인유형.
 # ⚠️ 브랜드 리포트(sabangnet-report·adcon_report app.py)의 type_ko 와 일치:
-#   SEARCH=구글검색 · DISPLAY=디스플레이 · VIDEO=동영상 · PERFORMANCE_MAX=실적최대화
-# (이전엔 DISPLAY 를 '구글검색'으로 잘못 매핑 → 디스플레이 광고비가 구글검색에 합산됐음)
+#   SEARCH=구글검색 · DISPLAY/DEMAND_GEN=디스플레이 · VIDEO=동영상 · PERFORMANCE_MAX=실적최대화
+# (norm_ct 가 '구글 + 디스플레이'는 최종적으로 'GDN' 으로 라벨링한다)
 _CHTP = {
     "SEARCH": "구글검색", "SHOPPING": "쇼핑검색", "VIDEO": "동영상",
     "PERFORMANCE_MAX": "실적최대화", "DISPLAY": "디스플레이",
