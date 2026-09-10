@@ -141,6 +141,17 @@
   .r-ai{margin-bottom:14px}                    /* AI 성과 진단 = 전체 폭(짧은 차트와 안 엮이게) */
   .r-ai .ai-diag{max-width:1060px}             /* 전체 폭에서 줄이 너무 길지 않게 가독 폭 제한 */
   @media(max-width:900px){.r-mid{grid-template-columns:1fr}}
+  /* 매체 × 캠페인유형 교차표 — 실무 리포트의 '매체별 상세' 시트와 같은 구조 */
+  .r-mx{margin-bottom:14px}
+  #mxTable table{font-size:12.5px;min-width:980px}
+  #mxTable th{white-space:nowrap;padding:0 9px 9px}
+  #mxTable td{padding:8px 9px;white-space:nowrap;border-top:1px solid var(--border-soft)}
+  #mxTable td.r{font-family:var(--mono);font-variant-numeric:tabular-nums}
+  #mxTable td.m{font-weight:600;vertical-align:top}
+  #mxTable tr.g0>td{border-top:1px solid var(--border)}   /* 매체가 바뀌는 행에 굵은 구분선 */
+  #mxTable .mdot{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:7px}
+  #mxTable td.na{color:var(--muted)}
+  #mxTable tr.tot>td{border-top:2px solid var(--fg);font-weight:600}
   .rp-set{display:inline-flex;gap:4px;flex-wrap:wrap}
   .rp-set .cx-mini.on{background:var(--primary);color:var(--primary-fg);border-color:var(--primary)}
   .donut-wrap{display:flex;justify-content:center;padding-top:6px}
@@ -635,6 +646,12 @@
         <div class="legend"><span><i style="background:var(--c1)"></i>광고비(백만원)</span><span><i style="background:var(--c2)"></i>가입(백건)</span><span><i style="background:var(--c3)"></i>클릭(천건)</span></div></div>
     </div>
   </div>
+  <div class="r-mx">
+    <div class="card">
+      <div class="card-h"><h3>매체 · 캠페인 유형별 성과</h3><span class="hint" id="mxHint"></span></div>
+      <div class="card-b" style="overflow-x:auto"><div id="mxTable"></div></div>
+    </div>
+  </div>
   <div class="r-mid">
     <div class="card"><div class="card-h"><h3>캠페인 유형별 광고비</h3><span class="hint">비중 순</span></div><div class="card-b"><div id="barCt"></div></div></div>
     <div class="card">
@@ -872,11 +889,11 @@ const DUReport=(function(){
 
   function drawLine(agg){const W=700,H=248,pl=34,pr=12,pt=12,pb=26,iw=W-pl-pr,ih=H-pt-pb;
     const S=[{n:"광고비",c:COL.c1,data:agg.cost.map(v=>v/1e6)},{n:"가입",c:COL.c2,data:agg.signup.map(v=>v/100)},{n:"클릭",c:COL.c3,data:agg.click.map(v=>v/1000)}];
-    const max=niceMax(Math.max(...S.flatMap(s=>s.data))*1.12),N=labels.length,x=i=>pl+iw*i/(N-1),y=v=>pt+ih*(1-v/max);
+    const max=niceMax(Math.max(...S.flatMap(s=>s.data))*1.12),N=labels.length,sw=N>1?iw/(N-1):iw,x=i=>N>1?pl+iw*i/(N-1):pl+iw/2,y=v=>pt+ih*(1-v/max);
     let g="";for(let t=0;t<=max;t+=max/4)g+=`<line x1="${pl}" y1="${y(t)}" x2="${W-pr}" y2="${y(t)}" stroke="${COL.line}"/><text x="${pl-6}" y="${y(t)+3.5}" text-anchor="end" font-size="10" fill="${COL.muted}" font-family="IBM Plex Mono, ui-monospace, monospace">${t}</text>`;
     let xl="";labels.forEach((d,i)=>{if(N<=14||i%Math.ceil(N/10)===0)xl+=`<text x="${x(i)}" y="${H-8}" text-anchor="middle" font-size="10" fill="${COL.muted}" font-family="IBM Plex Mono, ui-monospace, monospace">${d}</text>`});
-    let area="",path="",dot="";S.forEach((s,si)=>{const pts=s.data.map((v,i)=>[x(i),y(v)]);const dd=smooth(pts);if(si===0)area+=`<path d="${dd} L${x(N-1)},${y(0)} L${x(0)},${y(0)} Z" fill="${s.c}" opacity=".07"/>`;path+=`<path d="${dd}" fill="none" stroke="${s.c}" stroke-width="${si===0?2.4:1.8}" stroke-linecap="round" opacity="${si===0?1:.85}"/>`;const l=pts[N-1];dot+=`<circle cx="${l[0]}" cy="${l[1]}" r="3.4" fill="${COL.surface}" stroke="${s.c}" stroke-width="2.2"/>`});
-    let hot="";labels.forEach((d,i)=>hot+=`<rect class="hc" data-i="${i}" x="${x(i)-iw/(N-1)/2}" y="${pt}" width="${iw/(N-1)}" height="${ih}" fill="transparent"/>`);
+    let area="",path="",dot="";S.forEach((s,si)=>{const pts=s.data.map((v,i)=>[x(i),y(v)]);const dd=smooth(pts);if(si===0)area+=`<path d="${dd} L${x(N-1)},${y(0)} L${x(0)},${y(0)} Z" fill="${s.c}" opacity=".07"/>`;path+=`<path d="${dd}" fill="none" stroke="${s.c}" stroke-width="${si===0?2.4:1.8}" stroke-linecap="round" opacity="${si===0?1:.85}"/>`;const l=pts[N-1];dot+=`<circle cx="${l[0]}" cy="${l[1]}" r="${N>1?3.4:5}" fill="${COL.surface}" stroke="${s.c}" stroke-width="2.2"/>`});
+    let hot="";labels.forEach((d,i)=>hot+=`<rect class="hc" data-i="${i}" x="${x(i)-sw/2}" y="${pt}" width="${sw}" height="${ih}" fill="transparent"/>`);
     const guide=`<line id="rlg_g" y1="${pt}" y2="${pt+ih}" stroke="${COL.primary}" stroke-dasharray="3 3" opacity="0"/>`;
     document.getElementById('lineChart').innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%">${g}${xl}${area}${path}${guide}${dot}${hot}</svg>`;
     const gEl=document.getElementById('rlg_g');
@@ -896,7 +913,7 @@ const DUReport=(function(){
     // 집행하지 않은(0원) 캠페인 유형은 빈 막대로 그리면 허전·깨져 보이므로 실제 집행분만 그린다.
     if(!rows.length){document.getElementById('barCt').innerHTML='<div style="padding:40px 8px;text-align:center;color:var(--muted);font-size:12.5px">이 기간 집행된 캠페인 광고비가 없어요.</div>';return;}
     const max=niceMax(Math.max(...rows.map(r=>r.v))*1.14),step=iw/rows.length,bw=Math.min(46,step*.5),y=v=>pt+ih*(1-v/max);let grid="";for(let k=0;k<=4;k++){const t=max*k/4;grid+=`<line x1="${pl}" y1="${y(t)}" x2="${W-pr}" y2="${y(t)}" stroke="${COL.line}"/><text x="${pl-6}" y="${y(t)+3.5}" text-anchor="end" font-size="10" fill="${COL.muted}" font-family="IBM Plex Mono, ui-monospace, monospace">${t>=1e6?(t/1e6).toFixed(0)+'M':Math.round(t/1e4)+'만'}</text>`}let bars="";rows.forEach((r,i)=>{const bx=pl+step*i+step/2,by=y(r.v),bh=pt+ih-by;bars+=`<rect class="bx" data-l="${r.l}" data-v="${r.v}" x="${(bx-bw/2).toFixed(1)}" y="${by.toFixed(1)}" width="${bw}" height="${bh.toFixed(1)}" rx="3" fill="${COL.c1}" opacity="${1-i*0.1}"/><text x="${bx.toFixed(1)}" y="${H-24}" text-anchor="middle" font-size="10" fill="${COL.muted}" font-family="Pretendard Variable, Pretendard, Apple SD Gothic Neo, Malgun Gothic, system-ui, sans-serif">${r.l}</text>`});document.getElementById('barCt').innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%">${grid}${bars}</svg>`;document.querySelectorAll('#barCt .bx').forEach(b=>{b.addEventListener('mousemove',e=>{TIP.innerHTML=`<div class="t">${b.dataset.l}</div><div class="row"><i style="background:${COL.c1}"></i><b>${won(+b.dataset.v)}</b></div>`;TIP.style.left=e.clientX+'px';TIP.style.top=e.clientY+'px';TIP.style.opacity='1';b.style.opacity='.75'});b.addEventListener('mouseleave',()=>{TIP.style.opacity='0';b.style.opacity=''})})}
-  function spark(data,color){const W=110,Hh=26,max=Math.max(...data),min=Math.min(...data),rng=(max-min)||1;const pts=data.map((v,i)=>[i/(data.length-1)*W,Hh-2-((v-min)/rng)*(Hh-5)]);return `<svg viewBox="0 0 ${W} ${Hh}" width="70" height="26"><path d="${smooth(pts)}" fill="none" stroke="${color}" stroke-width="1.6" stroke-linecap="round"/></svg>`}
+  function spark(data,color){const W=110,Hh=26,max=Math.max(...data),min=Math.min(...data),rng=(max-min)||1;const dn=data.length-1;const pts=data.map((v,i)=>[dn>0?i/dn*W:W/2,Hh-2-((v-min)/rng)*(Hh-5)]);return `<svg viewBox="0 0 ${W} ${Hh}" width="70" height="26"><path d="${smooth(pts)}" fill="none" stroke="${color}" stroke-width="1.6" stroke-linecap="round"/></svg>`}
   function aiMd(t){var esc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));var lines=String(t).split(/\r?\n/),out=[],inList=false,seenH=false;var flush=()=>{if(inList){out.push('</ul>');inList=false}};for(var i=0;i<lines.length;i++){var raw=lines[i];var h=raw.match(/^\s*(#{1,6})\s+(.*)/);if(h){flush();var lvl=h[1].length,txt=esc(h[2]).replace(/\*\*(.+?)\*\*/g,'$1').replace(/[:：]\s*$/,'');if(lvl===1&&!seenH){seenH=true;continue}/* 맨 앞 제목(h1)은 카드 헤더와 중복이라 생략 */out.push('<p class="dh"><b>'+txt+'</b></p>');seenH=true;continue}seenH=true;var ln=esc(raw).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>');var m=ln.match(/^\s*(?:[-*·•]|\d+\.)\s+(.*)/);if(m){if(!inList){out.push('<ul>');inList=true}out.push('<li>'+m[1]+'</li>')}else{flush();if(ln.trim())out.push('<p>'+ln+'</p>')}}flush();return out.join('')}
   function buildComment(group,agg){const box=document.getElementById('comment');if(!box)return;
     const topCt=CT_ORDER.map(k=>[k,agg.ct[k]||0]).sort((a,b)=>b[1]-a[1])[0];
@@ -986,7 +1003,78 @@ const DUReport=(function(){
     // 브랜드 탭·순서 고정(홈 바로가기와 동일). 목록에 없는 브랜드는 뒤로.
     var ORD=["사방넷","뿌리오","다우오피스","애드콘","애드웰"];
     GROUPS.sort(function(a,b){var i=ORD.indexOf(a.key),j=ORD.indexOf(b.key);return (i<0?99:i)-(j<0?99:j);});}
-  function render(){mergeBrands();ensureRange();buildDates(365);viewN=fullDates.length||365;const subs=currentSubs();const agg=aggregate(subs,viewN,state.start,state.end),coverage='';const rs=document.getElementById('repStart'),re=document.getElementById('repEnd');if(rs){rs.value=state.start;rs.classList.toggle('set',!!state.start)}if(re){re.value=state.end;re.classList.toggle('set',!!state.end)}document.querySelectorAll('#repPresets [data-rp]').forEach(b=>b.classList.toggle('on',b.dataset.rp===state.preset));document.getElementById('repTitle').textContent=state.sub==="전체"?`${state.group} 광고 리포트`:`${state.sub}`;document.getElementById('repSub').textContent=`${GROUP_SUBS[state.group].join(" · ")} · 전체데이터 ${viewN}일 (${periodText()})`;document.getElementById('trendHint').textContent=periodText()+coverage;renderTabs();renderPills();renderKPIs(agg);drawLine(agg);drawDonut(agg);drawBar(agg);buildComment(state.group,agg);renderAction(subs,agg,viewN);renderTable()}
+  // ── 매체 × 캠페인 유형 교차표 ──────────────────────────────────
+  // 매일 보는 '매체별 상세' 시트를 그대로 옮긴 표. 지표는 전부 원천 행(facts)에서 재계산한다.
+  //   CTR=클릭/노출 · CPC=광고비/클릭 · 가입율=가입/클릭 · CPA=광고비/가입 · 소진율=기간 광고비/월예산
+  // 예산은 '예산 관리'에서 매체·유형별로 저장한 월 예산(daouhub_budget_v2)을 그대로 읽는다.
+  // 저장된 값이 없으면 추정하지 않고 '–' 로 둔다.
+  const MXCOL={네이버:COL.naver,구글:COL.google,메타:COL.meta,타불라:COL.taboola,사람인:COL.saramin};
+  const MXORDER=["네이버","구글","메타","타불라","사람인"];
+  function mxBudgets(){
+    // 예산 관리 엔티티 키: 그룹 전체는 'g:그룹', 세부 브랜드가 여럿인 그룹에서 하나를 고르면 's:브랜드'
+    let id='g:'+state.group;
+    if(state.sub&&state.sub!=='전체'&&(GROUP_SUBS[state.group]||[]).length>1)id='s:'+state.sub;
+    const D=(window.DAOU_DATA&&window.DAOU_DATA.report&&window.DAOU_DATA.report.budgets)||{};
+    const def=((D[id]||{}).type)||{};let mine={};
+    try{const all=JSON.parse(localStorage.getItem('daouhub_budget_v2')||'{}')||{};mine=((all[id]||{}).type)||{}}catch(_){}
+    return Object.assign({},def,mine);   // 사용자가 예산 관리에서 넣은 값이 계획값을 덮어쓴다
+  }
+  function renderMatrix(subs){
+    const box=document.getElementById('mxTable'),hint=document.getElementById('mxHint');if(!box)return;
+    const F=(window.DAOU_DATA&&window.DAOU_DATA.report&&window.DAOU_DATA.report.facts)||[];
+    const lo=state.start,hi=state.end,acc={};
+    F.forEach(r=>{if(subs.indexOf(r.svc)<0||(lo&&r.d<lo)||(hi&&r.d>hi))return;
+      const m=acc[r.media]||(acc[r.media]={});
+      const a=m[r.ct]||(m[r.ct]={media:r.media,ct:r.ct,imp:0,click:0,cost:0,signup:0});
+      a.imp+=+r.imp||0;a.click+=+r.click||0;a.cost+=+r.cost||0;a.signup+=+r.signup||0});
+    const rows=[];Object.keys(acc).forEach(m=>Object.keys(acc[m]).forEach(c=>{const a=acc[m][c];if(a.cost>0||a.imp>0)rows.push(a)}));
+    // 예산은 잡혀 있는데 이 기간에 집행이 없던 유형(예: 캠페인성 동영상)도 한 줄로 보여준다.
+    // 안 보여주면 '예산 합계'가 집행한 유형만 더한 값이 돼 소진율을 잘못 읽게 된다.
+    const BG0=mxBudgets();
+    Object.keys(BG0).forEach(k=>{const i=k.indexOf(' \u00b7 ');if(i<0||!(+BG0[k]>0))return;
+      const m=k.slice(0,i),c=k.slice(i+3);if(acc[m]&&acc[m][c])return;
+      rows.push({media:m,ct:c,imp:0,click:0,cost:0,signup:0})});
+    if(!rows.length){box.innerHTML='<div style="padding:16px 2px;font-size:12.5px;color:var(--muted)">이 기간에는 집계된 매체·유형 데이터가 없습니다.</div>';if(hint)hint.textContent='';return}
+    const mi=m=>{const i=MXORDER.indexOf(m);return i<0?99:i};
+    rows.sort((a,b)=>mi(a.media)-mi(b.media)||(a.media<b.media?-1:a.media>b.media?1:0)||b.cost-a.cost);
+    // 예산은 월 단위로 잡지만 조회 기간은 자유(어제·7일·전체…)다. 월예산을 그대로 나누면
+    // '전체 365일' 에서 소진율이 1,000% 로 찍혀 의미가 없다 → 기간 일수만큼 환산해서 비교한다.
+    const nDay=(lo&&hi)?Math.round((new Date(hi)-new Date(lo))/864e5)+1:30;
+    const bScale=nDay/30.4167;
+    const BG=BG0,nf=v=>Math.round(v).toLocaleString('ko-KR');
+    const p2=(n,d)=>d>0?(n/d*100).toFixed(2)+'%':'–';
+    const rt=(n,d)=>d>0?'₩'+nf(n/d):'–';
+    const esc=v=>String(v).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+    const usep=p=>p==null?'<span class="na">–</span>':'<b style="color:'+(p>100?'var(--danger)':p>90?'var(--warning)':'var(--success)')+'">'+p.toFixed(1)+'%</b>';
+    const cnt={};rows.forEach(a=>cnt[a.media]=(cnt[a.media]||0)+1);
+    const T={imp:0,click:0,cost:0,signup:0,bud:0};let body='',prev=null,hasBud=false;
+    rows.forEach(a=>{
+      const first=a.media!==prev;prev=a.media;
+      const bud=Math.round((+BG[a.media+' · '+a.ct]||0)*bScale/1e4)*1e4;if(bud>0)hasBud=true;
+      T.imp+=a.imp;T.click+=a.click;T.cost+=a.cost;T.signup+=a.signup;T.bud+=bud;
+      body+='<tr'+(first?' class="g0"':'')+'>'
+        +(first?'<td class="m" rowspan="'+cnt[a.media]+'"><span class="mdot" style="background:'+(MXCOL[a.media]||COL.muted)+'"></span>'+esc(a.media)+'</td>':'')
+        +'<td>'+esc(a.ct)+'</td>'
+        +'<td class="r">'+nf(a.imp)+'</td><td class="r">'+nf(a.click)+'</td>'
+        +'<td class="r">'+p2(a.click,a.imp)+'</td><td class="r">'+rt(a.cost,a.click)+'</td>'
+        +'<td class="r">₩'+nf(a.cost)+'</td><td class="r">'+nf(a.signup)+'</td>'
+        +'<td class="r">'+p2(a.signup,a.click)+'</td><td class="r">'+rt(a.cost,a.signup)+'</td>'
+        +'<td class="r'+(bud>0?'':' na')+'">'+(bud>0?'₩'+nf(bud):'–')+'</td>'
+        +'<td class="r">'+usep(bud>0?a.cost/bud*100:null)+'</td></tr>'});
+    body+='<tr class="tot"><td class="m">총합계</td><td></td>'
+      +'<td class="r">'+nf(T.imp)+'</td><td class="r">'+nf(T.click)+'</td>'
+      +'<td class="r">'+p2(T.click,T.imp)+'</td><td class="r">'+rt(T.cost,T.click)+'</td>'
+      +'<td class="r">₩'+nf(T.cost)+'</td><td class="r">'+nf(T.signup)+'</td>'
+      +'<td class="r">'+p2(T.signup,T.click)+'</td><td class="r">'+rt(T.cost,T.signup)+'</td>'
+      +'<td class="r'+(T.bud>0?'':' na')+'">'+(T.bud>0?'₩'+nf(T.bud):'–')+'</td>'
+      +'<td class="r">'+usep(T.bud>0?T.cost/T.bud*100:null)+'</td></tr>';
+    box.innerHTML='<table><thead><tr><th>매체</th><th>캠페인 유형</th><th class="r">노출</th><th class="r">클릭</th>'
+      +'<th class="r">CTR</th><th class="r">CPC</th><th class="r">광고비</th><th class="r">가입전환</th>'
+      +'<th class="r">가입율</th><th class="r">CPA</th><th class="r">예산</th><th class="r">소진율</th></tr></thead>'
+      +'<tbody>'+body+'</tbody></table>';
+    if(hint)hint.textContent=periodText()+(hasBud?' · 예산 = 월 예산 × '+nDay+'일/30.4 · 소진율 = 광고비 ÷ 예산':' · 예산 관리에서 매체·유형별 월 예산을 넣으면 소진율이 채워집니다');
+  }
+  function render(){mergeBrands();ensureRange();buildDates(365);viewN=fullDates.length||365;const subs=currentSubs();const agg=aggregate(subs,viewN,state.start,state.end),coverage='';const rs=document.getElementById('repStart'),re=document.getElementById('repEnd');if(rs){rs.value=state.start;rs.classList.toggle('set',!!state.start)}if(re){re.value=state.end;re.classList.toggle('set',!!state.end)}document.querySelectorAll('#repPresets [data-rp]').forEach(b=>b.classList.toggle('on',b.dataset.rp===state.preset));document.getElementById('repTitle').textContent=state.sub==="전체"?`${state.group} 광고 리포트`:`${state.sub}`;document.getElementById('repSub').textContent=`${GROUP_SUBS[state.group].join(" · ")} · 전체데이터 ${viewN}일 (${periodText()})`;document.getElementById('trendHint').textContent=periodText()+coverage;renderTabs();renderPills();renderKPIs(agg);drawLine(agg);drawDonut(agg);drawBar(agg);renderMatrix(subs);buildComment(state.group,agg);renderAction(subs,agg,viewN);renderTable()}
   // 기간 프리셋 — 데이터의 마지막 날짜를 '어제'(최신 집계일)로 보고 계산한다.
   function setPreset(k){const ds=allDates();if(!ds.length)return;const lo=ds[0],hi=ds[ds.length-1];let s,e;
     if(k==='yday'){s=e=hi;}
@@ -1271,8 +1359,8 @@ const DUCustom=(function(){
 
 /* ===================== 예산 관리 ===================== */
 const DUBudget=(function(){
-  var MEDIA=['네이버','구글','메타'];
-  var MCOL={'네이버':COL.naver,'구글':COL.google,'메타':COL.meta};
+  var MEDIA=['네이버','구글','메타','타불라','사람인'];
+  var MCOL={'네이버':COL.naver,'구글':COL.google,'메타':COL.meta,'타불라':COL.taboola,'사람인':COL.saramin};
   var LS='daouhub_budget_v2';
   var budgets={};try{budgets=JSON.parse(localStorage.getItem(LS)||'{}')||{}}catch(e){}
   var brand=null,dim='media',editing=false;
@@ -1289,7 +1377,10 @@ const DUBudget=(function(){
   function keyOf(f){return dim==='media'?f.media:(f.media+' · '+f.ct)}
   function mediaOf(k){return dim==='media'?k:k.split(' · ')[0]}
   function bmap(br){budgets[br]=budgets[br]||{};budgets[br][dim]=budgets[br][dim]||{};return budgets[br][dim]}
-  function bget(br,k){return (+bmap(br)[k])||0}
+  // data.json 의 계획 예산을 기본값으로. 사용자가 입력해 저장한 값이 있으면 그게 우선.
+  function bdef(br){var D=window.DAOU_DATA&&window.DAOU_DATA.report&&window.DAOU_DATA.report.budgets;
+    return ((D&&D[br])||{})[dim]||{}}
+  function bget(br,k){var v=bmap(br)[k];if(v===undefined||v===null||v==='')v=bdef(br)[k];return (+v)||0}
   function bset(br,k,v){bmap(br)[k]=v;try{localStorage.setItem(LS,JSON.stringify(budgets))}catch(e){}}
   function won(n){return Math.round(n||0).toLocaleString('ko-KR')}
   function pctc(p){return p>100?COL.danger:p>90?COL.warning:p>70?(COL.c3||COL.warning):COL.success}
@@ -1300,7 +1391,7 @@ const DUBudget=(function(){
     F.forEach(function(f){if(!m(f)||f.d.slice(0,7)!==ym)return;var k=keyOf(f);present[k]=1;dset[f.d]=1;
       byK[k]=(byK[k]||0)+(f.cost||0);(byDate[f.d]=byDate[f.d]||{});byDate[f.d][k]=(byDate[f.d][k]||0)+(f.cost||0);});
     // 예산만 있고 소진 없는 항목도 표시
-    Object.keys(bmap(id)).forEach(function(k){if(bget(id,k)>0)present[k]=1});
+    Object.keys(bmap(id)).concat(Object.keys(bdef(id))).forEach(function(k){if(bget(id,k)>0)present[k]=1});
     var items;
     if(dim==='media'){items=MEDIA.filter(function(m){return present[m]});if(!items.length)items=['네이버','구글']}
     else{items=Object.keys(present).sort(function(a,b){return (byK[b]||0)-(byK[a]||0)})}

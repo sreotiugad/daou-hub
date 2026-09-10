@@ -15,7 +15,7 @@
 실행:  cd pipeline && python demo_data.py      (repo 루트 data.json 을 덮어씀)
 실데이터로 복귀: .github/workflows/daily-data.yml 의 schedule 주석 해제 후 mode=real 실행.
 """
-import os, json, math, random
+import os, json, math, random, zlib
 from datetime import date, timedelta
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -169,10 +169,30 @@ def main():
                     seed=rnd.random(),
                 ))
 
+    # 1-b) 매체·유형별 월 예산(계획). 리포트 교차표의 '예산·소진율' 칸과 '예산 관리' 초기값.
+    #      plan 의 daily 에는 주말 보정(/0.945)이 들어가 있으므로 되돌린 뒤 한 달(=DAYS/12일)
+    #      길이를 곱해 만원 단위로 정리한다 → 서비스 예산 합이 SVC_PLAN 의 월예산과 일치한다.
+    #      실제 소진은 요일·노이즈로 흔들리므로 소진율이 90~105% 근처에 자연스럽게 형성된다.
+    budgets = {}
+
+    def _bacc(eid, dim, key, v):
+        budgets.setdefault(eid, {}).setdefault(dim, {})
+        budgets[eid][dim][key] = budgets[eid][dim].get(key, 0) + v
+
+    for p in plan:
+        mv = int(round(p["daily"] * 0.945 * DAYS / 12.0 / 10000.0)) * 10000     # 만원 단위
+        if mv <= 0:
+            continue
+        for eid in ("g:" + p["grp"], "s:" + p["svc"]):
+            _bacc(eid, "media", p["media"], mv)
+            _bacc(eid, "type", p["media"] + " · " + p["ct"], mv)
+
     # 2) 일자별 팩트 생성
     facts = []
     for p in plan:
-        r2 = random.Random(hash(p["cmp"]) & 0xFFFFFFFF)
+        # str.hash 는 프로세스마다 달라진다(PYTHONHASHSEED) → 실행할 때마다 데이터가 바뀌었다.
+        # crc32 는 값이 고정이라 같은 코드면 항상 같은 data.json 이 나온다(= 재현 가능).
+        r2 = random.Random(zlib.crc32(p["cmp"].encode("utf-8")))
         # 구간 집행 캠페인은 연중 2~3개 구간에서만 노출
         windows = []
         if p["burst"]:
@@ -246,7 +266,7 @@ def main():
         "source": "sample",
         "generated_at": date.today().isoformat(),
         "period": {"start": dates[0], "end": dates[-1], "days": DAYS, "dates": dates},
-        "report": {"brands": brands, "subs": subs, "facts": facts},
+        "report": {"brands": brands, "subs": subs, "facts": facts, "budgets": budgets},
         "keyword": old.get("keyword", {}),
         "meta": {"live_report": False, "live_keyword": False,
                  "present_subs": list(subs.keys()),
