@@ -842,7 +842,7 @@
 
 <button id="duChatBtn" title="AI 분석 어시스턴트"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>AI 분석</button>
 <div id="duChat" role="dialog" aria-label="AI 분석 어시스턴트">
-  <div class="dc-h"><span class="dc-ava"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 4.5L18.5 9l-4.6 1.5L12 15l-1.9-4.5L5.5 9l4.6-1.5z"/><circle cx="18" cy="18" r="2.4"/></svg></span><div><div class="t">AI 분석 어시스턴트</div><div class="s" id="dcMeta">Claude · 선택 화면 데이터 기반</div></div><button class="x" id="dcReset" title="새 대화" style="margin-left:auto"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></button><button class="x" id="dcClose" title="닫기" style="margin-left:0">✕</button></div>
+  <div class="dc-h"><span class="dc-ava"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 4.5L18.5 9l-4.6 1.5L12 15l-1.9-4.5L5.5 9l4.6-1.5z"/><circle cx="18" cy="18" r="2.4"/></svg></span><div><div class="t">AI 분석 어시스턴트</div><div class="s" id="dcMeta">실제 광고 데이터 기반 분석</div></div><button class="x" id="dcReset" title="새 대화" style="margin-left:auto"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></button><button class="x" id="dcClose" title="닫기" style="margin-left:0">✕</button></div>
   <div class="dc-body" id="dcBody"></div>
   <div class="dc-sug" id="dcSug"></div>
   <div class="dc-in"><textarea id="dcInput" placeholder="예: 사방넷 최근 성과 어때?" rows="1"></textarea><button id="dcSend">전송</button></div>
@@ -938,7 +938,7 @@ const DUReport=(function(){
     const topCt=CT_ORDER.map(k=>[k,agg.ct[k]||0]).sort((a,b)=>b[1]-a[1])[0];
     const mt=Object.keys(agg.media).filter(k=>agg.media[k]>0).sort((a,b)=>agg.media[b]-agg.media[a]);
     const mediaTxt=mt.map(k=>k+' '+(agg.tCost?agg.media[k]/agg.tCost*100:0).toFixed(0)+'%').join(' · ');
-    const head=`<div class="ci"><span class="ico">${ic('trend',COL.primary,15)}</span><div><b>AI 성과 진단</b> <em>${group} · Claude</em></div></div>`;
+    const head=`<div class="ci"><span class="ico">${ic('trend',COL.primary,15)}</span><div><b>AI 성과 진단</b> <em>${group}</em></div></div>`;
     // 결정론적 폴백(AI 키 없음·호출 실패 시): 기존 계산식 3줄 요약
     const fallback=()=>{const dc=agg.d.cpa,dsg=agg.d.signup;const cpaGood=dc!=null&&dc<0;const cpaTxt=dc==null?`CPA <b class="hl">${cpaF(agg.cpa)}</b> · 직전 비교 데이터 없음`:cpaGood?`CPA <b class="hl">${Math.abs(dc).toFixed(1)}% 개선</b>`:`CPA ${dc.toFixed(1)}% 상승`;const sTxt=dsg==null?`가입 <b class="hl">${comma(agg.tSign)}건</b>`:dsg>0?`가입 <b class="hl">${dsg.toFixed(1)}% 증가</b>`:`가입 ${Math.abs(dsg).toFixed(1)}% 감소`;const items=[[cpaGood?'check':'alert',cpaGood?COL.success:COL.warning,`직전 대비 ${cpaTxt}. 현재 CPA <b class="hl">${cpaF(agg.cpa)}</b>.`],['trend',COL.primary,`광고비 <b class="hl">${won(agg.tCost)}</b>, ${sTxt} · 총 <b class="hl">${comma(agg.tSign)}건</b>.`],['target',COL.accent,`<b class="hl">${topCt[0]}</b> 비중 1위(${(topCt[1]/(agg.tCost||1)*100).toFixed(0)}%) · ${mediaTxt}.`]];box.innerHTML=`<div class="ci"><span class="ico">${ic('trend',COL.primary,15)}</span><div><b>자동 성과 요약</b> <em>${group} · 계산식</em></div></div><ul>${items.map(it=>`<li><span class="k">${ic(it[0],it[1],15)}</span><span>${it[2]}</span></li>`).join('')}</ul>`;};
     // 지표 컨텍스트(실수치, CPA=CPC÷CVR 분해까지 넘겨 원인 지목하게)
@@ -2026,7 +2026,7 @@ const DUComp=(function(){
 
 /* ── AI 분석 어시스턴트(챗봇) ── 우리 광고 실데이터를 컨텍스트로 Claude 에게 질의 */
 (function(){
-  var open=false,busy=false,hist=[],scope=null,AI_LS='daouhub_ai_usage_v1';
+  var open=false,busy=false,hist=[],scope=null;
   var SUG=['이번 기간 실적 요약해줘','성과가 가장 좋은 브랜드는?','CPA 높은 브랜드랑 개선안 알려줘','최근 광고비 늘어난 브랜드 있어?'];
   function el(id){return document.getElementById(id)}
   function sum(a){return (a||[]).reduce(function(x,y){return x+(+y||0)},0)}
@@ -2052,9 +2052,6 @@ const DUComp=(function(){
     });
     return L.join('\n');
   }
-  function usageState(){try{return JSON.parse(localStorage.getItem(AI_LS)||'{}')||{}}catch(_){return{}}}
-  function updateMeta(){var u=usageState(),n=(u.input_tokens||0)+(u.output_tokens||0)+(u.cache_creation_input_tokens||0)+(u.cache_read_input_tokens||0);el('dcMeta').textContent='Claude · '+(u.calls||0)+'회 · 누적 '+n.toLocaleString()+' tokens'}
-  function trackUsage(u){if(!u)return;var s=usageState();s.calls=(s.calls||0)+1;['input_tokens','output_tokens','cache_creation_input_tokens','cache_read_input_tokens'].forEach(function(k){s[k]=(s[k]||0)+(+u[k]||0)});s.model=u.model||s.model;s.updated_at=new Date().toISOString();try{localStorage.setItem(AI_LS,JSON.stringify(s))}catch(_){}updateMeta()}
   function mdEsc(s){return String(s==null?'':s).replace(/[&<>]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;'}[c]})}
   function md(t){t=mdEsc(t);
     t=t.replace(/`([^`]+)`/g,'<code>$1</code>');
@@ -2076,7 +2073,7 @@ const DUComp=(function(){
     add('user',q);hist.push({role:'user',content:q});busy=true;el('dcSend').disabled=true;typing(true);
     fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:hist.slice(-10),context:ctx()})})
       .then(function(r){return r.json()}).then(function(j){typing(false);
-        if(j&&j.reply){add('assistant',j.reply);hist.push({role:'assistant',content:j.reply});trackUsage(j.usage)}
+        if(j&&j.reply){add('assistant',j.reply);hist.push({role:'assistant',content:j.reply})}
         else{add('err',(j&&j.error)||'응답을 받지 못했어요.')}
       }).catch(function(){typing(false);add('err','네트워크 오류로 답을 못 받았어요.')})
       .then(function(){busy=false;el('dcSend').disabled=false});
@@ -2094,7 +2091,6 @@ const DUComp=(function(){
   var rb=el('dcReset');if(rb)rb.addEventListener('click',reset);
   el('dcSend').addEventListener('click',function(){send()});
   el('dcInput').addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}});
-  updateMeta();
   window.DUChat={open:function(q,nextScope){scope=nextScope||null;toggle(true);if(q)setTimeout(function(){send(q)},80)}};
 })();
 </script>
