@@ -581,7 +581,7 @@
 <main id="v-home" class="view home">
   <div class="mk">D</div>
   <h1>Daou Hub</h1>
-  <p class="sub">사방넷 · 애드콘 · 다우오피스 광고 성과 · 경쟁 분석</p>
+  <p class="sub">사방넷 · 뿌리오 · 다우오피스 · 애드콘 · 애드웰 광고 성과 · 경쟁 분석</p>
   <div class="home-search">
     <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
     <input id="homeSearch" placeholder="키워드로 검색량·경쟁 분석 (예: 그룹웨어)">
@@ -590,8 +590,10 @@
   <div class="home-chips">
     <span class="lab">브랜드 리포트</span>
     <button data-brand="사방넷" style="--cc:var(--sabang)"><span class="d"></span>사방넷</button>
-    <button data-brand="애드콘" style="--cc:var(--adcon)"><span class="d"></span>애드콘</button>
+    <button data-brand="뿌리오" style="--cc:#B45309"><span class="d"></span>뿌리오</button>
     <button data-brand="다우오피스" style="--cc:var(--daou)"><span class="d"></span>다우오피스</button>
+    <button data-brand="애드콘" style="--cc:var(--adcon)"><span class="d"></span>애드콘</button>
+    <button data-brand="애드웰" style="--cc:#0369A1"><span class="d"></span>애드웰</button>
   </div>
   <div class="home-two">
     <button data-go="report">
@@ -928,7 +930,10 @@ const DUReport=(function(){
       if(!GROUPS.some(function(x){return x.key===g}))GROUPS.push({key:g});
       if(!GCOLOR[g])GCOLOR[g]=pal[(GROUPS.length-1)%pal.length];});
     Object.keys(subs).forEach(function(n){if(!SUBS[n]){var s=subs[n]||{};
-      SUBS[n]={group:s.group||'',cost:100000,cpa:9000,cpc:600,ctr:.034,mo:0,media:s.media||{네이버:.6,구글:.4},ct:s.ct||{}};}});}
+      SUBS[n]={group:s.group||'',cost:100000,cpa:9000,cpc:600,ctr:.034,mo:0,media:s.media||{네이버:.6,구글:.4},ct:s.ct||{}};}});
+    // 브랜드 탭·순서 고정(홈 바로가기와 동일). 목록에 없는 브랜드는 뒤로.
+    var ORD=["사방넷","뿌리오","다우오피스","애드콘","애드웰"];
+    GROUPS.sort(function(a,b){var i=ORD.indexOf(a.key),j=ORD.indexOf(b.key);return (i<0?99:i)-(j<0?99:j);});}
   function render(){mergeBrands();ensureRange();buildDates(365);viewN=fullDates.length||365;const subs=currentSubs();const agg=aggregate(subs,viewN,state.start,state.end),coverage='';const rs=document.getElementById('repStart'),re=document.getElementById('repEnd');if(rs){rs.value=state.start;rs.classList.toggle('set',!!state.start)}if(re){re.value=state.end;re.classList.toggle('set',!!state.end)}document.getElementById('repTitle').textContent=state.sub==="전체"?`${state.group} 광고 리포트`:`${state.sub}`;document.getElementById('repSub').textContent=`${GROUP_SUBS[state.group].join(" · ")} · 전체데이터 ${viewN}일 (${periodText()})`;document.getElementById('trendHint').textContent=periodText()+coverage;renderTabs();renderPills();renderKPIs(agg);drawLine(agg);drawDonut(agg);drawBar(agg);buildComment(state.group,agg);renderAction(subs,agg,viewN);renderTable()}
   document.getElementById('repStart').addEventListener('change',e=>{state.start=e.target.value;render()});
   document.getElementById('repEnd').addEventListener('change',e=>{state.end=e.target.value;render()});
