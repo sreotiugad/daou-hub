@@ -34,16 +34,22 @@ PFX = {"네이버": "NV", "구글": "GG", "메타": "MT"}
 ADG_CT = {"파워링크", "브랜드검색", "쇼핑검색", "구글검색"}
 RANK_CT = {"파워링크", "브랜드검색", "쇼핑검색"}          # 평균노출순위는 네이버 검색 지표
 
-# 유형별 단가·효율 (cpc원, ctr, cvr) — 실제 감각에 맞춘 범위
+# 유형별 클릭단가·클릭률 범위 (cpc원, ctr)
 CT_PERF = {
-    "브랜드검색": ((140, 240),  (.075, .115), (.055, .085)),
-    "파워링크":   ((480, 900),  (.030, .052), (.022, .042)),
-    "쇼핑검색":   ((280, 520),  (.012, .022), (.012, .024)),
-    "구글검색":   ((520, 980),  (.042, .068), (.020, .038)),
-    "실적최대화": ((320, 620),  (.008, .016), (.015, .030)),
-    "GDN":       ((90, 210),   (.0035, .0075), (.0030, .0080)),
-    "동영상":     ((60, 150),   (.0035, .0080), (.0020, .0060)),
-    "디스플레이": ((240, 520),  (.009, .018), (.008, .018)),
+    "브랜드검색": ((140, 240),  (.075, .115)),
+    "파워링크":   ((480, 900),  (.030, .052)),
+    "쇼핑검색":   ((280, 520),  (.012, .022)),
+    "구글검색":   ((520, 980),  (.042, .068)),
+    "실적최대화": ((320, 620),  (.008, .016)),
+    "GDN":       ((90, 210),   (.0035, .0075)),
+    "동영상":     ((60, 150),   (.0035, .0080)),
+    "디스플레이": ((240, 520),  (.009, .018)),
+}
+# 유형별 CPA 배수 — 브랜드검색은 싸게 먹히고 GDN·동영상은 비싸다(인지 목적).
+# 서비스 단위 CPA가 목표값에 정확히 맞도록 아래에서 정규화한다.
+CT_CPA_MULT = {
+    "브랜드검색": .55, "파워링크": .95, "쇼핑검색": 1.20, "구글검색": 1.00,
+    "실적최대화": 1.15, "GDN": 2.30, "동영상": 2.80, "디스플레이": 1.70,
 }
 # 매체 안에서의 유형 비중(기본값) — 서비스별로 약간씩 흔들어 쓴다.
 CT_MIX = {
@@ -52,15 +58,27 @@ CT_MIX = {
     "메타":   {"디스플레이": 1.0},
 }
 BRANDS = {
-    "사방넷":     [("사방넷", .50), ("사방넷미니", .30), ("풀필먼트", .20)],
-    "뿌리오":     [("뿌리오", .45), ("반값문자", .22), ("알뜰문자", .18), ("문자매니아", .15)],
-    "다우오피스": [("다우오피스", .68), ("다우오피스HR", .32)],
-    "애드콘":     [("애드콘", .70), ("엔팩스", .30)],
-    "애드웰":     [("애드웰", 1.0)],
+    "사방넷":     ["사방넷", "사방넷미니", "풀필먼트"],
+    "뿌리오":     ["뿌리오", "반값문자", "알뜰문자", "문자매니아"],
+    "다우오피스": ["다우오피스", "다우오피스HR"],
+    "애드콘":     ["애드콘", "엔팩스"],
+    "애드웰":     ["애드웰"],
 }
-BRAND_BUDGET = {   # 365일 총 광고비(원) — 기존 합성본의 브랜드 비중을 유지
-    "뿌리오": 519_000_000, "사방넷": 307_000_000, "애드콘": 195_000_000,
-    "다우오피스": 146_000_000, "애드웰": 143_000_000,
+# 서비스별 (월 광고비 원, 목표 CPA 원) — 실제 운영 규모 기준.
+#   ※ 뿌리오 계열·엔팩스·애드웰 CPA 는 추정값(운영자 확인 필요).
+SVC_PLAN = {
+    "사방넷":       (80_000_000, 300_000),
+    "사방넷미니":   (20_000_000, 240_000),
+    "풀필먼트":     (14_000_000, 380_000),
+    "뿌리오":       (36_000_000,  30_000),
+    "반값문자":     (20_000_000,  25_000),
+    "알뜰문자":     (16_000_000,  28_000),
+    "문자매니아":   ( 8_000_000,  35_000),
+    "다우오피스":   (60_000_000, 300_000),
+    "다우오피스HR": (20_000_000, 360_000),
+    "애드콘":       (20_000_000,   8_000),
+    "엔팩스":       ( 1_200_000,  60_000),
+    "애드웰":       (10_000_000, 150_000),
 }
 # 서비스별 매체 비중 · 월추세(mo: +면 우상향)
 SVC_MEDIA = {
@@ -77,15 +95,6 @@ SVC_MEDIA = {
     "엔팩스": ({"네이버": .62, "구글": .30, "메타": .08}, .05),
     "애드웰": ({"네이버": .40, "구글": .45, "메타": .15}, .30),
 }
-# 서비스별 전환효율 계수(=CPA 조절). B2C 쿠폰(애드콘)은 전환이 잘 되고,
-# B2B 그룹웨어(다우오피스)는 검토 기간이 길어 CPA가 높다 — 실제 감각을 반영.
-SVC_CVR = {
-    "애드콘": 1.88, "엔팩스": 1.50,
-    "뿌리오": 1.33, "반값문자": 1.40, "알뜰문자": 1.30, "문자매니아": 1.25,
-    "사방넷": 1.13, "사방넷미니": 1.25, "풀필먼트": 0.94,
-    "다우오피스": 0.83, "다우오피스HR": 0.75,
-    "애드웰": 1.02,
-}
 ADG_WORDS = ["일반", "브랜드", "경쟁사", "프로모션", "롱테일"]
 
 
@@ -95,39 +104,48 @@ def main():
     dates = [(end - timedelta(days=DAYS - 1 - i)).isoformat() for i in range(DAYS)]
 
     # 1) 캠페인 설계: (서비스, 매체, 유형) → 캠페인 1개(+광고그룹 몇 개)
-    plan = []          # {svc,grp,media,ct,cmp,adgs,daily,perf,active}
+    #    월예산을 매체→유형으로 쪼개고, 목표 CPA 는 유형별 배수로 배분한다.
+    #    배수를 그대로 쓰면 서비스 CPA 가 목표에서 밀리므로 조화평균으로 정규화(scale)해
+    #    서비스 단위 CPA 가 목표값에 정확히 수렴하게 만든다.
+    plan = []
     seq = 0
     for grp, subs in BRANDS.items():
-        for svc, share in subs:
-            budget = BRAND_BUDGET[grp] * share
+        for svc in subs:
+            monthly, cpa_target = SVC_PLAN[svc]
+            # /0.945 = 주말 감소(2/7일 ×0.86)로 평균이 낮아지는 만큼 보정 → 월예산이 목표에 맞음
+            daily_total = monthly * 12.0 / DAYS / 0.945
             mmix, mo = SVC_MEDIA[svc]
+            combos = []                     # (media, ct, daily, mult)
             for media, mshare in mmix.items():
-                mix = dict(CT_MIX[media])
-                # 서비스마다 유형 비중을 ±20% 흔들어 서로 다른 구성이 되게
-                mix = {k: v * (0.8 + 0.4 * rnd.random()) for k, v in mix.items()}
+                mix = {k: v * (0.8 + 0.4 * rnd.random()) for k, v in CT_MIX[media].items()}
                 tot = sum(mix.values())
                 for ct, cshare in mix.items():
-                    daily = budget * mshare * (cshare / tot) / DAYS
-                    if daily < 9000:      # 너무 작은 조합은 아예 집행 안 한 것으로
+                    daily = daily_total * mshare * (cshare / tot)
+                    if daily < 600:         # 너무 작은 조합은 아예 집행 안 한 것으로
                         continue
-                    seq += 1
-                    cpcR, ctrR, cvrR = CT_PERF[ct]
-                    U = lambda a, b: a + (b - a) * rnd.random()
-                    adgs = []
-                    if ct in ADG_CT:
-                        n = 2 if ct in ("파워링크", "구글검색") else 1   # 주력 검색만 광고그룹 2개
-                        picks = rnd.sample(ADG_WORDS, n)
-                        for w in picks:
-                            adgs.append("%s_%s_%s" % (svc, rnd.choice(["PC", "MO"]), w))
-                    plan.append(dict(
-                        svc=svc, grp=grp, media=media, ct=ct,
-                        cmp="%s_%s_%s_%02d" % (PFX[media], svc, ct, seq),
-                        adgs=adgs or [""], daily=daily, mo=mo,
-                        cpc=U(*cpcR), ctr=U(*ctrR), cvr=U(*cvrR) * SVC_CVR.get(svc, 1.0),
-                        # 유튜브(동영상)는 캠페인성 구간 집행, GDN은 리타게팅으로 상시 집행
-                        burst=(ct == "동영상"),
-                        seed=rnd.random(),
-                    ))
+                    combos.append((media, ct, daily, CT_CPA_MULT[ct]))
+            spend = sum(c[2] for c in combos) or 1.0
+            # scale = 1/Σ(share/mult) 의 역수 관계 → signup_i = cost_i/(CPA·mult_i·scale)
+            scale = sum((c[2] / spend) / c[3] for c in combos) or 1.0
+            for media, ct, daily, mult in combos:
+                seq += 1
+                cpcR, ctrR = CT_PERF[ct]
+                U = lambda a, b: a + (b - a) * rnd.random()
+                adgs = []
+                if ct in ADG_CT:
+                    n = 2 if ct in ("파워링크", "구글검색") else 1   # 주력 검색만 광고그룹 2개
+                    for w in rnd.sample(ADG_WORDS, n):
+                        adgs.append("%s_%s_%s" % (svc, rnd.choice(["PC", "MO"]), w))
+                plan.append(dict(
+                    svc=svc, grp=grp, media=media, ct=ct,
+                    cmp="%s_%s_%s_%02d" % (PFX[media], svc, ct, seq),
+                    adgs=adgs or [""], daily=daily, mo=mo,
+                    cpc=U(*cpcR), ctr=U(*ctrR),
+                    cpa=cpa_target * mult * scale,      # 이 캠페인의 목표 CPA
+                    # 유튜브(동영상)는 캠페인성 구간 집행, GDN은 리타게팅으로 상시 집행
+                    burst=(ct == "동영상"),
+                    seed=rnd.random(),
+                ))
 
     # 2) 일자별 팩트 생성
     facts = []
@@ -152,8 +170,8 @@ def main():
             cost_day = p["daily"] * trend * wk * seas * noise
             if cost_day < 500:
                 continue
-            # 최근 30일은 전환효율이 소폭 개선(증감 지표가 의미 있게 보이도록)
-            cvr = p["cvr"] * (1.10 if i >= DAYS - 30 else 1.0)
+            # 최근 30일은 효율이 소폭 개선(증감 지표가 의미 있게 보이도록) → CPA 하락
+            cpa = p["cpa"] * (0.92 if i >= DAYS - 30 else 1.0) * (.90 + .20 * r2.random())
             for j, adg in enumerate(p["adgs"]):
                 w = (1.0 / nadg) * (0.75 + 0.5 * r2.random()) if nadg > 1 else 1.0
                 cost = cost_day * w
@@ -161,7 +179,7 @@ def main():
                     continue
                 click = cost / p["cpc"]
                 imp = click / p["ctr"]
-                signup = click * cvr
+                signup = cost / cpa
                 f = {"d": d, "svc": p["svc"], "grp": p["grp"], "media": p["media"],
                      "ct": p["ct"], "cmp": p["cmp"], "adg": adg, "ad": "",
                      "imp": int(round(imp)), "click": int(round(click)),
@@ -195,7 +213,7 @@ def main():
         tc = sum(ctset[svc].values()) or 1
         s["ct"] = {k: round(v / tc, 4) for k, v in sorted(ctset[svc].items(), key=lambda x: -x[1])}
 
-    brands = {g: {"subs": [n for n, _ in sl if n in subs]} for g, sl in BRANDS.items()}
+    brands = {g: {"subs": [n for n in sl if n in subs]} for g, sl in BRANDS.items()}
 
     old = {}
     if os.path.exists(OUT):
