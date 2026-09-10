@@ -138,6 +138,8 @@
   .r-ai{margin-bottom:14px}                    /* AI 성과 진단 = 전체 폭(짧은 차트와 안 엮이게) */
   .r-ai .ai-diag{max-width:1060px}             /* 전체 폭에서 줄이 너무 길지 않게 가독 폭 제한 */
   @media(max-width:900px){.r-mid{grid-template-columns:1fr}}
+  .rp-set{display:inline-flex;gap:4px;flex-wrap:wrap}
+  .rp-set .cx-mini.on{background:var(--primary);color:var(--primary-fg);border-color:var(--primary)}
   .donut-wrap{display:flex;justify-content:center;padding-top:6px}
 
   .bname{display:flex;align-items:center;gap:9px}
@@ -617,7 +619,7 @@
       <div class="seg" id="reportMode"><button data-rmode="summary" class="on">요약</button><button data-rmode="builder">보고서 제작</button></div>
       <button id="repAi" class="kw-btn" title="이 화면을 AI가 분석"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 4.5L18.5 9l-4.6 1.5L12 15l-1.9-4.5L5.5 9l4.6-1.5z"/><circle cx="18" cy="18" r="2.4"/></svg>AI 분석</button>
       <button id="repRaw" class="kw-btn" title="지금 보고 있는 그룹·기간의 RAW 데이터를 CSV로 내려받기"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16"/></svg>RAW CSV</button>
-      <div class="cx-gran report-range" id="reportRange"><span style="font-size:12px;color:var(--muted)">기간</span><input type="date" id="repStart" class="cx-date"><span style="color:var(--muted)">~</span><input type="date" id="repEnd" class="cx-date"><button id="repAll" class="cx-mini" title="전체 기간">전체</button></div>
+      <div class="cx-gran report-range" id="reportRange"><span style="font-size:12px;color:var(--muted)">기간</span><input type="date" id="repStart" class="cx-date"><span style="color:var(--muted)">~</span><input type="date" id="repEnd" class="cx-date"><span class="rp-set" id="repPresets"><button class="cx-mini" data-rp="yday">어제</button><button class="cx-mini" data-rp="7">7일</button><button class="cx-mini" data-rp="30">30일</button><button class="cx-mini" data-rp="mtd">이번달</button><button class="cx-mini" data-rp="prev">전달</button><button class="cx-mini" data-rp="all" id="repAll">전체</button></span></div>
     </div>
   </div>
   <div class="tabbar" id="tabbar"></div>
@@ -835,9 +837,13 @@ const DUReport=(function(){
     "다우오피스HR":{group:"다우오피스",cost:372000,cpa:13300,cpc:720,ctr:.031,mo:-.5,media:{네이버:.64,구글:.36},ct:{브랜드검색:.12,파워링크:.28,쇼핑검색:.02,구글검색:.30,실적최대화:.20,동영상:.08}},
   };
   const GROUP_SUBS={"사방넷":["사방넷","사방넷미니","풀필먼트"],"애드콘":["애드콘","엔팩스"],"다우오피스":["다우오피스","다우오피스HR"]};
-  let state={group:"사방넷",sub:"전체",start:"",end:""},viewN=30,fullDates=[],labels=[],dateKeys=[];
+  let state={group:"사방넷",sub:"전체",start:"",end:"",preset:"30"},viewN=30,fullDates=[],labels=[],dateKeys=[];
   function allDates(){const P=window.DAOU_DATA&&window.DAOU_DATA.period;if(P&&P.dates&&P.dates.length)return P.dates.slice().sort();const F=window.DAOU_DATA&&window.DAOU_DATA.report&&window.DAOU_DATA.report.facts;if(F&&F.length)return Array.from(new Set(F.map(f=>f.d).filter(Boolean))).sort();return []}
-  function ensureRange(){const ds=allDates();if(!ds.length)return; if(!state.start)state.start=ds[0]; if(!state.end)state.end=ds[ds.length-1]; if(state.start>state.end){const t=state.start;state.start=state.end;state.end=t}}
+  function _shiftISO(iso,n){const d=new Date(iso+'T00:00:00');d.setDate(d.getDate()+n);
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+  // 기본 조회기간 = 최근 30일. 1년치를 통째로 띄우면 일별 추이가 뭉개지고 증감 비교도 안 된다.
+  function ensureRange(){const ds=allDates();if(!ds.length)return; if(!state.start){const hi=ds[ds.length-1];
+      const s30=_shiftISO(hi,-29);state.start=s30<ds[0]?ds[0]:s30;} if(!state.end)state.end=ds[ds.length-1]; if(state.start>state.end){const t=state.start;state.start=state.end;state.end=t}}
   function genSub(name,N){const s=SUBS[name],r=MUL(H(name)+N*7);const cost=[],signup=[],imp=[],click=[];for(let i=0;i<N;i++){const t=N>1?i/(N-1):0;const trend=1+s.mo*(t-.5)*.44;const noise=.85+r()*.30;const dow=(i+2)%7;const wk=(dow===5||dow===6)?.9:1;const c=Math.max(0,s.cost*trend*noise*wk);cost.push(c);click.push(c/s.cpc);imp.push(c/s.cpc/s.ctr);signup.push(c/s.cpa)}return{cost,signup,imp,click}}
   function realSub(){return (window.DAOU_DATA&&window.DAOU_DATA.report&&window.DAOU_DATA.report.subs)||null}
   function subDaily(name,N){const R=realSub();if(R&&R[name]&&R[name].cost&&R[name].cost.length){const a=R[name],L=a.cost.length,st=Math.max(0,L-N);return{cost:a.cost.slice(st),signup:a.signup.slice(st),imp:a.imp.slice(st),click:a.click.slice(st)}}return genSub(name,N)}
@@ -948,10 +954,23 @@ const DUReport=(function(){
     // 브랜드 탭·순서 고정(홈 바로가기와 동일). 목록에 없는 브랜드는 뒤로.
     var ORD=["사방넷","뿌리오","다우오피스","애드콘","애드웰"];
     GROUPS.sort(function(a,b){var i=ORD.indexOf(a.key),j=ORD.indexOf(b.key);return (i<0?99:i)-(j<0?99:j);});}
-  function render(){mergeBrands();ensureRange();buildDates(365);viewN=fullDates.length||365;const subs=currentSubs();const agg=aggregate(subs,viewN,state.start,state.end),coverage='';const rs=document.getElementById('repStart'),re=document.getElementById('repEnd');if(rs){rs.value=state.start;rs.classList.toggle('set',!!state.start)}if(re){re.value=state.end;re.classList.toggle('set',!!state.end)}document.getElementById('repTitle').textContent=state.sub==="전체"?`${state.group} 광고 리포트`:`${state.sub}`;document.getElementById('repSub').textContent=`${GROUP_SUBS[state.group].join(" · ")} · 전체데이터 ${viewN}일 (${periodText()})`;document.getElementById('trendHint').textContent=periodText()+coverage;renderTabs();renderPills();renderKPIs(agg);drawLine(agg);drawDonut(agg);drawBar(agg);buildComment(state.group,agg);renderAction(subs,agg,viewN);renderTable()}
-  document.getElementById('repStart').addEventListener('change',e=>{state.start=e.target.value;render()});
-  document.getElementById('repEnd').addEventListener('change',e=>{state.end=e.target.value;render()});
-  document.getElementById('repAll').addEventListener('click',()=>{const ds=allDates();state.start=ds[0]||'';state.end=ds[ds.length-1]||'';render()});
+  function render(){mergeBrands();ensureRange();buildDates(365);viewN=fullDates.length||365;const subs=currentSubs();const agg=aggregate(subs,viewN,state.start,state.end),coverage='';const rs=document.getElementById('repStart'),re=document.getElementById('repEnd');if(rs){rs.value=state.start;rs.classList.toggle('set',!!state.start)}if(re){re.value=state.end;re.classList.toggle('set',!!state.end)}document.querySelectorAll('#repPresets [data-rp]').forEach(b=>b.classList.toggle('on',b.dataset.rp===state.preset));document.getElementById('repTitle').textContent=state.sub==="전체"?`${state.group} 광고 리포트`:`${state.sub}`;document.getElementById('repSub').textContent=`${GROUP_SUBS[state.group].join(" · ")} · 전체데이터 ${viewN}일 (${periodText()})`;document.getElementById('trendHint').textContent=periodText()+coverage;renderTabs();renderPills();renderKPIs(agg);drawLine(agg);drawDonut(agg);drawBar(agg);buildComment(state.group,agg);renderAction(subs,agg,viewN);renderTable()}
+  // 기간 프리셋 — 데이터의 마지막 날짜를 '어제'(최신 집계일)로 보고 계산한다.
+  function setPreset(k){const ds=allDates();if(!ds.length)return;const lo=ds[0],hi=ds[ds.length-1];let s,e;
+    if(k==='yday'){s=e=hi;}
+    else if(k==='7'){e=hi;s=_shiftISO(hi,-6);}
+    else if(k==='30'){e=hi;s=_shiftISO(hi,-29);}
+    else if(k==='mtd'){e=hi;s=hi.slice(0,8)+'01';}
+    else if(k==='prev'){const first=hi.slice(0,8)+'01';e=_shiftISO(first,-1);s=e.slice(0,8)+'01';}
+    else {s=lo;e=hi;}
+    state.start=(s<lo?lo:s);state.end=(e>hi?hi:e);
+    if(state.start>state.end)state.start=state.end;
+    state.preset=k;render();}
+  document.getElementById('repPresets').addEventListener('click',e=>{
+    const b=e.target.closest('[data-rp]');if(b)setPreset(b.dataset.rp);});
+  document.getElementById('repStart').addEventListener('change',e=>{state.start=e.target.value;state.preset='';render()});
+  document.getElementById('repEnd').addEventListener('change',e=>{state.end=e.target.value;state.preset='';render()});
+  
   document.getElementById('repAi').addEventListener('click',function(){if(!window.DUChat)return;var services=currentSubs(),who=state.sub==='전체'?state.group+' 그룹('+GROUP_SUBS[state.group].join('·')+')':state.sub;window.DUChat.open(who+' '+periodText()+' 광고 실적을 분석하고, 잘된 점과 개선이 필요한 지점·다음 액션을 알려줘.',{days:viewN,services:services,label:who})});
   // 메인 리포트에서 '지금 보고 있는 그룹·기간' 그대로 RAW(원천 행) CSV 다운로드.
   function exportReportRaw(){const F=(window.DAOU_DATA&&window.DAOU_DATA.report&&window.DAOU_DATA.report.facts)||[];
