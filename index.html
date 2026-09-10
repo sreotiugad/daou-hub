@@ -1484,7 +1484,8 @@ const DUComp=(function(){
     {id:'seed_playauto',name:'플레이오토',kw:'플레이오토',home:'playauto.co.kr'},
     {id:'seed_ezadmin',name:'이지어드민',kw:'이지어드민',home:'ezadmin.co.kr'},
     {id:'seed_shoplinker',name:'샵링커',kw:'샵링커',home:'shoplinker.co.kr'},
-    {id:'seed_nextengine',name:'넥스트엔진',kw:'넥스트엔진',home:'next-engine.net'}];
+    {id:'seed_nextengine',name:'넥스트엔진',kw:'넥스트엔진',home:'next-engine.co.kr'},
+    {id:'seed_sellmate',name:'셀메이트',kw:'셀메이트',home:'sellmate.io'}];
   let list=[], curId=null, tab='overview';
   const el=id=>document.getElementById(id);
   const esc=s=>String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
@@ -1492,9 +1493,20 @@ const DUComp=(function(){
   const ACC={'실측':'ok','관측':'obs','추정':'est','미확인':'unk','미설정':'unk'};
   const accHTML=l=>'<span class="acc '+(ACC[l]||'unk')+'">'+esc(l)+'</span>';
   const gcol=s=>s>=67?COL.danger:s>=34?COL.warning:COL.success;   // 강도 높음=위협
+  const MIGR2='daouhub_comp_migr2', DROP_NAMES=['아이소이','메디큐브'];
   function load(){try{list=JSON.parse(localStorage.getItem(LS)||'[]')||[]}catch(_){list=[]}
     if(!list.length){var seeded=false;try{seeded=!!localStorage.getItem(SEEDED)}catch(_){}
-      if(!seeded){list=SEED_COMPS.map(function(c){return Object.assign({},c)});save();try{localStorage.setItem(SEEDED,'1')}catch(_){}}}}
+      if(!seeded){list=SEED_COMPS.map(function(c){return Object.assign({},c)});save();try{localStorage.setItem(SEEDED,'1')}catch(_){}}}
+    var migrated=false;try{migrated=!!localStorage.getItem(MIGR2)}catch(_){}
+    if(!migrated){
+      list=list.filter(function(c){return DROP_NAMES.indexOf(c.name)<0});
+      // 넥스트엔진 도메인 오타(next-engine.net) 교정 — 사용자가 직접 고친 값이면 건드리지 않는다
+      list.forEach(function(c){if(c.id==='seed_nextengine'&&c.home==='next-engine.net')c.home='next-engine.co.kr'});
+      var ids=list.map(function(c){return c.id});
+      SEED_COMPS.forEach(function(c){if(ids.indexOf(c.id)<0)list.push(Object.assign({},c))});
+      save();
+      try{localStorage.setItem(MIGR2,'1')}catch(_){}
+    }}
   function save(){try{localStorage.setItem(LS,JSON.stringify(list))}catch(_){}}
   function snaps(){try{return JSON.parse(localStorage.getItem(SNAP)||'{}')||{}}catch(_){return{}}}
   function setSnap(id,d){try{var c=snaps();c[id]={t:Date.now(),d:d};localStorage.setItem(SNAP,JSON.stringify(c))}catch(_){}}
