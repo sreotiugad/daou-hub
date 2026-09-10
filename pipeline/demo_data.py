@@ -104,6 +104,17 @@ SVC_MEDIA = {
     "애드웰": ({"네이버": .40, "구글": .45, "메타": .15}, .30),
 }
 ADG_WORDS = ["일반", "브랜드", "경쟁사", "프로모션", "롱테일"]
+# 검색 외 유형의 광고그룹 이름(실제 계정 구조). PMax 는 광고그룹이 아니라 '애셋그룹'이다.
+ADG_ETC = {"실적최대화": "애셋그룹", "GDN": "리타게팅", "동영상": "영상",
+           "디스플레이": "리타게팅", "네이티브": "네이티브", "배너": "기업회원"}
+# 광고(소재) 이름 — 유형별 실제 소재 형태. 광고그룹당 1개를 대표 소재로 붙인다.
+AD_BY_CT = {
+    "파워링크": ["RSA_01", "RSA_02"], "브랜드검색": ["브랜드소재_01"],
+    "쇼핑검색": ["상품소재_01", "상품소재_02"], "구글검색": ["RSA_01", "RSA_02"],
+    "실적최대화": ["반응형 애셋"], "GDN": ["배너_300x250", "배너_728x90"],
+    "동영상": ["영상_15s", "영상_30s"], "디스플레이": ["피드_1x1", "릴스_9x16"],
+    "네이티브": ["네이티브_1200x628"], "배너": ["배너_640x200"],
+}
 
 
 def main():
@@ -144,10 +155,13 @@ def main():
                     n = 2 if ct in ("파워링크", "구글검색") else 1   # 주력 검색만 광고그룹 2개
                     for w in rnd.sample(ADG_WORDS, n):
                         adgs.append("%s_%s_%s" % (svc, rnd.choice(["PC", "MO"]), w))
+                else:
+                    # 데모에 '(미지정)' 이 뜨지 않도록 모든 유형에 광고그룹을 부여
+                    adgs.append("%s_%s" % (svc, ADG_ETC.get(ct, ct)))
                 plan.append(dict(
                     svc=svc, grp=grp, media=media, ct=ct,
                     cmp="%s_%s_%s_%02d" % (PFX[media], svc, ct, seq),
-                    adgs=adgs or [""], daily=daily, mo=mo,
+                    adgs=adgs, ads=AD_BY_CT.get(ct, ["소재_01"]), daily=daily, mo=mo,
                     cpc=U(*cpcR), ctr=U(*ctrR),
                     cpa=cpa_target * mult * scale,      # 이 캠페인의 목표 CPA
                     # 유튜브(동영상)는 캠페인성 구간 집행, GDN은 리타게팅으로 상시 집행
@@ -189,7 +203,8 @@ def main():
                 imp = click / p["ctr"]
                 signup = cost / cpa
                 f = {"d": d, "svc": p["svc"], "grp": p["grp"], "media": p["media"],
-                     "ct": p["ct"], "cmp": p["cmp"], "adg": adg, "ad": "",
+                     "ct": p["ct"], "cmp": p["cmp"], "adg": adg,
+                     "ad": p["ads"][j % len(p["ads"])],
                      "imp": int(round(imp)), "click": int(round(click)),
                      "cost": int(round(cost)), "signup": round(signup, 1),
                      "rnkw": 0, "rnki": 0}
