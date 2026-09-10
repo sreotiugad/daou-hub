@@ -132,10 +132,12 @@
   .delta{font-family:var(--mono);font-size:11px;font-weight:500;display:inline-flex;align-items:center;gap:3px}
   .delta.up{color:var(--success)}.delta.down{color:var(--danger)}.delta.flat{color:var(--muted)}
 
-  .r-focal{display:grid;grid-template-columns:1.9fr 1fr;gap:14px;margin-bottom:14px}
-  /* align-items:start — AI 코멘트가 길어져도 옆 차트 카드가 딸려 늘어나(빈 공간 생겨) 깨져 보이지 않게 */
+  .r-focal{margin-bottom:14px}                 /* 일별 추이 = 전체 폭 히어로 차트 */
+  /* 캠페인유형(바)·매체(도넛) 분포 차트를 나란히 — 둘 다 컴팩트라 높이 균형이 맞는다 */
   .r-mid{display:grid;grid-template-columns:1.4fr 1fr;gap:14px;margin-bottom:14px;align-items:start}
-  @media(max-width:900px){.r-focal,.r-mid{grid-template-columns:1fr}}
+  .r-ai{margin-bottom:14px}                    /* AI 성과 진단 = 전체 폭(짧은 차트와 안 엮이게) */
+  .r-ai .ai-diag{max-width:1060px}             /* 전체 폭에서 줄이 너무 길지 않게 가독 폭 제한 */
+  @media(max-width:900px){.r-mid{grid-template-columns:1fr}}
   .donut-wrap{display:flex;justify-content:center;padding-top:6px}
 
   .bname{display:flex;align-items:center;gap:9px}
@@ -581,7 +583,7 @@
 <main id="v-home" class="view home">
   <div class="mk">D</div>
   <h1>Daou Hub</h1>
-  <p class="sub">사방넷 · 뿌리오 · 다우오피스 · 애드콘 · 애드웰 광고 성과 · 경쟁 분석</p>
+  <p class="sub">숫자를 넘어 진단까지 — AI가 읽어주는 우리 광고 성과와 경쟁 인텔리전스</p>
   <div class="home-search">
     <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
     <input id="homeSearch" placeholder="키워드로 검색량·경쟁 분석 (예: 그룹웨어)">
@@ -627,14 +629,16 @@
       <div class="card-b"><div id="lineChart"></div>
         <div class="legend"><span><i style="background:var(--c1)"></i>광고비(백만원)</span><span><i style="background:var(--c2)"></i>가입(백건)</span><span><i style="background:var(--c3)"></i>클릭(천건)</span></div></div>
     </div>
+  </div>
+  <div class="r-mid">
+    <div class="card"><div class="card-h"><h3>캠페인 유형별 광고비</h3><span class="hint">비중 순</span></div><div class="card-b"><div id="barCt"></div></div></div>
     <div class="card">
       <div class="card-h"><h3>매체별 광고비</h3><span class="hint">선택 기간 · 상세 원천 집계</span></div>
       <div class="card-b"><div class="donut-wrap" id="donut"></div>
         <div class="legend c"><span><i style="background:var(--naver)"></i>네이버</span><span><i style="background:var(--google)"></i>구글</span><span><i style="background:var(--meta)"></i>메타</span></div></div>
     </div>
   </div>
-  <div class="r-mid">
-    <div class="card"><div class="card-h"><h3>캠페인 유형별 광고비</h3><span class="hint">비중 순</span></div><div class="card-b"><div id="barCt"></div></div></div>
+  <div class="r-ai">
     <div class="card"><div class="card-b" style="padding-top:16px"><div class="comment" id="comment"></div></div></div>
   </div>
   <div class="card action-card">
