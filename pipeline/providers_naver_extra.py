@@ -127,18 +127,18 @@ def _fmt_postdate(s):
 
 
 def _relevant(kw, title, desc):
-    """이 글이 키워드와 실제로 관련 있나. 네이버 블로그 검색은 '그룹웨어'를
-    '그룹'+'웨어'로 쪼개 매칭해 엉뚱한 글(볼보그룹 등)을 올리므로 후처리로 거른다.
-    - 단어 1개: 공백 제거 키워드가 제목/본문에 통째로 포함돼야 함.
-    - 여러 단어: 모든 토큰이 포함돼야 함."""
+    """이 글의 '제목'이 키워드를 실제로 언급하나(본문/설명은 보지 않음). 네이버
+    블로그 검색은 '그룹웨어'를 '그룹'+'웨어'로 쪼개 매칭해, 제목에 키워드가
+    없는 엉뚱한 글(볼보그룹 등)도 올리므로 제목 기준으로 후처리해 거른다.
+    - 단어 1개: 공백 제거 키워드가 제목에 통째로 포함돼야 함.
+    - 여러 단어: 모든 토큰이 제목에 포함돼야 함."""
     tokens = [t for t in kw.split() if t]
     if not tokens:
         return True
-    joined = f"{title} {desc}"
-    nj = joined.replace(" ", "")
+    nt = title.replace(" ", "")
     if len(tokens) == 1:
-        return kw.replace(" ", "") in nj
-    return all((t in joined) or (t in nj) for t in tokens)
+        return kw.replace(" ", "") in nt
+    return all((t in title) or (t in nt) for t in tokens)
 
 
 def _one_search(kw, endpoint, author_f, sort, n):
@@ -168,8 +168,10 @@ def _one_search(kw, endpoint, author_f, sort, n):
                 rel.append(m)
             if len(rel) >= n:
                 break
-        items = rel if rel else [_mk(it) for it in raw[:n]]
-        return items, int(j.get("total", 0))
+        # 관련 글이 0건이면 예전엔 무관한 원본 상위 n개로 '빈 칸 회피' 폴백을
+        # 했는데, 그게 바로 "제목에 경쟁사명도 없는 엉뚱한 글이 뜬다"는 문제였다.
+        # 관련 글이 없으면 빈 목록이 맞는 답이다(프론트가 빈 상태를 정직히 표시).
+        return rel, int(j.get("total", 0))
     except Exception:
         return None, 0
 

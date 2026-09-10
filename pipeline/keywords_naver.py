@@ -170,7 +170,11 @@ def fetch_keyword(kw, acc, logs=None):
     male = dl.get("male", ex["male"])
     female = dl.get("female", ex["female"])
     age = dl.get("age", ex["age"])
-    youtube = yt if yt is not None else S.model_youtube(kw)
+    # YouTube API 실패/키 없음이면 가짜 영상 목록 대신 빈 배열로 — 이 함수는
+    # sources.youtube 를 이미 'estimated' 로 정직하게 남기지만, 예전엔 값 자체는
+    # S.model_youtube(kw) 가짜 영상을 채워 넣어서 프론트가 실측인 것처럼 렌더했다.
+    # (전체가 미수집 키워드일 때 쓰는 sample.build_sample_keyword 의 자체 폴백은 그대로 둔다.)
+    youtube = yt if yt is not None else []
 
     # 광고 경쟁 브랜드: Firecrawl 이 실제 네이버 SERP 광고주를 잡았으면 실측으로 교체,
     # 못 잡았으면(키없음·실패) 모델 추정 브랜드 유지. 입찰가는 순위별 예상입찰가로 채움.
