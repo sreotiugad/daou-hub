@@ -17,7 +17,7 @@
     --success:#006425;--warning:#6E4B00;--danger:#902824;
     --sabang:#2957CD;--adcon:#763AA7;--daou:#0E7C7B;
     --c1:#2957CD;--c2:#0E7C7B;--c3:#A8641B;
-    --naver:#03934A;--google:#2E6BD6;--meta:#C4377E;
+    --naver:#03934A;--google:#2E6BD6;--meta:#C4377E;--taboola:#B45309;--saramin:#0E7C7B;
     --r:8px;--r-sm:6px;
     --shadow:0 1px 2px rgba(9,12,14,.05);
     --mono:"IBM Plex Mono",ui-monospace,monospace;
@@ -635,7 +635,7 @@
     <div class="card">
       <div class="card-h"><h3>매체별 광고비</h3><span class="hint">선택 기간 · 상세 원천 집계</span></div>
       <div class="card-b"><div class="donut-wrap" id="donut"></div>
-        <div class="legend c"><span><i style="background:var(--naver)"></i>네이버</span><span><i style="background:var(--google)"></i>구글</span><span><i style="background:var(--meta)"></i>메타</span></div></div>
+        <div class="legend c" id="donutLegend"></div></div>
     </div>
   </div>
   <div class="r-ai">
@@ -811,7 +811,7 @@
 const CSS=getComputedStyle(document.documentElement);
 const cv=(n,f)=>{const v=CSS.getPropertyValue(n).trim();return v||f};
 const TIP=document.getElementById('tip');
-const COL={c1:cv('--c1','#2957CD'),c2:cv('--c2','#0E7C7B'),c3:cv('--c3','#A8641B'),primary:cv('--primary','#2957CD'),accent:cv('--accent','#763AA7'),naver:cv('--naver','#03934A'),google:cv('--google','#2E6BD6'),meta:cv('--meta','#C4377E'),line:cv('--border-soft','#D8E3EC'),muted:cv('--muted','#4B5055'),surface:cv('--surface','#FAFDFF'),fg:cv('--fg','#090C0E'),success:cv('--success','#006425'),warning:cv('--warning','#6E4B00'),danger:cv('--danger','#902824')};
+const COL={c1:cv('--c1','#2957CD'),c2:cv('--c2','#0E7C7B'),c3:cv('--c3','#A8641B'),primary:cv('--primary','#2957CD'),accent:cv('--accent','#763AA7'),naver:cv('--naver','#03934A'),google:cv('--google','#2E6BD6'),meta:cv('--meta','#C4377E'),taboola:cv('--taboola','#B45309'),saramin:cv('--saramin','#0E7C7B'),line:cv('--border-soft','#D8E3EC'),muted:cv('--muted','#4B5055'),surface:cv('--surface','#FAFDFF'),fg:cv('--fg','#090C0E'),success:cv('--success','#006425'),warning:cv('--warning','#6E4B00'),danger:cv('--danger','#902824')};
 function H(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
 function MUL(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 function niceMax(m){if(m<=0)return 10;const p=Math.pow(10,Math.floor(Math.log10(m)));const n=m/p;return (n<=1?1:n<=2?2:n<=5?5:10)*p}
@@ -824,7 +824,7 @@ function ic(name,color,sz){return `<svg width="${sz||15}" height="${sz||15}" vie
 const DUReport=(function(){
   const GROUPS=[{key:"사방넷"},{key:"애드콘"},{key:"다우오피스"}];
   const GCOLOR={"사방넷":cv('--sabang','#2957CD'),"애드콘":cv('--adcon','#763AA7'),"다우오피스":cv('--daou','#0E7C7B')};
-  const CT_ORDER=["브랜드검색","파워링크","쇼핑검색","구글검색","실적최대화","동영상","GDN","디스플레이"];
+  const CT_ORDER=["브랜드검색","파워링크","쇼핑검색","구글검색","실적최대화","동영상","GDN","디스플레이","네이티브","배너"];
   const SUBS={
     "사방넷":{group:"사방넷",cost:1740000,cpa:9100,cpc:610,ctr:.034,mo:.7,media:{네이버:.62,구글:.38},ct:{브랜드검색:.14,파워링크:.33,쇼핑검색:.21,구글검색:.16,실적최대화:.12,동영상:.04}},
     "사방넷미니":{group:"사방넷",cost:452000,cpa:8100,cpc:560,ctr:.036,mo:.5,media:{네이버:.70,구글:.30},ct:{브랜드검색:.10,파워링크:.40,쇼핑검색:.24,구글검색:.14,실적최대화:.09,동영상:.03}},
@@ -872,7 +872,17 @@ const DUReport=(function(){
     document.getElementById('lineChart').innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%">${g}${xl}${area}${path}${guide}${dot}${hot}</svg>`;
     const gEl=document.getElementById('rlg_g');
     document.querySelectorAll('#lineChart .hc').forEach(c=>{c.addEventListener('mousemove',e=>{const i=+c.dataset.i;gEl.setAttribute('x1',x(i));gEl.setAttribute('x2',x(i));gEl.setAttribute('opacity','1');TIP.innerHTML=`<div class="t">${fullDates[i]}</div><div class="row"><i style="background:${COL.c1}"></i>광고비<b>${won(agg.cost[i])}</b></div><div class="row"><i style="background:${COL.c2}"></i>가입<b>${comma(agg.signup[i])}</b></div><div class="row"><i style="background:${COL.c3}"></i>클릭<b>${comma(agg.click[i])}</b></div>`;TIP.style.left=e.clientX+'px';TIP.style.top=e.clientY+'px';TIP.style.opacity='1'});c.addEventListener('mouseleave',()=>{TIP.style.opacity='0';gEl.setAttribute('opacity','0')})});}
-  function drawDonut(agg){const order=[["네이버",COL.naver],["구글",COL.google],["메타",COL.meta]];let segs=order.filter(o=>(agg.media[o[0]]||0)>0).map(o=>({l:o[0],v:agg.media[o[0]]||0,c:o[1]}));if(!segs.length)segs=[{l:"네이버",v:1,c:COL.naver}];const total=segs.reduce((a,s)=>a+s.v,0)||1,R=72,r=48,cx=88,cy=88,gap=.025;let ang=-Math.PI/2,arcs="";segs.forEach(s=>{const a0=ang+gap,a1=ang+(s.v/total)*6.283-gap,lg=(a1-a0)>Math.PI?1:0;const P=(a,rd)=>[cx+rd*Math.cos(a),cy+rd*Math.sin(a)];const[x0,y0]=P(a0,R),[x1,y1]=P(a1,R),[x2,y2]=P(a1,r),[x3,y3]=P(a0,r);arcs+=`<path d="M${x0.toFixed(1)},${y0.toFixed(1)} A${R},${R} 0 ${lg} 1 ${x1.toFixed(1)},${y1.toFixed(1)} L${x2.toFixed(1)},${y2.toFixed(1)} A${r},${r} 0 ${lg} 0 ${x3.toFixed(1)},${y3.toFixed(1)} Z" fill="${s.c}"><title>${s.l}: ${won(s.v)}</title></path>`;ang+=(s.v/total)*6.283});const top=segs.slice().sort((a,b)=>b.v-a.v)[0];const pctTop=(top.v/total*100).toFixed(0);document.getElementById('donut').innerHTML=`<svg viewBox="0 0 176 176" width="180" height="180">${arcs}<text x="88" y="83" text-anchor="middle" font-size="11" fill="${COL.muted}" font-family="IBM Plex Mono">${top.l}</text><text x="88" y="103" text-anchor="middle" font-size="22" font-weight="600" fill="${COL.fg}" font-family="Pretendard,IBM Plex Sans KR">${pctTop}%</text></svg>`;}
+  function drawDonut(agg){
+    // 매체는 고정 3개가 아니다(타불라·사람인 등 추가 가능) → data 에 실제로 있는 매체를 전부 그린다.
+    const MC={네이버:COL.naver,구글:COL.google,메타:COL.meta,타불라:COL.taboola,사람인:COL.saramin};
+    const MO=["네이버","구글","메타","타불라","사람인"],PAL=['#7C3AED','#0369A1','#C2410C','#9333EA'];
+    const keys=Object.keys(agg.media||{}).filter(k=>(agg.media[k]||0)>0)
+      .sort((a,b)=>{const i=MO.indexOf(a),j=MO.indexOf(b);return (i<0?99:i)-(j<0?99:j)||(agg.media[b]-agg.media[a])});
+    let segs=keys.map((k,i)=>({l:k,v:agg.media[k],c:MC[k]||PAL[i%PAL.length]}));
+    if(!segs.length)segs=[{l:"네이버",v:1,c:COL.naver}];
+    const lg=document.getElementById('donutLegend');
+    const e2=v=>String(v).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+    if(lg)lg.innerHTML=segs.map(x=>`<span><i style="background:${x.c}"></i>${e2(x.l)}</span>`).join('');const total=segs.reduce((a,s)=>a+s.v,0)||1,R=72,r=48,cx=88,cy=88,gap=.025;let ang=-Math.PI/2,arcs="";segs.forEach(s=>{const a0=ang+gap,a1=ang+(s.v/total)*6.283-gap,lg=(a1-a0)>Math.PI?1:0;const P=(a,rd)=>[cx+rd*Math.cos(a),cy+rd*Math.sin(a)];const[x0,y0]=P(a0,R),[x1,y1]=P(a1,R),[x2,y2]=P(a1,r),[x3,y3]=P(a0,r);arcs+=`<path d="M${x0.toFixed(1)},${y0.toFixed(1)} A${R},${R} 0 ${lg} 1 ${x1.toFixed(1)},${y1.toFixed(1)} L${x2.toFixed(1)},${y2.toFixed(1)} A${r},${r} 0 ${lg} 0 ${x3.toFixed(1)},${y3.toFixed(1)} Z" fill="${s.c}"><title>${s.l}: ${won(s.v)}</title></path>`;ang+=(s.v/total)*6.283});const top=segs.slice().sort((a,b)=>b.v-a.v)[0];const pctTop=(top.v/total*100).toFixed(0);document.getElementById('donut').innerHTML=`<svg viewBox="0 0 176 176" width="180" height="180">${arcs}<text x="88" y="83" text-anchor="middle" font-size="11" fill="${COL.muted}" font-family="IBM Plex Mono">${top.l}</text><text x="88" y="103" text-anchor="middle" font-size="22" font-weight="600" fill="${COL.fg}" font-family="Pretendard,IBM Plex Sans KR">${pctTop}%</text></svg>`;}
   function drawBar(agg){const rows=CT_ORDER.map(k=>({l:k,v:agg.ct[k]||0})).filter(r=>r.v>0).sort((a,b)=>b.v-a.v);const W=560,H=224,pl=38,pr=10,pt=10,pb=40,iw=W-pl-pr,ih=H-pt-pb;
     // 집행하지 않은(0원) 캠페인 유형은 빈 막대로 그리면 허전·깨져 보이므로 실제 집행분만 그린다.
     if(!rows.length){document.getElementById('barCt').innerHTML='<div style="padding:40px 8px;text-align:center;color:var(--muted);font-size:12.5px">이 기간 집행된 캠페인 광고비가 없어요.</div>';return;}

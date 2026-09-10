@@ -40,18 +40,26 @@ GROUP_SUBS = {
 GROUPS = ["사방넷", "애드콘", "다우오피스"]
 
 # 캠페인유형 표준 7종 (프론트 CT_ORDER 와 동일)
-CT_ORDER = ["브랜드검색", "파워링크", "쇼핑검색", "구글검색", "실적최대화", "동영상", "GDN", "디스플레이"]
+CT_ORDER = ["브랜드검색", "파워링크", "쇼핑검색", "구글검색", "실적최대화", "동영상",
+            "GDN", "디스플레이", "네이티브", "배너"]
 
 # 매체 표준: 네이버 / 구글 / 메타
+MEDIA_ORDER = ["네이버", "구글", "메타", "타불라", "사람인"]
+
+
 def norm_media(m) -> str:
     s = str(m or "").strip()
-    if s in ("네이버", "구글", "메타"):
+    if s in MEDIA_ORDER:
         return s
     u = s.lower()
     if "구글" in s or "google" in u:
         return "구글"
     if "메타" in s or "meta" in u or "facebook" in u or "insta" in u:
         return "메타"
+    if "타불라" in s or "taboola" in u:
+        return "타불라"
+    if "사람인" in s or "saramin" in u:
+        return "사람인"
     return "네이버"
 
 # RAW 원본 캠페인유형 → 표준 매핑 (adcon_report 의 type_ko 반영)
@@ -67,9 +75,18 @@ def norm_ct(raw: str, media: str = "") -> str:
         return "실적최대화"
     if "동영상" in s or "VIDEO" in s.upper():
         return "동영상"
+    if "네이티브" in s or "NATIVE" in s.upper():
+        return "네이티브"
     if "디스플레이" in s or "DISPLAY" in s.upper() or "배너" in s or "GDN" in s.upper():
-        # 구글 디스플레이는 'GDN'으로 라벨링, 그 외(메타 등)는 '디스플레이'
-        return "GDN" if str(media).strip() == "구글" else "디스플레이"
+        # 구글 디스플레이는 'GDN', 타불라는 '네이티브', 사람인은 '배너', 그 외(메타 등)는 '디스플레이'
+        mm0 = str(media).strip()
+        if mm0 == "구글":
+            return "GDN"
+        if mm0 == "타불라":
+            return "네이티브"
+        if mm0 == "사람인":
+            return "배너"
+        return "디스플레이"
     if "검색" in s or "SEARCH" in s.upper():
         # 네이버 일반 검색은 파워링크, 구글 검색은 구글검색
         return "구글검색" if str(media).strip() == "구글" else "파워링크"
@@ -79,6 +96,10 @@ def norm_ct(raw: str, media: str = "") -> str:
         return "구글검색"
     if mm == "메타":
         return "디스플레이"
+    if mm == "타불라":
+        return "네이티브"
+    if mm == "사람인":
+        return "배너"
     return "파워링크"
 
 # ── RAW 시트 컬럼 매핑 (실제 헤더가 다르면 env 로 덮어쓰기) ──
