@@ -3,8 +3,10 @@ name: Daily Daou Hub data
 # 매일 오전 9시(KST) = 00:00 UTC 에 시트 RAW → data.json 갱신 후 커밋.
 # 수동 실행도 가능(Actions 탭 → Run workflow).
 on:
-  schedule:
-    - cron: "0 0 * * *"
+  # ⚠️ 데모 기간: 자동 스케줄 비활성화(합성 data.json 유지 — 실데이터로 덮이지 않게).
+  #   실데이터로 복귀할 때 아래 2줄 주석 해제하거나, 수동으로 Run workflow(mode=real) 실행.
+  # schedule:
+  #   - cron: "0 0 * * *"
   workflow_dispatch:
     inputs:
       mode:
