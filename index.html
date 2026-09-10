@@ -778,7 +778,7 @@
       <select id="cxMedia" class="cx-sel"><option value="">전체 매체</option><option value="네이버">네이버</option><option value="구글">구글</option><option value="메타">메타</option></select>
     </div>
     <div class="cx-row"><span class="cx-lab">기간</span>
-      <div class="seg sm cxseg" id="cxPeriod"><button data-n="30">30D</button><button data-n="90">90D</button><button data-n="365" class="on">1년</button></div>
+      <span class="rp-set" id="cxPeriod"><button class="cx-mini" data-rp="yday">어제</button><button class="cx-mini" data-rp="7">지난 7일</button><button class="cx-mini" data-rp="30" >최근 30일</button><button class="cx-mini" data-rp="mtd">이번 달</button><button class="cx-mini" data-rp="prev">지난 달</button><button class="cx-mini" data-rp="all">전체</button></span>
       <span class="cx-gran">직접 <input type="date" id="cxStart" class="cx-date"><span style="color:var(--muted)">~</span><input type="date" id="cxEnd" class="cx-date"><button id="cxClear" class="cx-mini" title="직접선택 해제">✕</button></span>
     </div>
   </div>
@@ -1167,7 +1167,7 @@ const DUCustom=(function(){
     cvr:{label:"전환율",fmt:"pct",calc:s=>s.click>0?s.signup/s.click*100:0},
     rank:{label:"평균노출순위",fmt:"rank",calc:s=>s.rnki>0?s.rnkw/s.rnki:0}
   };
-  let st={dims:["기간","서비스"],gran:"월",mets:["cost","signup","cpa"],group:"",media:"",N:365,start:"",end:"",sort:null,dir:-1};
+  let st={dims:["기간","서비스"],gran:"월",mets:["cost","signup","cpa"],group:"",media:"",N:30,start:"",end:"",preset:"30",sort:null,dir:-1};
   let _synth=null;
   const cma=n=>Math.round(n).toLocaleString();
   const wonf=n=>"₩"+Math.round(n).toLocaleString();
@@ -1197,12 +1197,23 @@ const DUCustom=(function(){
     const tot=list.reduce((t,g)=>{t.cost+=g.cost;t.imp+=g.imp;t.click+=g.click;t.signup+=g.signup;t.rnkw+=g.rnkw;t.rnki+=g.rnki;return t},{cost:0,imp:0,click:0,signup:0,rnkw:0,rnki:0});
     return{list,tot}}
   function populate(){const F=facts();const gs=[];for(const r of F)if(gs.indexOf(r.grp)<0)gs.push(r.grp);const sel=document.getElementById('cxGroup');if(sel.options.length<=1)gs.forEach(g=>{const o=document.createElement('option');o.value=g;o.textContent=g;sel.appendChild(o)})}
+  const CX_PRESET={yday:'어제','7':'지난 7일','30':'최근 30일',mtd:'이번 달',prev:'지난 달',all:'전체'};
+  function _sh(iso,n){const d=new Date(iso+'T00:00:00');d.setDate(d.getDate()+n);
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+  function cxPreset(k){const F=facts(),lo=minD(F),hi=maxD(F);if(!hi)return;let a,z;
+    if(k==='yday'){a=z=hi;}
+    else if(k==='7'){z=hi;a=_sh(hi,-6);}
+    else if(k==='30'){z=hi;a=_sh(hi,-29);}
+    else if(k==='mtd'){z=hi;a=hi.slice(0,8)+'01';}
+    else if(k==='prev'){const f=hi.slice(0,8)+'01';z=_sh(f,-1);a=z.slice(0,8)+'01';}
+    else {a=lo;z=hi;}
+    st.start=(a<lo?lo:a);st.end=(z>hi?hi:z);st.preset=k;render();}
   function syncSeg(id,active){document.querySelectorAll('#'+id+' button').forEach(b=>{const on=active(b);b.classList.toggle('on',on)})}
   function render(){
     populate();
     syncSeg('cxGran',b=>b.dataset.g===st.gran);
-    const custom=!!(st.start||st.end);
-    syncSeg('cxPeriod',b=>!custom&&+b.dataset.n===st.N);
+    const custom=!(st.preset);
+    syncSeg('cxPeriod',b=>b.dataset.rp===st.preset);
     document.getElementById('cxGranWrap').style.display=st.dims.includes('기간')?'':'none';
     const F0=facts(),mn=minD(F0),mx=maxD(F0);
     const cs=document.getElementById('cxStart'),ce=document.getElementById('cxEnd');
@@ -1214,7 +1225,7 @@ const DUCustom=(function(){
     const body=list.map(g=>st.dims.map((dm,i)=>`<td class="dimc">${g._k[i]}</td>`).join('')+st.mets.map(m=>`<td class="r">${fmtV(m,metVal(m,g))}</td>`).join('')).map(r=>`<tr>${r}</tr>`).join('');
     const totr=st.dims.map((dm,i)=>`<td>${i===0?'합계 ('+list.length+')':''}</td>`).join('')+st.mets.map(m=>`<td class="r">${fmtV(m,metVal(m,tot))}</td>`).join('');
     document.getElementById('cxTable').innerHTML=`<table><thead><tr>${th}</tr></thead><tbody>${body}<tr class="tot">${totr}</tr></tbody></table>`;
-    document.getElementById('cxCount').textContent=list.length+'행 · '+(custom?((st.start||mn)+' ~ '+(st.end||mx)):('최근 '+st.N+'일'));
+    document.getElementById('cxCount').textContent=list.length+'행 · '+(st.preset?CX_PRESET[st.preset]:((st.start||mn)+' ~ '+(st.end||mx)))+((st.start||st.end)?(' ('+(st.start||mn)+'~'+(st.end||mx)+')'):'');
     document.getElementById('cxTitle').textContent=st.dims.join(' × ')+' — '+st.mets.map(m=>MET[m].label).join('·');
     document.querySelectorAll('#cxTable th[data-sort]').forEach(h=>h.addEventListener('click',()=>{const c=h.dataset.sort;if(st.sort===c)st.dir*=-1;else{st.sort=c;st.dir=DIMS[c]!==undefined?1:-1}render()}));
   }
@@ -1247,10 +1258,10 @@ const DUCustom=(function(){
   document.addEventListener('pointercancel',()=>{if(dragged){if(dragged.clone)dragged.clone.remove();dragged.chip.classList.remove('dragging');clearOver();dragged=null}});
   buildChips();
   document.getElementById('cxGran').addEventListener('click',e=>{if(e.target.tagName!=='BUTTON')return;st.gran=e.target.dataset.g;render()});
-  document.getElementById('cxPeriod').addEventListener('click',e=>{if(e.target.tagName!=='BUTTON')return;st.N=+e.target.dataset.n;st.start='';st.end='';render()});
-  document.getElementById('cxStart').addEventListener('change',e=>{st.start=e.target.value;render()});
-  document.getElementById('cxEnd').addEventListener('change',e=>{st.end=e.target.value;render()});
-  document.getElementById('cxClear').addEventListener('click',()=>{st.start='';st.end='';render()});
+  document.getElementById('cxPeriod').addEventListener('click',e=>{const b=e.target.closest('[data-rp]');if(b)cxPreset(b.dataset.rp)});
+  document.getElementById('cxStart').addEventListener('change',e=>{st.start=e.target.value;st.preset='';render()});
+  document.getElementById('cxEnd').addEventListener('change',e=>{st.end=e.target.value;st.preset='';render()});
+  document.getElementById('cxClear').addEventListener('click',()=>{cxPreset('30')});
   document.getElementById('cxGroup').addEventListener('change',e=>{st.group=e.target.value;render()});
   document.getElementById('cxMedia').addEventListener('change',e=>{st.media=e.target.value;render()});
   document.getElementById('cxExport').addEventListener('click',csv);
