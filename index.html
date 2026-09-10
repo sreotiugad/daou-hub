@@ -1333,7 +1333,6 @@ const DUCustom=(function(){
     const totr=st.dims.map((dm,i)=>`<td>${i===0?'합계 ('+list.length+')':''}</td>`).join('')+st.mets.map(m=>`<td class="r">${fmtV(m,metVal(m,tot))}</td>`).join('');
     document.getElementById('cxTable').innerHTML=`<table><thead><tr>${th}</tr></thead><tbody>${body}<tr class="tot">${totr}</tr></tbody></table>`;
     document.getElementById('cxCount').textContent=list.length+'행 · '+(st.preset?CX_PRESET[st.preset]:((st.start||mn)+' ~ '+(st.end||mx)))+((st.start||st.end)?(' ('+(st.start||mn)+'~'+(st.end||mx)+')'):'');
-    document.getElementById('cxTitle').textContent=st.dims.join(' × ')+' — '+st.mets.map(m=>MET[m].label).join('·');
     document.querySelectorAll('#cxTable th[data-sort]').forEach(h=>h.addEventListener('click',()=>{const c=h.dataset.sort;if(st.sort===c)st.dir*=-1;else{st.sort=c;st.dir=DIMS[c]!==undefined?1:-1}render()}));
   }
   function cell(v){return '"'+String(v==null?'':v).replace(/"/g,'""')+'"'}
