@@ -99,7 +99,12 @@
   .tip .row{display:flex;align-items:center;gap:7px}.tip .row i{width:8px;height:8px;border-radius:2px}.tip .row b{margin-left:auto;font-variant-numeric:tabular-nums}
 
   /* ===== REPORT ===== */
-  .rep-head{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;margin-bottom:14px}
+  .rep-head{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;margin-bottom:10px;flex-wrap:wrap}
+  .rep-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+  /* 기간 선택은 버튼 줄과 한 줄에 두면 프리셋이 밀려 삐져나온다 → 아래 한 줄로 분리 */
+  .rep-bar{display:flex;align-items:center;flex-wrap:wrap;gap:10px 14px;margin-bottom:12px;
+           padding:9px 12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r)}
+  .rep-bar .report-range{flex-wrap:wrap;gap:8px}
   .rep-head h2{font-size:19px;font-weight:700}
   .rep-head .s{color:var(--muted);font-size:12.5px;margin-top:2px}
   .seg{display:flex;border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden}
@@ -153,6 +158,10 @@
   #mxTable td.na{color:var(--muted)}
   #mxTable tr.tot>td{border-top:2px solid var(--fg);font-weight:600}
   .rp-set{display:inline-flex;gap:4px;flex-wrap:wrap}
+  /* .cx-mini 기본값은 34x34 정사각(✕ 버튼용) — '이번달·최근 30일' 같은 라벨이 눌려 깨졌다 */
+  .rp-set .cx-mini{width:auto;min-width:34px;padding:0 11px;font-size:11.5px;font-weight:500;
+                   white-space:nowrap;border-color:var(--border);background:var(--surface)}
+  .rp-set .cx-mini:hover{border-color:var(--primary);color:var(--primary)}
   .rp-set .cx-mini.on{background:var(--primary);color:var(--primary-fg);border-color:var(--primary)}
   .donut-wrap{display:flex;justify-content:center;padding-top:6px}
 
@@ -629,12 +638,14 @@
 <main id="v-report" class="view" hidden>
   <div class="rep-head">
     <div><h2 id="repTitle">광고 리포트</h2><div class="s" id="repSub"></div></div>
-    <div style="display:flex;align-items:center;gap:10px">
+    <div class="rep-actions">
       <div class="seg" id="reportMode"><button data-rmode="summary" class="on">요약</button><button data-rmode="builder">보고서 제작</button></div>
       <button id="repAi" class="kw-btn" title="이 화면을 AI가 분석"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 4.5L18.5 9l-4.6 1.5L12 15l-1.9-4.5L5.5 9l4.6-1.5z"/><circle cx="18" cy="18" r="2.4"/></svg>AI 분석</button>
       <button id="repRaw" class="kw-btn" title="지금 보고 있는 그룹·기간의 RAW 데이터를 CSV로 내려받기"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16"/></svg>RAW CSV</button>
-      <div class="cx-gran report-range" id="reportRange"><span style="font-size:12px;color:var(--muted)">기간</span><input type="date" id="repStart" class="cx-date"><span style="color:var(--muted)">~</span><input type="date" id="repEnd" class="cx-date"><span class="rp-set" id="repPresets"><button class="cx-mini" data-rp="yday">어제</button><button class="cx-mini" data-rp="7">7일</button><button class="cx-mini" data-rp="30">30일</button><button class="cx-mini" data-rp="mtd">이번달</button><button class="cx-mini" data-rp="prev">전달</button><button class="cx-mini" data-rp="all" id="repAll">전체</button></span></div>
     </div>
+  </div>
+  <div class="rep-bar">
+    <div class="cx-gran report-range" id="reportRange"><span style="font-size:12px;color:var(--muted)">기간</span><input type="date" id="repStart" class="cx-date"><span style="color:var(--muted)">~</span><input type="date" id="repEnd" class="cx-date"><span class="rp-set" id="repPresets"><button class="cx-mini" data-rp="yday">어제</button><button class="cx-mini" data-rp="7">7일</button><button class="cx-mini" data-rp="30">30일</button><button class="cx-mini" data-rp="mtd">이번달</button><button class="cx-mini" data-rp="prev">전달</button><button class="cx-mini" data-rp="all" id="repAll">전체</button></span></div>
   </div>
   <div class="tabbar" id="tabbar"></div>
   <div class="pills" id="pills"></div>
