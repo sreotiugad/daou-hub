@@ -541,9 +541,6 @@
   .da-tabs{display:flex;gap:7px;margin-bottom:13px}
   .da-tab{font-size:12px;font-weight:600;padding:5px 13px;border-radius:8px;border:1px solid var(--border);color:var(--muted);cursor:pointer;background:var(--surface)}
   .da-tab.on{background:var(--primary-weak);color:var(--primary);border-color:transparent}
-  .da-manual{padding:20px 4px;text-align:center}
-  .da-manual .kw-btn{font-size:13px;padding:9px 18px}
-  .da-manual-note{font-size:11.5px;color:var(--muted);margin-top:10px;line-height:1.5}
   .da-shot-wrap{max-height:540px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;background:var(--bg)}
   .da-shot{width:100%;display:block}
   /* AI 챗봇 */
@@ -1680,8 +1677,10 @@ const DUComp=(function(){
         // 폴백도 비어서 다시 '정사각' 그룹으로 떨어진다.
         const ar=(im&&im.w&&im.h)?' style="aspect-ratio:'+im.w+'/'+im.h+'"':'';
         // 영상 소재이고 재생 URL(im.v)이 있으면 <video>로 클릭 재생/일시정지, 없으면 포스터/이미지만
+        // preload="metadata": 영상 전체가 아니라 앞부분(모브 아톰)만 받아 실제 가로세로비를
+        // 안다 — groupBySize 의 arOf() 가 videoWidth/videoHeight 를 읽으려면 이게 필요하다.
         const media=(ty==='video'&&vurl)
-          ? '<video class="thumb" src="'+esc(vurl)+'" poster="'+esc(u)+'" muted loop playsinline preload="none"'+ar+'></video><span class="da-play">▶</span>'
+          ? '<video class="thumb" src="'+esc(vurl)+'" poster="'+esc(u)+'" muted loop playsinline preload="metadata"'+ar+'></video><span class="da-play">▶</span>'
           : '<img class="thumb" data-src="'+esc(u)+'"'+ar+' alt="광고 소재">';
         // 관측 배지: 집행 일수(활성이면 '째'). 30일+는 장기 관측일 뿐 성과를 뜻하지 않는다.
         const days=(im&&typeof im.days==='number')?im.days:null;
@@ -1707,9 +1706,13 @@ const DUComp=(function(){
     // 실패하면 1회 재시도(캐시버스터), 그래도 안 되면 그 카드를 아예 제거(깨진 카드 노출 방지).
     (function(){
       const q=[...body.querySelectorAll('.da-item img.thumb[data-src]')];
+      // 영상도 groupBySize 를 기다리게 해야 한다 — 안 그러면 이미지만 다 로드되자마자
+      // 바로 그룹핑해버려 세로 영상이 videoWidth=0 상태그대로 '정사각'으로 떨어진다.
+      const vids=[...body.querySelectorAll('.da-item video.thumb')];
       let active=0, idx=0, settled=0;
+      const total=q.length+vids.length;
       const finish=()=>{ try{groupBySize(body);}catch(_){} };  // 모든 DA 소재: 로드 후 실제 크기로 그룹핑
-      const settle=()=>{ if(++settled>=q.length) finish(); };
+      const settle=()=>{ if(++settled>=total) finish(); };
       const pump=()=>{ while(active<3 && idx<q.length){ loadOne(q[idx++]); } };
       const loadOne=img=>{ active++; let tried=0;
         img.onload=()=>{ if(img.naturalWidth&&img.naturalHeight)img.style.aspectRatio=img.naturalWidth+'/'+img.naturalHeight; active--; settle(); pump(); };  // 실제 비율로 표시(메타·구글 공통)
@@ -1719,7 +1722,18 @@ const DUComp=(function(){
         };
         img.src=img.dataset.src;
       };
-      if(!q.length){ finish(); return; }
+      // 메타데이터만 받으니 동시 제한 필요 없이 바로 시작. 코덱 문제 등으로 이벤트가 안 올 수도 있어
+      // 4초 타임아웃으로 settle 을 보장한다(타임아웃 시 매니페스트 폴백으로 분류).
+      vids.forEach(v=>{
+        let done=false;
+        const mark=()=>{ if(done)return; done=true;
+          if(v.videoWidth&&v.videoHeight)v.style.aspectRatio=v.videoWidth+'/'+v.videoHeight;
+          settle(); };
+        v.addEventListener('loadedmetadata',mark,{once:true});
+        v.addEventListener('error',mark,{once:true});
+        setTimeout(mark,4000);
+      });
+      if(!total){ finish(); return; }
       pump();
     })();
     // 영상 카드: 호버가 아니라 클릭으로 재생/일시정지(터치 기기에서도 동작). 아이콘이
@@ -1754,8 +1768,7 @@ const DUComp=(function(){
       });
     });}
 
-  // DA 소재: Meta(광고 라이브러리) / Google(투명성센터) 를 탭으로 전환.
-  // Meta는 기본 로드, Google은 탭을 처음 눌렀을 때만 조회(불필요한 유료 실행 방지).
+  // DA 소재: Meta(광고 라이브러리) / Google(투명성센터) 를 탭으로 전환. 둘 다 탭을 처음 눌렀을 때 자동 조회.
   function renderDA(c,snap){const box=el('compDA');if(!box)return;
     const metaLib=adSearchUrl('meta',c.name||c.kw||'');
     const gLink=(c.google||'').trim()||adSearchUrl('google',c.name||c.kw||'');
@@ -1776,14 +1789,9 @@ const DUComp=(function(){
     _daOpenLink();
     if(x[p]){_daFilter=_defFilter(x[p]);paintDA(x[p]);return;}
     const body=el('daBody');if(!body)return;
-    // 구글은 유료 조회($5/1000)라 탭 열자마자 자동 실행하지 않고 버튼으로만(비용 절약).
-    // Meta는 저렴해서 기존대로 자동 로드.
-    if(p==='google'){
-      body.innerHTML='<div class="da-manual"><button type="button" class="kw-btn primary" id="daGoLoad">🔵 구글 광고 불러오기</button></div>';
-      const b=el('daGoLoad');if(b)b.onclick=()=>{if(x.plat!=='google')return;body.innerHTML='<div class="da-loading">구글 광고 불러오는 중…</div>';loadGoogle();};
-      return;
-    }
-    body.innerHTML='<div class="da-loading">소재 불러오는 중…</div>';
+    // 구글도 Meta와 동일하게 탭 열자마자 자동 조회(이전에는 유료 조회 비용 절약용 수동 버튼이럈다).
+    body.innerHTML='<div class="da-loading">'+(p==='google'?'구글 광고 불러오는 중…':'소재 불러오는 중…')+'</div>';
+    if(p==='google'){loadGoogle();return;}
     loadMeta();}
   function loadMeta(){const x=_daCtx,c=x.c,lib=x.metaLib;
     const key=(c.kw||c.name||'').trim();
