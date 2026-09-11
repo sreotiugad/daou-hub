@@ -954,7 +954,11 @@ const DUReport=(function(){
     if(!rows.length){document.getElementById('barCt').innerHTML='<div style="padding:40px 8px;text-align:center;color:var(--muted);font-size:12.5px">이 기간 집행된 캠페인 광고비가 없어요.</div>';return;}
     const max=niceMax(Math.max(...rows.map(r=>r.v))*1.14),step=iw/rows.length,bw=Math.min(46,step*.5),y=v=>pt+ih*(1-v/max);let grid="";for(let k=0;k<=4;k++){const t=max*k/4;grid+=`<line x1="${pl}" y1="${y(t)}" x2="${W-pr}" y2="${y(t)}" stroke="${COL.line}"/><text x="${pl-6}" y="${y(t)+3.5}" text-anchor="end" font-size="10" fill="${COL.muted}" font-family="IBM Plex Mono, ui-monospace, monospace">${t>=1e6?(t/1e6).toFixed(0)+'M':Math.round(t/1e4)+'만'}</text>`}let bars="";rows.forEach((r,i)=>{const bx=pl+step*i+step/2,by=y(r.v),bh=pt+ih-by;bars+=`<rect class="bx" data-l="${r.l}" data-v="${r.v}" x="${(bx-bw/2).toFixed(1)}" y="${by.toFixed(1)}" width="${bw}" height="${bh.toFixed(1)}" rx="3" fill="${COL.c1}" opacity="${1-i*0.1}"/><text x="${bx.toFixed(1)}" y="${H-24}" text-anchor="middle" font-size="10" fill="${COL.muted}" font-family="Pretendard Variable, Pretendard, Apple SD Gothic Neo, Malgun Gothic, system-ui, sans-serif">${r.l}</text>`});document.getElementById('barCt').innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%">${grid}${bars}</svg>`;document.querySelectorAll('#barCt .bx').forEach(b=>{b.addEventListener('mousemove',e=>{TIP.innerHTML=`<div class="t">${b.dataset.l}</div><div class="row"><i style="background:${COL.c1}"></i><b>${won(+b.dataset.v)}</b></div>`;TIP.style.left=e.clientX+'px';TIP.style.top=e.clientY+'px';TIP.style.opacity='1';b.style.opacity='.75'});b.addEventListener('mouseleave',()=>{TIP.style.opacity='0';b.style.opacity=''})})}
   function spark(data,color){const W=110,Hh=26,max=Math.max(...data),min=Math.min(...data),rng=(max-min)||1;const dn=data.length-1;const pts=data.map((v,i)=>[dn>0?i/dn*W:W/2,Hh-2-((v-min)/rng)*(Hh-5)]);return `<svg viewBox="0 0 ${W} ${Hh}" width="70" height="26"><path d="${smooth(pts)}" fill="none" stroke="${color}" stroke-width="1.6" stroke-linecap="round"/></svg>`}
-  function aiMd(t){var esc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));var lines=String(t).split(/\r?\n/),out=[],inList=false,seenH=false;var flush=()=>{if(inList){out.push('</ul>');inList=false}};for(var i=0;i<lines.length;i++){var raw=lines[i];var h=raw.match(/^\s*(#{1,6})\s+(.*)/);if(h){flush();var lvl=h[1].length,txt=esc(h[2]).replace(/\*\*(.+?)\*\*/g,'$1').replace(/[:：]\s*$/,'');if(lvl===1&&!seenH){seenH=true;continue}/* 맨 앞 제목(h1)은 카드 헤더와 중복이라 생략 */out.push('<p class="dh"><b>'+txt+'</b></p>');seenH=true;continue}seenH=true;var ln=esc(raw).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>');var m=ln.match(/^\s*(?:[-*·•]|\d+\.)\s+(.*)/);if(m){if(!inList){out.push('<ul>');inList=true}out.push('<li>'+m[1]+'</li>')}else{flush();if(ln.trim())out.push('<p>'+ln+'</p>')}}flush();return out.join('')}
+  function aiMd(t){var esc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+    // 서버(api/chat.py)가 줄 끝 마침표를 지우지만, 캐시된 옛 응답(마침표 있던 시절)이
+    // 그대로 남아 다시 표시될 수 있다 — 렌더 시점에도 한 번 더 지워 항상 보장한다.
+    var stripDot=s=>String(s).replace(/(?<![\d.])\.(?=\s*$)/,'');
+    var lines=String(t).split(/\r?\n/),out=[],inList=false,seenH=false;var flush=()=>{if(inList){out.push('</ul>');inList=false}};for(var i=0;i<lines.length;i++){var raw=lines[i];var h=raw.match(/^\s*(#{1,6})\s+(.*)/);if(h){flush();var lvl=h[1].length,txt=stripDot(esc(h[2]).replace(/\*\*(.+?)\*\*/g,'$1').replace(/[:：]\s*$/,''));if(lvl===1&&!seenH){seenH=true;continue}/* 맨 앞 제목(h1)은 카드 헤더와 중복이라 생략 */out.push('<p class="dh"><b>'+txt+'</b></p>');seenH=true;continue}seenH=true;var ln=esc(raw).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>');var m=ln.match(/^\s*(?:[-*·•]|\d+\.)\s+(.*)/);if(m){if(!inList){out.push('<ul>');inList=true}out.push('<li>'+stripDot(m[1])+'</li>')}else{flush();if(ln.trim())out.push('<p>'+stripDot(ln)+'</p>')}}flush();return out.join('')}
   function buildComment(group,agg){const box=document.getElementById('comment');if(!box)return;
     const topCt=CT_ORDER.map(k=>[k,agg.ct[k]||0]).sort((a,b)=>b[1]-a[1])[0];
     const mt=Object.keys(agg.media).filter(k=>agg.media[k]>0).sort((a,b)=>agg.media[b]-agg.media[a]);
@@ -986,7 +990,7 @@ const DUReport=(function(){
       +`**추천 행동** — 지금 실행 가능한 액션 최대 2개. 각 줄 맨 앞에 [영역] 태그(예: [매체 믹스]/[예산]/[소재]/[타겟팅])를 붙이고, 어느 매체·캠페인·비중인지 구체적으로 써라.`;
     // 캐시(그룹·기간·규모·델타 시그니처, 24h) — 같은 화면 반복 렌더 시 재호출 안 함
     const sig=[group,agg.cost?agg.cost.length:0,Math.round(agg.tCost),Math.round(agg.tSign),noPrev?'np':(d.cpa==null?'x':d.cpa.toFixed(1)),(d.signup==null?'x':d.signup.toFixed(1))].join('|');
-    let cache={};try{cache=JSON.parse(localStorage.getItem('daouhub_perf_ai_v2')||'{}')||{}}catch(_){}
+    let cache={};try{cache=JSON.parse(localStorage.getItem('daouhub_perf_ai_v3')||'{}')||{}}catch(_){}
     // applyAiAction 은 항상 다음 틱에 — 캐시 히트 때 동기로 실행되면 뒤이어 도는
     // renderAction(규칙 문구)이 AI 문구를 덮어써 버린다.
     const paint=txt=>{box.innerHTML=head+'<div class="ai-diag md">'+aiMd(txt)+'</div>';
@@ -994,7 +998,7 @@ const DUReport=(function(){
     const hit=cache[sig];if(hit&&hit.txt&&Date.now()-hit.t<864e5){paint(hit.txt);return;}
     box.innerHTML=head+'<div class="ai-diag" style="color:var(--muted);font-size:12.5px;padding:8px 2px">10년차 관점으로 분석 중…</div>';
     fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'user',content:ask}],context:ctx})})
-      .then(r=>r.json()).then(j=>{if(j&&j.reply){paint(j.reply);cache[sig]={txt:j.reply,t:Date.now()};try{localStorage.setItem('daouhub_perf_ai_v2',JSON.stringify(cache))}catch(_){}}else fallback();})
+      .then(r=>r.json()).then(j=>{if(j&&j.reply){paint(j.reply);cache[sig]={txt:j.reply,t:Date.now()};try{localStorage.setItem('daouhub_perf_ai_v3',JSON.stringify(cache))}catch(_){}}else fallback();})
       .catch(fallback);}
 
   // ── AI 진단 → '오늘의 운영 판단' 연결 ─────────────────────────────
@@ -1535,7 +1539,7 @@ const DUComp=(function(){
   let list=[], curId=null, tab='overview';
   const el=id=>document.getElementById(id);
   const esc=s=>String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
-  const mdb=s=>esc(s).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>');   // AI 응답의 **강조**를 실제 볼드로
+  const mdb=s=>esc(s).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/(?<![\d.])\.(?=\s*$)/,'');   // AI 응답의 **강조**→볼드, 줄 끝 마침표 제거
   const comma=n=>Math.round(n||0).toLocaleString();
   const ACC={'실측':'ok','관측':'obs','추정':'est','미확인':'unk','미설정':'unk'};
   const accHTML=l=>'<span class="acc '+(ACC[l]||'unk')+'">'+esc(l)+'</span>';
