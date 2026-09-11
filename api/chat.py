@@ -9,6 +9,7 @@
 없으면 안내 메시지를 반환(사이트는 계속 동작).
 """
 import os
+import re
 import json
 from http.server import BaseHTTPRequestHandler
 
@@ -55,6 +56,9 @@ def _reply(messages, context):
         )
         text = "".join(getattr(b, "text", "") for b in msg.content
                        if getattr(b, "type", None) == "text").strip()
+        # 문장 끝마다 마침표를 찍는 게 너무 '정형화된 AI 말투'라는 피드백 → 줄 끝의
+        # 마침표를 제거해 실무자가 메모하듯 쓰는 톤에 가깝게 만든다(소수점·말줄임표는 보존).
+        text = re.sub(r"(?<![\d.])\.(?=\s*$)", "", text, flags=re.MULTILINE)
         u = getattr(msg, "usage", None)
         usage = {
             "model": MODEL,
