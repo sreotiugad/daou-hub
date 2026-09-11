@@ -1557,7 +1557,7 @@ const DUComp=(function(){
     el('compHero').innerHTML='<div class="comp-gauge"><div class="num" style="color:'+g+'">'+(it.score||0)+'</div><div class="of">/ 100 · 집행 강도</div>'
       +'<div class="bar"><i style="width:'+(it.score||0)+'%;background:'+g+'"></i></div></div>'
       +'<div class="info"><h2>'+esc(c.name||d.name||'')+'</h2>'
-      +'<div><b style="color:'+g+'">'+esc(it.band||'–')+'</b> '+accHTML(it.label||'추정')+' <span style="color:var(--muted);font-size:12px">신뢰도 '+esc(it.confidence||'낮음')+'</span></div>'
+      +'<div><b style="color:'+g+'">'+esc(it.band||'–')+'</b></div>'
       +'<div class="basis">근거 · '+esc(it.basis||'관측 데이터 부족')+'</div></div>';
     const content=d.content||{},trend=d.trend||{},promo=d.promo,ads=d.ads||[],cards=[];
     const tdir=trend.dir||'보합',tar=tdir==='상승'?'▲':tdir==='하락'?'▼':'—',tcol=tdir==='상승'?COL.danger:tdir==='하락'?COL.success:COL.muted;
