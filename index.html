@@ -914,13 +914,22 @@ const DUReport=(function(){
     const W=700,H=248,pl=40,pr=44,pt=14,pb=26,iw=W-pl-pr,ih=H-pt-pb;
     const N=labels.length,sw=N>1?iw/N:iw,x=i=>N>1?pl+iw*(i+0.5)/N:pl+iw/2;
     const cost=agg.cost.map(v=>v/1e4),sign=agg.signup;
-    const maxCost=niceMax(Math.max(...cost,1)*1.2),maxSign=niceMax(Math.max(...sign,1)*1.2);
-    const yL=v=>pt+ih*(1-v/maxCost),yR=v=>pt+ih*(1-v/maxSign);
-    let grid="";for(let k=0;k<=4;k++){const t=maxCost*k/4;grid+=`<line x1="${pl}" y1="${yL(t)}" x2="${W-pr}" y2="${yL(t)}" stroke="${COL.line}"/><text x="${pl-6}" y="${yL(t)+3.5}" text-anchor="end" font-size="10" fill="${COL.muted}" font-family="IBM Plex Mono, ui-monospace, monospace">${comma(Math.round(t))}</text>`}
+    // 광고비 막대축을 0부터 잡으면 하루 증감폭이 작아서 막대 높이 차이가 잘 안 보인다.
+    // 평균 광고비의 ±30%를 기본 범위로 잡아 변화를 크게 보이게 하되, 실제 값이 그
+    // 범위를 벗어나면(예산 급변 등) 잘려 보이지 않도록 범위를 값 쪽으로 살짝 더 늘린다.
+    const avgCost=cost.reduce((a,b)=>a+b,0)/(cost.length||1)||1;
+    let loCost=avgCost*.7,hiCost=avgCost*1.3;
+    const minC=Math.min(...cost),maxC=Math.max(...cost);
+    if(minC<loCost)loCost=minC*.97;
+    if(maxC>hiCost)hiCost=maxC*1.03;
+    if(hiCost<=loCost)hiCost=loCost+1;
+    const maxSign=niceMax(Math.max(...sign,1)*1.2);
+    const yL=v=>pt+ih*(1-(v-loCost)/(hiCost-loCost)),yR=v=>pt+ih*(1-v/maxSign);
+    let grid="";for(let k=0;k<=4;k++){const t=loCost+(hiCost-loCost)*k/4;grid+=`<line x1="${pl}" y1="${yL(t)}" x2="${W-pr}" y2="${yL(t)}" stroke="${COL.line}"/><text x="${pl-6}" y="${yL(t)+3.5}" text-anchor="end" font-size="10" fill="${COL.muted}" font-family="IBM Plex Mono, ui-monospace, monospace">${comma(Math.round(t))}</text>`}
     let rlab="";for(let k=0;k<=4;k++){const t=maxSign*k/4;rlab+=`<text x="${W-pr+6}" y="${yR(t)+3.5}" text-anchor="start" font-size="10" fill="${COL.muted}" font-family="IBM Plex Mono, ui-monospace, monospace">${comma(Math.round(t))}</text>`}
     let xl="";labels.forEach((d,i)=>{if(N<=14||i%Math.ceil(N/10)===0)xl+=`<text x="${x(i)}" y="${H-8}" text-anchor="middle" font-size="10" fill="${COL.muted}" font-family="IBM Plex Mono, ui-monospace, monospace">${d}</text>`});
     const bw=Math.min(20,sw*.55);
-    let bars="";cost.forEach((v,i)=>{const bx=x(i),by=yL(v),bh=Math.max(0,pt+ih-by);bars+=`<rect class="bx" x="${(bx-bw/2).toFixed(1)}" y="${by.toFixed(1)}" width="${bw.toFixed(1)}" height="${bh.toFixed(1)}" rx="2" fill="${COL.c1}"/>`});
+    let bars="";cost.forEach((v,i)=>{const bx=x(i),by=yL(v),bh=Math.max(0,(pt+ih)-by);bars+=`<rect class="bx" x="${(bx-bw/2).toFixed(1)}" y="${by.toFixed(1)}" width="${bw.toFixed(1)}" height="${bh.toFixed(1)}" rx="2" fill="${COL.c1}"/>`});
     const pts=sign.map((v,i)=>[x(i),yR(v)]);const dd=smooth(pts);
     const path=`<path d="${dd}" fill="none" stroke="${COL.c2}" stroke-width="2.4" stroke-linecap="round"/>`;
     const l=pts[N-1],dot=`<circle cx="${l[0]}" cy="${l[1]}" r="${N>1?3.4:5}" fill="${COL.surface}" stroke="${COL.c2}" stroke-width="2.2"/>`;
