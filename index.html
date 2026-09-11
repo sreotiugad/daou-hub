@@ -2084,11 +2084,12 @@ const DUComp=(function(){
     names.forEach(function(nm){var raw=subs[nm];if(!raw)return;var L0=(raw.cost||[]).length,st=Math.max(0,L0-days),s={group:raw.group,cost:(raw.cost||[]).slice(st),signup:(raw.signup||[]).slice(st),imp:(raw.imp||[]).slice(st),click:(raw.click||[]).slice(st)};var c=sum(s.cost),g=sum(s.signup),im=sum(s.imp),ck=sum(s.click);
       var cpa=g>0?Math.round(c/g):null,ctr=im>0?(ck/im*100):0;
       var wc=tailWeeks(s.cost,2),wg=tailWeeks(s.signup,2);
-      var mf={},cf={};(D.report.facts||[]).forEach(function(f){if(f.svc!==nm||f.d<lo||f.d>hi)return;mf[f.media]=(mf[f.media]||0)+(+f.cost||0);cf[f.ct]=(cf[f.ct]||0)+(+f.cost||0)});var ms=Object.values(mf).reduce(function(a,b){return a+b},0)||1,cs=Object.values(cf).reduce(function(a,b){return a+b},0)||1;
+      var mf={},cf={},msig={};(D.report.facts||[]).forEach(function(f){if(f.svc!==nm||f.d<lo||f.d>hi)return;mf[f.media]=(mf[f.media]||0)+(+f.cost||0);cf[f.ct]=(cf[f.ct]||0)+(+f.cost||0);msig[f.media]=(msig[f.media]||0)+(+f.signup||0)});var ms=Object.values(mf).reduce(function(a,b){return a+b},0)||1,cs=Object.values(cf).reduce(function(a,b){return a+b},0)||1;
       var media=Object.keys(mf).filter(function(k){return mf[k]>0}).map(function(k){return k+' '+Math.round(mf[k]/ms*100)+'%'}).join('/');
       var ct=Object.keys(cf).filter(function(k){return cf[k]>0}).sort(function(a,b){return cf[b]-cf[a]}).slice(0,4).map(function(k){return k+' '+Math.round(cf[k]/cs*100)+'%'}).join('/');
+      var mediaCpa=Object.keys(mf).filter(function(k){return mf[k]>0}).map(function(k){var mg=msig[k]||0;return k+' '+(mg>0?'CPA '+Math.round(mf[k]/mg).toLocaleString()+'원':'전환없음')+'(가입'+Math.round(mg)+')'}).join('/');
       L.push('· '+nm+'('+s.group+'): 광고비 '+Math.round(c).toLocaleString()+'원, 가입 '+Math.round(g)+', CPA '+(cpa==null?'전환 없음':cpa.toLocaleString()+'원')+', CTR '+ctr.toFixed(2)+'%, 노출 '+Math.round(im).toLocaleString()+', 클릭 '+Math.round(ck).toLocaleString()
-        +' | 매체 '+media+(ct?' | 유형 '+ct:'')
+        +' | 매체 '+media+(ct?' | 유형 '+ct:'')+(mediaCpa?' | 매체별 CPA '+mediaCpa:'')
         +' | 최근주 광고비 '+wc[1].toLocaleString()+'('+pctd(wc[1],wc[0])+' WoW)·가입 '+wg[1]+'('+pctd(wg[1],wg[0])+' WoW)'
         +' | 4주 광고비추이 '+tailWeeks(s.cost,4).join('→')+' | 4주 가입추이 '+tailWeeks(s.signup,4).join('→'));
     });
