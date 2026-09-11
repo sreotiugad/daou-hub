@@ -824,7 +824,6 @@
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
       <select id="bgBrand" class="cx-sel"></select>
       <div class="seg sm cxseg" id="bgDimSeg"><button data-d="media" class="on">매체별</button><button data-d="type">유형별</button></div>
-      <button id="bgCsv" class="kw-btn" title="예산 현황 CSV 내보내기">CSV</button>
       <button id="bgEdit" class="kw-btn">⚙ 예산 설정</button>
     </div>
   </div>
@@ -1381,12 +1380,9 @@ const DUBudget=(function(){
   var brand=null,dim='media',editing=false;
   function el(id){return document.getElementById(id)}
   function facts(){return (window.DAOU_DATA&&window.DAOU_DATA.report&&window.DAOU_DATA.report.facts)||[]}
-  function ents(){var F=facts(),grps=[],byG={};
-    F.forEach(function(f){if(grps.indexOf(f.grp)<0){grps.push(f.grp);byG[f.grp]=[]}if(byG[f.grp].indexOf(f.svc)<0)byG[f.grp].push(f.svc)});
-    var out=[];grps.forEach(function(g){var multi=byG[g].length>1;
-      out.push({id:'g:'+g,label:g+(multi?' (그룹 전체)':''),name:g+(multi?' 그룹':''),grp:g});
-      if(multi)byG[g].forEach(function(s){out.push({id:'s:'+s,label:'　└ '+s,name:s,svc:s})})});
-    return out;}
+  function ents(){var F=facts(),grps=[];
+    F.forEach(function(f){if(grps.indexOf(f.grp)<0)grps.push(f.grp)});
+    return grps.map(function(g){return {id:'g:'+g,label:g,name:g,grp:g}});}
   function entById(id){var e=ents();for(var i=0;i<e.length;i++)if(e[i].id===id)return e[i];return e[0]||{id:'',name:'',grp:''}}
   function matchFn(e){return e.svc?function(f){return f.svc===e.svc}:function(f){return f.grp===e.grp}}
   function keyOf(f){return dim==='media'?f.media:(f.media+' · '+f.ct)}
@@ -1417,7 +1413,7 @@ const DUBudget=(function(){
     var sel=el('bgBrand');if(!sel)return;var E=ents();
     if(!E.length){el('bgOverview').innerHTML='<div class="cmp-empty">데이터를 불러오는 중…</div>';return}
     var ids=E.map(function(e){return e.id});
-    if(!brand||ids.indexOf(brand)<0)brand=ids.indexOf('s:애드콘')>=0?'s:애드콘':(ids.indexOf('g:애드콘')>=0?'g:애드콘':ids[0]);
+    if(!brand||ids.indexOf(brand)<0)brand=ids.indexOf('g:애드콘')>=0?'g:애드콘':ids[0];
     if(sel.options.length!==E.length)sel.innerHTML=E.map(function(e){return '<option value="'+e.id+'">'+e.label+'</option>'}).join('');
     sel.value=brand;
     Array.prototype.forEach.call(el('bgDimSeg').querySelectorAll('button'),function(b){b.classList.toggle('on',b.dataset.d===dim)});
@@ -1458,17 +1454,6 @@ const DUBudget=(function(){
   }
   var bsel=document.getElementById('bgBrand');if(bsel)bsel.addEventListener('change',function(e){brand=e.target.value;editing=false;render()});
   var bed=document.getElementById('bgEdit');if(bed)bed.addEventListener('click',function(){editing=!editing;render()});
-  function cell(v){v=String(v==null?'':v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}
-  function csv(){if(!brand)return;var name=entById(brand).name,c=calc(brand),dimLab=dim==='media'?'매체':'유형';
-    var rows=[['# '+name+' 예산 현황 ('+c.ym+' · '+dimLab+'별)'],[],[dimLab,'월예산','누적소진','소진율(%)','잔여','권장일예산']];
-    var tb=0,tc=0;
-    c.items.forEach(function(k){var b=bget(brand,k),cum=c.byK[k]||0,rem=b-cum;tb+=b;tc+=cum;rows.push([k,b,Math.round(cum),b>0?(cum/b*100).toFixed(1):'',Math.round(rem),Math.round(Math.max(rem,0)/c.rem)])});
-    rows.push(['합계',tb,Math.round(tc),tb>0?(tc/tb*100).toFixed(1):'',Math.round(tb-tc),Math.round(Math.max(tb-tc,0)/c.rem)]);
-    rows.push([]);rows.push(['# 일자별 소진']);rows.push(['일자'].concat(c.items).concat(['합계']));
-    c.dates.forEach(function(dt){var row=c.byDate[dt]||{},rt=0,r=[dt];c.items.forEach(function(k){var v=row[k]||0;rt+=v;r.push(Math.round(v))});r.push(Math.round(rt));rows.push(r)});
-    var out=rows.map(function(r){return (r||[]).map(cell).join(',')}).join('\r\n');
-    var blob=new Blob(['﻿'+out],{type:'text/csv;charset=utf-8'});var u=URL.createObjectURL(blob);var a=document.createElement('a');a.href=u;a.download='예산현황_'+name+'_'+c.ym+'.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(u)},1000)}
-  var bcsv=document.getElementById('bgCsv');if(bcsv)bcsv.addEventListener('click',csv);
   var bseg=document.getElementById('bgDimSeg');if(bseg)bseg.addEventListener('click',function(e){if(e.target.tagName==='BUTTON'){dim=e.target.dataset.d;editing=false;render()}});
   return {render:render};
 })();
