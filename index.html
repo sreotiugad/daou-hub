@@ -1830,7 +1830,10 @@ const DUComp=(function(){
     loadMeta();}
   function loadMeta(){const x=_daCtx,c=x.c,lib=x.metaLib;
     const key=(c.kw||c.name||'').trim();
-    const paint=e=>{e._plat='meta';x.meta=e;if(x.plat==='meta'){_daFilter=_defFilter(e);paintDA(e);}_aiRun(false);_copyRun(false);};
+    const paint=e=>{e._plat='meta';x.meta=e;if(x.plat==='meta'){_daFilter=_defFilter(e);paintDA(e);}_aiRun(false);_copyRun(false);
+      // '한눈에 비교' 탭(renderMulti)은 _daMf 캐시만 읽는다 — 개요에서 실시간으로 받아온
+      // 소재도 여기 반영해야 "개요를 열면 자동 수집된다"는 안내가 실제로 맞아떨어진다.
+      if(!_daMf)_daMf={};_daMf[key||c.name||'']=Object.assign({},e,{kw:key||c.name||''});};
     // 정적 캡처(comp-ads/manifest.json, GitHub Actions 수동 트리거) — 실시간 조회 실패 시 폴백
     const fallbackStatic=()=>{
       const done=mf=>{_daMf=mf;const nm=(c.name||'').trim();
