@@ -1521,6 +1521,7 @@ const DUComp=(function(){
   let list=[], curId=null, tab='overview';
   const el=id=>document.getElementById(id);
   const esc=s=>String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+  const mdb=s=>esc(s).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>');   // AI 응답의 **강조**를 실제 볼드로
   const comma=n=>Math.round(n||0).toLocaleString();
   const ACC={'실측':'ok','관측':'obs','추정':'est','미확인':'unk','미설정':'unk'};
   const accHTML=l=>'<span class="acc '+(ACC[l]||'unk')+'">'+esc(l)+'</span>';
@@ -1928,7 +1929,7 @@ const DUComp=(function(){
     fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:[{role:'user',content:q}],context:brief})})
       .then(function(r){return r.json()}).then(function(j){var t=String((j&&j.reply)||'');
         var rws=t.split(/\n+/).map(function(s){return s.trim()}).filter(Boolean).map(function(l){var i=l.indexOf('|');return [i<0?'':l.slice(0,i).replace(/[^가-힣]/g,''),(i<0?l:l.slice(i+1)).trim()];});
-        var h=rws.map(function(kv){var m=LAB[kv[0]]||['•',kv[0]||'인사이트'];return '<div class="ins-row"><div class="ins-h">'+m[0]+' '+esc(m[1])+'</div><div class="ins-b">'+esc(kv[1])+'</div></div>';}).join('');
+        var h=rws.map(function(kv){var m=LAB[kv[0]]||['•',kv[0]||'인사이트'];return '<div class="ins-row"><div class="ins-h">'+m[0]+' '+esc(m[1])+'</div><div class="ins-b">'+mdb(kv[1])+'</div></div>';}).join('');
         box.querySelector('.card-b').className='card-b ins-wrap';box.querySelector('.card-b').innerHTML=h||'<div class="line">분석을 받지 못했어요.</div>';})
       .catch(function(){box.querySelector('.card-b').innerHTML='<div class="line" style="color:var(--muted)">AI 분석을 불러오지 못했어요.</div>';});
   }
@@ -1978,7 +1979,7 @@ const DUComp=(function(){
     var rows=String(t).split(/\n+/).map(function(s){return s.trim()}).filter(Boolean).map(function(l){
       var i=l.indexOf('|');return [i<0?'':l.slice(0,i).replace(/[^가-힣]/g,''), (i<0?l:l.slice(i+1)).trim()];});
     var html=rows.map(function(kv){var m=LAB[kv[0]]||['•',kv[0]||'인사이트'];
-      return '<div class="ins-row"><div class="ins-h">'+m[0]+' '+esc(m[1])+'</div><div class="ins-b">'+esc(kv[1])+'</div></div>';}).join('');
+      return '<div class="ins-row"><div class="ins-h">'+m[0]+' '+esc(m[1])+'</div><div class="ins-b">'+mdb(kv[1])+'</div></div>';}).join('');
     box.innerHTML=_aiHead('소재 관측 기반')+'<div class="card-b ins-wrap">'+(html||'<div class="line">분석을 받지 못했어요.</div>')+'</div>';
   }
   function renderAi(d,c){_ins={d:d,c:c};_aiSig='';_copySig='';var box=el('compAi');
@@ -2032,11 +2033,11 @@ const DUComp=(function(){
         .map(function(s){return '<span class="cp-hook">'+esc(s)+'</span>';}).join('');
       if(chips)html+='<div class="cp-hooks">'+chips+'</div>';
     }
-    function row(k,ic,key){return rows[k]?('<div class="cp-row"><span class="cp-ic">'+ic+'</span><span class="cp-k">'+key+'</span><span class="cp-v">'+esc(rows[k])+'</span></div>'):'';}
+    function row(k,ic,key){return rows[k]?('<div class="cp-row"><span class="cp-ic">'+ic+'</span><span class="cp-k">'+key+'</span><span class="cp-v">'+mdb(rows[k])+'</span></div>'):'';}
     html+=row('메시지','📣','핵심 메시지');
     html+=row('CTA','👉','CTA 패턴');
-    if(rows['검증카피'])html+='<div class="cp-quote">🏆 <b>검증 카피</b> · '+esc(rows['검증카피'])+'</div>';
-    if(rows['제안'])html+='<div class="cp-sug"><div class="cp-row"><span class="cp-ic">💡</span><span class="cp-k">우리 대응</span><span class="cp-v">'+esc(rows['제안'])+'</span></div></div>';
+    if(rows['검증카피'])html+='<div class="cp-quote">🏆 <b>검증 카피</b> · '+mdb(rows['검증카피'])+'</div>';
+    if(rows['제안'])html+='<div class="cp-sug"><div class="cp-row"><span class="cp-ic">💡</span><span class="cp-k">우리 대응</span><span class="cp-v">'+mdb(rows['제안'])+'</span></div></div>';
     box.innerHTML=_copyHead(n)+'<div class="card-b cp-wrap">'+(html||'<div class="line">분석을 받지 못했어요.</div>')+'</div>';
   }
 
