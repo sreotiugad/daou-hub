@@ -533,8 +533,11 @@
   .cp-k{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.02em;min-width:66px;flex:none;padding-top:1px}
   .cp-v{font-size:13.5px;line-height:1.6;color:var(--fg)}
   .cp-v .q{color:var(--muted);font-style:italic}
-  .cp-quote{font-size:13px;line-height:1.55;color:var(--fg);background:var(--surface-2,var(--border-soft));border-radius:8px;padding:8px 11px;border-left:3px solid #b45309}
-  .cp-quote b{color:#b45309;font-weight:700}
+  /* 검증 카피·우리 대응 박스는 색만 다르고 내부는 .cp-row 규칙(아이콘·라벨·본문
+     크기)을 그대로 쓴다 — 예전엔 검증 카피만 한 줄 텍스트라 라벨이 본문 크기로
+     나오고 패딩도 달라 같은 위계인데 따로 노는 것처럼 보였다. */
+  .cp-quote{background:var(--surface-2,var(--border-soft));border-radius:8px;padding:9px 12px;border-left:3px solid #b45309}
+  .cp-quote .cp-k{color:#b45309}
   .cp-sug{border-left:3px solid var(--primary);background:var(--primary-weak);border-radius:8px;padding:9px 12px}
   .cp-sug .cp-k{color:var(--primary)}
   .cp-sug .cp-v{color:var(--fg)}
@@ -2072,7 +2075,7 @@ const DUComp=(function(){
     function row(k,ic,key){return rows[k]?('<div class="cp-row"><span class="cp-ic">'+ic+'</span><span class="cp-k">'+key+'</span><span class="cp-v">'+mdb(rows[k])+'</span></div>'):'';}
     html+=row('메시지','📣','핵심 메시지');
     html+=row('CTA','👉','CTA 패턴');
-    if(rows['검증카피'])html+='<div class="cp-quote">🏆 <b>검증 카피</b> · '+mdb(rows['검증카피'])+'</div>';
+    if(rows['검증카피'])html+='<div class="cp-quote"><div class="cp-row"><span class="cp-ic">🏆</span><span class="cp-k">검증 카피</span><span class="cp-v">'+mdb(rows['검증카피'])+'</span></div></div>';
     if(rows['제안'])html+='<div class="cp-sug"><div class="cp-row"><span class="cp-ic">💡</span><span class="cp-k">우리 대응</span><span class="cp-v">'+mdb(rows['제안'])+'</span></div></div>';
     box.innerHTML=_copyHead(n)+'<div class="card-b cp-wrap">'+(html||'<div class="line">분석을 받지 못했어요.</div>')+'</div>';
   }
