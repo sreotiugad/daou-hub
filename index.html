@@ -193,7 +193,9 @@
   .ai-diag p.dh b{color:var(--primary);font-weight:700;letter-spacing:.02em}
   .ai-diag p b,.ai-diag li b{color:var(--fg);font-weight:600}
   .ai-diag ul{margin:2px 0 9px;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px}
-  .ai-diag li{position:relative;padding-left:13px;font-size:12.5px;color:var(--fg);line-height:1.55}
+  /* display:block 필수 — 같은 카드의 .comment li{display:flex}(규칙 폴백 전용)가 여기까지 걸리면
+     AI 문장의 <b>가 flex item 으로 쪼그라들어 '[채널 믹스]' 같은 앞머리가 세로로 잘린다 */
+  .ai-diag li{display:block;position:relative;padding-left:13px;font-size:12.5px;color:var(--fg);line-height:1.55}
   .ai-diag li::before{content:'';position:absolute;left:2px;top:8px;width:4px;height:4px;border-radius:50%;background:var(--primary)}
   .action-card{margin-bottom:14px;overflow:hidden}
   .action-grid{display:grid;grid-template-columns:1fr 1.2fr;gap:12px}
@@ -201,6 +203,10 @@
   .action-block{padding:13px;border:1px solid var(--border-soft);border-radius:var(--r-sm);background:var(--bg)}
   .action-block .lab{font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em}
   .action-block .txt{font-size:13px;line-height:1.6;color:var(--fg)}
+  .action-block .txt ul.ai-pts{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px}
+  .action-block .txt ul.ai-pts li{display:block;position:relative;padding-left:13px}
+  .action-block .txt ul.ai-pts li::before{content:'';position:absolute;left:1px;top:8px;width:4px;height:4px;border-radius:50%;background:var(--primary)}
+  .action-block .txt ul.ai-pts b{font-weight:600;color:var(--primary)}
   .action-controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:center}
   .action-controls input,.action-controls select{height:34px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface);color:var(--fg);padding:0 9px;font:12px var(--sans)}
   .action-controls input{flex:1 1 190px}
@@ -952,7 +958,7 @@ const DUReport=(function(){
   function drawBar(agg){const rows=CT_ORDER.map(k=>({l:k,v:agg.ct[k]||0})).filter(r=>r.v>0).sort((a,b)=>b.v-a.v);const W=560,H=224,pl=38,pr=10,pt=10,pb=40,iw=W-pl-pr,ih=H-pt-pb;
     // 집행하지 않은(0원) 캠페인 유형은 빈 막대로 그리면 허전·깨져 보이므로 실제 집행분만 그린다.
     if(!rows.length){document.getElementById('barCt').innerHTML='<div style="padding:40px 8px;text-align:center;color:var(--muted);font-size:12.5px">이 기간 집행된 캠페인 광고비가 없어요.</div>';return;}
-    const max=niceMax(Math.max(...rows.map(r=>r.v))*1.14),step=iw/rows.length,bw=Math.min(46,step*.5),y=v=>pt+ih*(1-v/max);let grid="";for(let k=0;k<=4;k++){const t=max*k/4;grid+=`<line x1="${pl}" y1="${y(t)}" x2="${W-pr}" y2="${y(t)}" stroke="${COL.line}"/><text x="${pl-6}" y="${y(t)+3.5}" text-anchor="end" font-size="10" fill="${COL.muted}" font-family="IBM Plex Mono, ui-monospace, monospace">${t>=1e6?(t/1e6).toFixed(0)+'M':Math.round(t/1e4)+'만'}</text>`}let bars="";rows.forEach((r,i)=>{const bx=pl+step*i+step/2,by=y(r.v),bh=pt+ih-by;bars+=`<rect class="bx" data-l="${r.l}" data-v="${r.v}" x="${(bx-bw/2).toFixed(1)}" y="${by.toFixed(1)}" width="${bw}" height="${bh.toFixed(1)}" rx="3" fill="${COL.c1}" opacity="${1-i*0.1}"/><text x="${bx.toFixed(1)}" y="${H-24}" text-anchor="middle" font-size="10" fill="${COL.muted}" font-family="Pretendard Variable, Pretendard, Apple SD Gothic Neo, Malgun Gothic, system-ui, sans-serif">${r.l}</text>`});document.getElementById('barCt').innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%">${grid}${bars}</svg>`;document.querySelectorAll('#barCt .bx').forEach(b=>{b.addEventListener('mousemove',e=>{TIP.innerHTML=`<div class="t">${b.dataset.l}</div><div class="row"><i style="background:${COL.c1}"></i><b>${won(+b.dataset.v)}</b></div>`;TIP.style.left=e.clientX+'px';TIP.style.top=e.clientY+'px';TIP.style.opacity='1';b.style.opacity='.75'});b.addEventListener('mouseleave',()=>{TIP.style.opacity='0';b.style.opacity=''})})}
+    const max=niceMax(Math.max(...rows.map(r=>r.v))*1.14),step=iw/rows.length,bw=Math.min(46,step*.5),y=v=>pt+ih*(1-v/max);let grid="";for(let k=0;k<=4;k++){const t=max*k/4;grid+=`<line x1="${pl}" y1="${y(t)}" x2="${W-pr}" y2="${y(t)}" stroke="${COL.line}"/><text x="${pl-6}" y="${y(t)+3.5}" text-anchor="end" font-size="10" fill="${COL.muted}" font-family="IBM Plex Mono, ui-monospace, monospace">${t>=1e6?(t/1e6).toFixed(0)+'M':Math.round(t/1e4)+'만'}</text>`}let bars="";rows.forEach((r,i)=>{const bx=pl+step*i+step/2,by=y(r.v),bh=pt+ih-by;bars+=`<rect class="bx" data-l="${r.l}" data-v="${r.v}" x="${(bx-bw/2).toFixed(1)}" y="${by.toFixed(1)}" width="${bw}" height="${bh.toFixed(1)}" rx="3" fill="${COL.c1}" opacity="${Math.max(.45,1-i*0.09).toFixed(2)}"/><text x="${bx.toFixed(1)}" y="${H-24}" text-anchor="middle" font-size="10" fill="${COL.muted}" font-family="Pretendard Variable, Pretendard, Apple SD Gothic Neo, Malgun Gothic, system-ui, sans-serif">${r.l}</text>`});document.getElementById('barCt').innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%">${grid}${bars}</svg>`;document.querySelectorAll('#barCt .bx').forEach(b=>{b.addEventListener('mousemove',e=>{TIP.innerHTML=`<div class="t">${b.dataset.l}</div><div class="row"><i style="background:${COL.c1}"></i><b>${won(+b.dataset.v)}</b></div>`;TIP.style.left=e.clientX+'px';TIP.style.top=e.clientY+'px';TIP.style.opacity='1';b.style.opacity='.75'});b.addEventListener('mouseleave',()=>{TIP.style.opacity='0';b.style.opacity=''})})}
   function spark(data,color){const W=110,Hh=26,max=Math.max(...data),min=Math.min(...data),rng=(max-min)||1;const dn=data.length-1;const pts=data.map((v,i)=>[dn>0?i/dn*W:W/2,Hh-2-((v-min)/rng)*(Hh-5)]);return `<svg viewBox="0 0 ${W} ${Hh}" width="70" height="26"><path d="${smooth(pts)}" fill="none" stroke="${color}" stroke-width="1.6" stroke-linecap="round"/></svg>`}
   function aiMd(t){var esc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
     // 서버(api/chat.py)가 줄 끝 마침표를 지우지만, 캐시된 옛 응답(마침표 있던 시절)이
@@ -1004,26 +1010,33 @@ const DUReport=(function(){
   // ── AI 진단 → '오늘의 운영 판단' 연결 ─────────────────────────────
   // 진단만 보여주고 끝나면 '봤다'로 끝난다. AI가 낸 한 줄 진단(근거)과 액션을
   // 그대로 판단 카드에 넣어, 채택·실행 여부까지 한 화면에서 기록되게 한다.
-  function _aiSection(txt,name){
+  function _aiLines(txt,name){
     const lines=String(txt).split(/\r?\n/);let on=false,out=[];
     for(const ln of lines){
       const h=ln.match(/^\s*#{1,6}\s*(.+?)\s*$/)||ln.match(/^\s*\*\*(.+?)\*\*\s*$/);
       if(h){const t=h[1].replace(/[*#:：\s]/g,'');on=t.indexOf(name.replace(/\s/g,''))>=0;continue;}
-      if(on&&ln.trim())out.push(ln.replace(/^\s*[-*·•]\s*/,'· ').replace(/\*\*(.+?)\*\*/g,'$1').trim());
+      if(on&&ln.trim())out.push(ln.replace(/^\s*[-*·•]\s*/,'').replace(/\*\*(.+?)\*\*/g,'$1').replace(/(?<![\d.])\.(?=\s*$)/,'').trim());
     }
-    return out.join(' ').trim();
+    return out;
   }
+  // 저장·이력용 평문(한 줄) — 화면 표시는 아래 applyAiAction 이 불릿으로 그린다
+  function _aiSection(txt,name){return _aiLines(txt,name).map(s=>'· '+s).join(' ').trim()}
   function applyAiAction(txt,group){
-    const diag=_aiSection(txt,'근거');
-    const act=_aiSection(txt,'추천 행동')||_aiSection(txt,'추천행동');
-    if(!diag&&!act)return;                       // 파싱 실패 시 규칙 문구 유지
-    const ev=diag;
+    const evL=_aiLines(txt,'근거');
+    let actL=_aiLines(txt,'추천 행동');if(!actL.length)actL=_aiLines(txt,'추천행동');
+    if(!evL.length&&!actL.length)return;          // 파싱 실패 시 규칙 문구 유지
+    // 여러 문장을 '·'로 이어 한 덩어리로 넣으면 읽기 어렵다 → 항목별 불릿으로 렌더.
+    const esc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+    const item=s=>{const m=s.match(/^\[([^\]]{1,24})\]\s*(.*)$/);   // '[채널 믹스] …' 앞머리는 강조
+      return m?'<li><b>['+esc(m[1])+']</b> '+esc(m[2])+'</li>':'<li>'+esc(s)+'</li>'};
+    const ul=ls=>'<ul class="ai-pts">'+ls.map(item).join('')+'</ul>';
     const sc=document.getElementById('actionScope'),e1=document.getElementById('actionEvidence'),a1=document.getElementById('actionSuggestion');
-    if(e1&&ev)e1.textContent=ev;
-    if(a1&&act)a1.textContent=act;
+    if(e1&&evL.length)e1.innerHTML=ul(evL);
+    if(a1&&actL.length)a1.innerHTML=ul(actL);
     if(sc)sc.textContent=(state.sub==='전체'?state.group:state.sub)+' · '+periodText()+' · AI 진단 기반';
-    if(currentAction){currentAction.evidence=ev||currentAction.evidence;
-      currentAction.action=act||currentAction.action;currentAction.source='AI';}
+    const flat=ls=>ls.map(s=>'· '+s).join(' ');
+    if(currentAction){currentAction.evidence=flat(evL)||currentAction.evidence;
+      currentAction.action=flat(actL)||currentAction.action;currentAction.source='AI';}
   }
 
   const ACTION_LS='daouhub_action_log_v1';let currentAction=null;
