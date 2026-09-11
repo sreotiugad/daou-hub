@@ -1185,7 +1185,21 @@ const DUKeyword=(function(){
   function hourBars(elId,arr,color){const W=760,Hh=170,pl=28,pr=10,pt=10,pb=26,iw=W-pl-pr,ih=Hh-pt-pb;const max=niceMax(Math.max(...arr)*1.12),step=iw/24,bw=step*.62,y=v=>pt+ih*(1-v/max);let grid="";for(let k=0;k<=2;k++){const t=max*k/2;grid+=`<line x1="${pl}" y1="${y(t)}" x2="${W-pr}" y2="${y(t)}" stroke="${COL.line}"/>`}let b="";arr.forEach((v,i)=>{const bx=pl+step*i+step/2,by=y(v),bh=pt+ih-by;b+=`<rect class="bx" data-l="${i}시" data-v="${v}" x="${(bx-bw/2).toFixed(1)}" y="${by.toFixed(1)}" width="${bw.toFixed(1)}" height="${bh.toFixed(1)}" rx="2" fill="${color}" opacity="${.5+v/max*.5}"/>`;if(i%3===0)b+=`<text x="${bx}" y="${Hh-9}" text-anchor="middle" font-size="10" fill="${COL.muted}" font-family="IBM Plex Mono, ui-monospace, monospace">${i}</text>`});document.getElementById(elId).innerHTML=`<svg viewBox="0 0 ${W} ${Hh}" width="100%">${grid}${b}</svg>`;document.querySelectorAll('#'+elId+' .bx').forEach(x=>{x.addEventListener('mousemove',e=>{TIP.innerHTML=`<div class="t">${x.dataset.l}</div><div class="row"><i style="background:${color}"></i><b>${x.dataset.v}%</b></div>`;TIP.style.left=e.clientX+'px';TIP.style.top=e.clientY+'px';TIP.style.opacity='1'});x.addEventListener('mouseleave',()=>TIP.style.opacity='0')})}
   function fmtViews(n){n=+n||0;return n>=1e8?(n/1e8).toFixed(1)+'억':n>=1e4?Math.round(n/1e4)+'만':String(Math.round(n));}
   function renderYT(d){const list=d.youtube||[];const box=document.getElementById('ytList');if(!box)return;if(d._demo){box.innerHTML='<div style="color:var(--muted);font-size:12.5px;padding:10px 2px;line-height:1.6">이 키워드는 <b>미리 수집된 키워드가 아니라</b> 실제 영상 순위를 표시하지 않아요.<br>추천 키워드를 쓰거나, 이 키워드를 <b>수집 목록에 등록</b>하면 실제 YouTube 순위가 나옵니다.</div>';return}if(!list.length){box.innerHTML='<div style="color:var(--muted);font-size:12.5px;padding:8px 2px">표시할 영상이 없어요. (YouTube 키 연동 시 실데이터)</div>';return}box.innerHTML='<div class="yt-grid">'+list.map((v,i)=>`<a class="yt" href="${v.url||'#'}" target="_blank" rel="noopener"><span class="rk">${i+1}</span><span class="thumb"><span class="ph"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>${v.thumb?`<img src="${v.thumb}" loading="lazy" onerror="this.remove()">`:''}${v.dur?`<span class="dur">${v.dur}</span>`:''}</span><span class="m"><b>${v.title||''}</b><span class="sub">${v.channel||''} · 조회 ${fmtViews(v.views)}${v.date?' · '+v.date:''}</span></span></a>`).join('')+'</div>';}
-  function resolveKw(kw){const RK=window.DAOU_DATA&&window.DAOU_DATA.keyword;if(RK&&RK[kw])return Promise.resolve(adaptKw(RK[kw]));return fetch('/api/keyword?q='+encodeURIComponent(kw)).then(function(r){return r.ok?r.json():null}).then(function(o){return (o&&!o.error)?adaptKw(o):gen(kw)}).catch(function(){return gen(kw)})}
+  function _kwPostsEmpty(p){if(!p)return true;var modes=['sim','date'],srcs=['blog','cafe'];for(var i=0;i<modes.length;i++)for(var j=0;j<srcs.length;j++){var a=p[modes[i]]&&p[modes[i]][srcs[j]];if(a&&a.length)return false}return true}
+  function resolveKw(kw){const RK=window.DAOU_DATA&&window.DAOU_DATA.keyword;
+    if(RK&&RK[kw]){
+      const base=RK[kw];
+      // 사전수집 스냅샷의 YouTube·블로그/카페가 비어 있으면(가짜 데이터 제거 이후
+      // 재수집 전 상태) 라이브 키가 연동돼 있어도 영원히 빈 화면으로 고정된다.
+      // 검색량·경쟁도 등 모델링 값은 스냅샷을 쓰되, 이 두 항목만 라이브로 다시 받는다.
+      if(!(base.youtube&&base.youtube.length)&&_kwPostsEmpty(base.posts)){
+        return fetch('/api/keyword?q='+encodeURIComponent(kw)).then(r=>r.ok?r.json():null)
+          .then(o=>(o&&!o.error&&!o._demo)?adaptKw(Object.assign({},base,{youtube:o.youtube,posts:o.posts})):adaptKw(base))
+          .catch(()=>adaptKw(base));
+      }
+      return Promise.resolve(adaptKw(base));
+    }
+    return fetch('/api/keyword?q='+encodeURIComponent(kw)).then(function(r){return r.ok?r.json():null}).then(function(o){return (o&&!o.error)?adaptKw(o):gen(kw)}).catch(function(){return gen(kw)})}
   function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
   var postSort='sim',lastPostsD=null;
   function renderPosts(d){lastPostsD=d;const box=document.getElementById('postList');if(!box)return;const p=d.posts||{};
