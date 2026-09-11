@@ -378,7 +378,12 @@
   #bgTable th,#bgDaily th{text-align:right;font-weight:600;color:var(--muted);font-size:11px;padding:9px 12px;border-bottom:1.5px solid var(--border);white-space:nowrap}
   #bgTable th:first-child,#bgDaily th:first-child{text-align:left}
   #bgTable td,#bgDaily td{padding:9px 12px;border-bottom:1px solid var(--border-soft);white-space:nowrap;text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
-  #bgTable td:first-child,#bgDaily td:first-child{text-align:left;font-family:inherit;font-weight:600}
+  #bgTable td:first-child{text-align:left;font-family:inherit}
+  #bgDaily td:first-child{text-align:left;font-family:inherit;font-weight:600}
+  /* 유형별 보기: 매체는 rowspan 으로 한 번만(.m), 그 옆 유형 칸은 숫자가 아니라 이름이라 왼쪽 정렬 */
+  #bgTable td.m{font-weight:600;vertical-align:top}
+  #bgTable td.m+td{text-align:left;font-family:inherit}
+  #bgTable tr.g0>td{border-top:1px solid var(--border)}   /* 매체가 바뀌는 행 구분선 */
   #bgTable tr.tot td,#bgDaily tr.cum td{font-weight:700;background:var(--bg);border-top:1.5px solid var(--border)}
   #bgDaily tr.today td{background:var(--warning-weak,color-mix(in srgb,var(--warning) 12%,transparent))}
   .bg-edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 18px}
@@ -1438,10 +1443,25 @@ const DUBudget=(function(){
       +'<div class="bg-row"><div class="lab"><span style="color:var(--muted)">예산 소진 진척</span><span style="color:'+pctc(totPct)+'">'+(totB>0?totPct.toFixed(1)+'%':'-')+'</span></div><div class="bg-bar"><i style="width:'+Math.min(totPct,100)+'%;background:'+pctc(totPct)+'"></i></div></div>'
       +'<div class="bg-note">'+(totB<=0?'⚙ 예산 설정을 눌러 이번 달 '+dimLab+'별 예산을 입력하세요.':(totPct>timeP?'⚠️ 소진이 시간보다 <b>'+(totPct-timeP).toFixed(1)+'%p 빠릅니다</b> (과지출 페이스)':'✓ 소진이 시간보다 <b>'+(timeP-totPct).toFixed(1)+'%p 여유</b> 있습니다')+' · 권장 일예산(잔여 ÷ 남은 '+c.rem+'일): <b>'+won(recDaily)+'원/일</b>')+'</div>'
       +'</div>';
-    var body=c.items.map(function(k){var b=bget(brand,k),cum=c.byK[k]||0,p=b>0?cum/b*100:0,rem=b-cum,rd=Math.max(rem,0)/c.rem;
-      return '<tr><td><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:'+(MCOL[mediaOf(k)]||COL.muted)+';margin-right:7px"></span>'+k+'</td><td>'+won(b)+'</td><td>'+won(cum)+'</td><td style="color:'+pctc(p)+';font-weight:600">'+(b>0?p.toFixed(1)+'%':'-')+'</td><td style="color:'+(rem>=0?'inherit':COL.danger)+'">'+won(rem)+'</td><td style="color:'+COL.success+'">'+won(rd)+'</td></tr>'}).join('');
-    el('bgTable').innerHTML='<table><thead><tr><th>'+dimLab+'</th><th>월예산</th><th>누적 소진</th><th>소진율</th><th>잔여</th><th>권장 일예산</th></tr></thead><tbody>'+body
-      +'<tr class="tot"><td>합계</td><td>'+won(totB)+'</td><td>'+won(totCum)+'</td><td style="color:'+pctc(totPct)+'">'+(totB>0?totPct.toFixed(1)+'%':'-')+'</td><td style="color:'+(totRem>=0?'inherit':COL.danger)+'">'+won(totB-totCum)+'</td><td style="color:'+COL.success+'">'+won(recDaily)+'</td></tr></tbody></table>';
+    var row=function(k){var b=bget(brand,k),cum=c.byK[k]||0,p=b>0?cum/b*100:0,rem=b-cum,rd=Math.max(rem,0)/c.rem;
+      return '<td>'+won(b)+'</td><td>'+won(cum)+'</td><td style="color:'+pctc(p)+';font-weight:600">'+(b>0?p.toFixed(1)+'%':'-')+'</td><td style="color:'+(rem>=0?'inherit':COL.danger)+'">'+won(rem)+'</td><td style="color:'+COL.success+'">'+won(rd)+'</td>'};
+    var thead,body;
+    if(dim==='type'){
+      // '네이버 · 파워링크' 처럼 매체·유형이 한 줄에 다 붙어 있으면 눈에 안 들어와서,
+      // 리포트의 매체×유형 표와 똑같이 매체를 rowspan 으로 한 번만 묶고 유형만 나열한다.
+      var byMedia={};c.items.forEach(function(k){var m=mediaOf(k);(byMedia[m]=byMedia[m]||[]).push(k)});
+      var mOrder=MEDIA.filter(function(m){return byMedia[m]});
+      thead='<th>매체</th><th>유형</th><th>월예산</th><th>누적 소진</th><th>소진율</th><th>잔여</th><th>권장 일예산</th>';
+      body=mOrder.map(function(m){var ks=byMedia[m];
+        return ks.map(function(k,i){var t=k.split(' · ')[1]||k;
+          return '<tr'+(i===0?' class="g0"':'')+'>'+(i===0?'<td class="m" rowspan="'+ks.length+'"><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:'+(MCOL[m]||COL.muted)+';margin-right:7px"></span>'+m+'</td>':'')+'<td>'+t+'</td>'+row(k)+'</tr>'}).join('')
+      }).join('');
+    }else{
+      thead='<th>매체</th><th>월예산</th><th>누적 소진</th><th>소진율</th><th>잔여</th><th>권장 일예산</th>';
+      body=c.items.map(function(k){return '<tr><td class="m"><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:'+(MCOL[mediaOf(k)]||COL.muted)+';margin-right:7px"></span>'+k+'</td>'+row(k)+'</tr>'}).join('');
+    }
+    el('bgTable').innerHTML='<table><thead><tr>'+thead+'</tr></thead><tbody>'+body
+      +'<tr class="tot"><td'+(dim==='type'?' colspan="2"':'')+'>합계</td><td>'+won(totB)+'</td><td>'+won(totCum)+'</td><td style="color:'+pctc(totPct)+'">'+(totB>0?totPct.toFixed(1)+'%':'-')+'</td><td style="color:'+(totRem>=0?'inherit':COL.danger)+'">'+won(totB-totCum)+'</td><td style="color:'+COL.success+'">'+won(recDaily)+'</td></tr></tbody></table>';
     el('bgDayHint').textContent=c.ym+' · '+dimLab+'별';
     var dhead='<tr><th>일자</th>'+c.items.map(function(k){return '<th>'+k+'</th>'}).join('')+'<th>합계</th></tr>';
     var cumRow='<tr class="cum"><td>누적</td>'+c.items.map(function(k){return '<td>'+won(c.byK[k]||0)+'</td>'}).join('')+'<td>'+won(totCum)+'</td></tr>';
